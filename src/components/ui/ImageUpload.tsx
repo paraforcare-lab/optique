@@ -27,6 +27,11 @@ function isSecureContext(): boolean {
   return window.isSecureContext || isLocalhost();
 }
 
+function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 function getCameraErrorMessage(error: any): string {
   console.log('Camera error details:', error);
   
@@ -80,10 +85,16 @@ export function ImageUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<string | null>(value || null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   useEffect(() => {
     setPreview(value || null);
@@ -209,6 +220,10 @@ export function ImageUpload({
   };
 
   const checkCameraAvailability = (): { available: boolean; message?: string } => {
+    if (isMobile) {
+      return { available: true };
+    }
+    
     if (typeof navigator === 'undefined') {
       return { available: false, message: 'Environnement non supporté' };
     }
@@ -231,7 +246,29 @@ export function ImageUpload({
     return { available: true };
   };
 
+  const handleNativeCameraCapture = () => {
+    if (nativeCameraInputRef.current) {
+      nativeCameraInputRef.current.click();
+    }
+  };
+
+  const handleNativeCameraInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFile(files[0]);
+    }
+    
+    if (nativeCameraInputRef.current) {
+      nativeCameraInputRef.current.value = '';
+    }
+  };
+
   const startCamera = async () => {
+    if (isMobile) {
+      handleNativeCameraCapture();
+      return;
+    }
+
     setCameraError(null);
     
     const availability = checkCameraAvailability();
@@ -242,20 +279,97 @@ export function ImageUpload({
       return;
     }
 
-    console.log('=== Attempting to access camera ===');
+    console.log('=== Attempting to access camera (desktop mode ===');
     console.log('isSecureContext:', isSecureContext());
     console.log('isLocalhost:', isLocalhost());
     console.log('URL:', window.location.href);
-    
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      typeof navigator !== 'undefined' ? navigator.userAgent : ''
-    );
 
     const videoConstraints = {
       width: { ideal: 1280 },
       height: { ideal: 720 },
-      facingMode: isMobile ? 'environment' : 'user',
+      facingMode: 'user',
     };
+
+    try {
+      console.log('Requesting camera access...');
+      console.log('Constraints:', videoConstraints);
+      
+      let stream: MediaStream | null = null;
+      
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+          audio: false,
+        });
+        console.log('Camera access granted with preferred constraints!');
+      } catch (preferredError: any) {
+        console.log('Preferred constraints failed:', preferredError.name, preferredError.message);
+        console.log('Trying with simple constraints...');
+        
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+          console.log('Camera access granted with simple constraints!');
+        } catch (simpleError: any) {
+          console.log('Simple constraints failed:', simpleError.name, simpleError.message);
+          throw simpleError;
+        }
+      }
+      
+      if (!stream) {
+        throw new Error('Impossible d\'obtenir le flux vidéo');
+      }
+      
+      streamRef.current = stream;
+      setIsCameraActive(true);
+      setCameraError(null);
+      
+      if (videoRef.current) {
+        const video = videoRef.current;
+        
+        video.muted = true;
+        video.playsInline = true;
+        video.autoPlay = true;
+        
+        const startPlayback = () => {
+          video.play()
+            .then(() => console.log('Video playback started successfully'))
+            .catch(playError => {
+              console.error('Video play error:', playError);
+            });
+        };
+        
+        video.onloadedmetadata = () => {
+          console.log('Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
+          startPlayback();
+        };
+        
+        video.onerror = (e) => {
+          console.error('Video element error:', e);
+        };
+        
+        video.srcObject = stream;
+        
+        setTimeout(() => {
+          if (video && video.readyState < 1) {
+            console.log('Metadata not loaded after timeout, trying direct play...');
+            startPlayback();
+          }
+        }, 1000);
+      }
+    } catch (error: any) {
+      console.error('=== CAMERA ERROR ===');
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Full error:', error);
+      
+      const userMessage = getCameraErrorMessage(error);
+      setCameraError(userMessage);
+      toast.error(userMessage, { duration: 6000 });
+    }
+  };
 
     try {
       console.log('Requesting camera access...');
@@ -421,8 +535,18 @@ export function ImageUpload({
       )}
 
       <canvas ref={canvasRef} className="hidden" />
+      
+      <input
+        ref={nativeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleNativeCameraInputChange}
+        disabled={isUploading}
+      />
 
-      {!isCameraSupported && !isCameraActive && (
+      {!isMobile && !isCameraSupported && !isCameraActive && (
         <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span>
@@ -616,7 +740,7 @@ export function ImageUpload({
         </div>
       )}
 
-      {!isCameraActive && (
+      {!isCameraActive && !isMobile && (
         <p className="text-[10px] text-muted-foreground/60 text-center">
           💡 Si la caméra ne fonctionne pas, vérifiez :
           1) Êtes-vous sur <span className="font-mono bg-slate-100 px-1 rounded">localhost:3000</span> ?
