@@ -123,11 +123,12 @@ export function AvoirsList() {
     try {
       const { data, error } = await supabase
         .from('parametres')
-        .select('id,user_id,nom_societe,nom,adresse,ville,telephone,email,ice,rc,if_number,logo_url,couleur_principale,capital_social,forme_juridique,watermark_text')
+        .select('id,user_id,nom_societe,nom,adresse,ville,telephone,email,ice,rc,if_number,logo_url,couleur_principale,capital_social,forme_juridique,watermark_text,activer_filigrane')
         .eq('user_id', String(user.id))
         .single();
 
       if (!data) {
+        console.log('No parametres found');
         setEntreprise(null);
         return;
       }
@@ -135,10 +136,11 @@ export function AvoirsList() {
       if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
-        const cleanLogoUrl = !data.logo_url || data.logo_url === 'image.png' || !data.logo_url.startsWith('http')
+        const cleanLogoUrl = !data.logo_url || data.logo_url === 'image.png'
           ? ''
           : data.logo_url;
         setEntreprise({
+          userId: user.id,
           nom: data.nom_societe || data.nom || '',
           nomEntreprise: data.nom_societe || data.nom || '',
           adresse: data.adresse || '',
@@ -148,6 +150,7 @@ export function AvoirsList() {
           ice: data.ice || '',
           logoUrl: cleanLogoUrl,
           watermarkText: data.watermark_text || 'ParaGestion',
+          activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
         });
       }
     } catch (error) {

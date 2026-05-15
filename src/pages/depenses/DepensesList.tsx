@@ -303,8 +303,8 @@ export function DepensesList() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-red-50 border border-red-200/50">
-            <Wallet className="h-5 w-5 text-red-500" />
+          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-red-50 border border-red-200/50 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
+            <Wallet className="h-5 w-5 text-red-500 dark:text-rose-400" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-foreground">Dépenses</h2>
@@ -321,15 +321,15 @@ export function DepensesList() {
           <DialogTrigger render={
             <Button
               onClick={openNewForm}
-              className="bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none"
+              className="bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none dark:rounded-sm"
             >
               <Plus className="mr-2 h-4 w-4" />
               Nouvelle Dépense
             </Button>
           } />
-          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20">
+          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20 dark:bg-slate-900">
             <div className="flex flex-col h-full">
-              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm">
+              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm dark:bg-slate-900/50">
                 <div className="max-w-7xl mx-auto w-full">
                   <DialogTitle className="text-2xl font-black text-foreground">
                     {editingDepense ? 'Modifier la dépense' : 'Nouvelle Dépense'}
@@ -343,7 +343,7 @@ export function DepensesList() {
               </DialogHeader>
               <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-7xl mx-auto">
-                  <div className="rounded-[6px] border border-slate-200 bg-white p-8">
+                  <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:border-white/10 dark:bg-slate-900 dark:rounded-sm">
                     <DepenseForm
                       initialData={editingDepense}
                       onSuccess={() => {
@@ -370,13 +370,13 @@ export function DepensesList() {
               <Input
                 type="text"
                 placeholder="Rechercher par description, catégorie, référence..."
-                className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm"
+                className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm dark:bg-transparent dark:border-white/10 dark:rounded-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="h-10 w-[160px] bg-white border-slate-200 rounded-[4px] shadow-none text-sm">
+              <SelectTrigger className="h-10 w-[160px] bg-white border-slate-200 rounded-[4px] shadow-none text-sm dark:bg-transparent dark:border-white/10 dark:rounded-sm">
                 <Filter className="h-3.5 w-3.5 text-slate-400 mr-2" />
                 <SelectValue placeholder="Paiement" />
               </SelectTrigger>
@@ -391,10 +391,10 @@ export function DepensesList() {
           </div>
 
           {/* Table */}
-          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden">
+          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden dark:border-white/10 dark:rounded-sm">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-slate-100">
+                <TableRow className="border-b border-slate-100 dark:border-white/5">
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Date</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Description</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Catégorie</TableHead>
@@ -418,10 +418,10 @@ export function DepensesList() {
                   <TableRow>
                     <TableCell colSpan={7} className="h-48 text-center">
                       <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100">
+                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100 dark:bg-slate-900/40 dark:border-white/5 dark:rounded-sm">
                           <Receipt className="h-8 w-8 text-slate-300" />
                         </div>
-                        <p className="text-sm text-slate-500 font-medium">
+                        <p className="text-sm text-slate-500 font-medium dark:text-slate-400">
                           {searchQuery || paymentFilter !== 'all'
                             ? 'Aucune dépense trouvée'
                             : 'Aucune dépense enregistrée'}
@@ -450,10 +450,10 @@ export function DepensesList() {
                     return (
                       <TableRow
                         key={depense.id}
-                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
+                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors dark:border-white/5 dark:hover:bg-white/[0.03]"
                       >
                         <TableCell className="px-4 py-5">
-                          <span className="text-sm text-slate-500">
+                          <span className="text-sm text-slate-500 dark:text-slate-400">
                             {depense.dateDepense
                               ? format(new Date(depense.dateDepense), 'dd MMM yyyy', { locale: fr })
                               : '-'}
@@ -461,7 +461,7 @@ export function DepensesList() {
                         </TableCell>
                         <TableCell className="px-4 py-5">
                           <div>
-                            <p className="text-sm font-semibold text-slate-800 max-w-[220px] truncate">
+                            <p className="text-sm font-semibold text-slate-800 max-w-[220px] truncate dark:text-white">
                               {depense.description || '-'}
                             </p>
                             <p className="text-[11px] text-slate-400 font-mono mt-0.5">
@@ -486,7 +486,7 @@ export function DepensesList() {
                                   {fournisseurInitial}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="text-sm text-slate-700">
+                              <span className="text-sm text-slate-700 dark:text-white">
                                 {depense.fournisseur?.nomSociete || depense.fournisseur?.nom || '-'}
                               </span>
                             </div>
@@ -497,7 +497,7 @@ export function DepensesList() {
                         <TableCell className="px-4 py-5">
                           <div className="flex items-center gap-1.5">
                             <PayIcon className="h-3.5 w-3.5 text-slate-400" />
-                            <span className="text-xs text-slate-500 capitalize">
+                            <span className="text-xs text-slate-500 capitalize dark:text-slate-400">
                               {depense.modePaiement}
                             </span>
                           </div>
@@ -512,7 +512,7 @@ export function DepensesList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px]"
+                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
                               onClick={() => handleEdit(depense)}
                               title="Modifier"
                             >
@@ -521,7 +521,7 @@ export function DepensesList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px]"
+                              className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
                               onClick={() => {
                                 setDepenseToDelete(depense.id);
                                 setDeleteConfirmOpen(true);
@@ -540,7 +540,7 @@ export function DepensesList() {
             </Table>
 
             {!isLoading && paginatedDepenses.length > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/5">
                 <p className="text-xs text-slate-400">
                   {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredDepenses.length)} sur {filteredDepenses.length}
                 </p>
@@ -548,7 +548,7 @@ export function DepensesList() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
                     disabled={currentPage === 1}
                     onClick={() => handlePageChange(currentPage - 1)}
                   >
@@ -560,10 +560,10 @@ export function DepensesList() {
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        "h-8 min-w-[32px] rounded-[4px] text-sm font-medium",
+                        "h-8 min-w-[32px] rounded-[4px] text-sm font-medium dark:rounded-sm",
                         page === currentPage
-                          ? "bg-slate-100 text-slate-800"
-                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                          ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-white"
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:text-white dark:hover:bg-white/5"
                       )}
                       onClick={() => handlePageChange(page)}
                     >
@@ -573,7 +573,7 @@ export function DepensesList() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
                     disabled={currentPage === totalPages}
                     onClick={() => handlePageChange(currentPage + 1)}
                   >
@@ -587,22 +587,22 @@ export function DepensesList() {
 
         {/* Right Column - Summary */}
         <div className="lg:col-span-1 space-y-4">
-          <Card className="border border-slate-200 shadow-none rounded-[6px]">
-            <CardHeader className="px-4 py-4 border-b border-slate-100">
-              <CardTitle className="text-sm font-semibold text-slate-700">Récapitulatif Mensuel</CardTitle>
+          <Card className="border border-slate-200 shadow-none rounded-[6px] dark:border-white/10 dark:rounded-sm">
+            <CardHeader className="px-4 py-4 border-b border-slate-100 dark:border-white/5">
+              <CardTitle className="text-sm font-semibold text-slate-700 dark:text-white">Récapitulatif Mensuel</CardTitle>
             </CardHeader>
             <CardContent className="px-4 py-4 space-y-5">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-red-50 border border-red-200/50 shrink-0">
-                  <Wallet className="h-4 w-4 text-red-500" />
+                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-red-50 border border-red-200/50 shrink-0 dark:rounded-sm dark:bg-rose-500/10 dark:border-rose-500/20">
+                  <Wallet className="h-4 w-4 text-red-500 dark:text-rose-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-500">Total des dépenses</p>
-                  <p className="text-lg font-bold text-rose-600">{formatCurrency(monthTotal)}</p>
+                  <p className="text-lg font-bold text-rose-600 dark:text-rose-400">{formatCurrency(monthTotal)}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 rounded-[6px] bg-slate-50 border border-slate-100 px-3 py-2">
+              <div className="flex items-center gap-2 rounded-[6px] bg-slate-50 border border-slate-100 px-3 py-2 dark:rounded-sm dark:bg-transparent dark:border-white/5">
                 {trend >= 0 ? (
                   <TrendingUp className="h-4 w-4 text-rose-500" />
                 ) : (
@@ -621,7 +621,7 @@ export function DepensesList() {
 
               {/* Pie Chart */}
               {pieSlices.length > 0 && (
-                <div className="border-t border-slate-100 pt-4">
+                <div className="border-t border-slate-100 pt-4 dark:border-white/5">
                   <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Par catégorie</p>
                   <div className="flex items-center gap-4">
                     <svg viewBox="0 0 100 100" className="h-20 w-20 shrink-0">
@@ -634,10 +634,10 @@ export function DepensesList() {
                       {pieSlices.slice(0, 5).map((slice, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
-                          <span className="text-[11px] text-slate-500 flex-1 truncate">
+                          <span className="text-[11px] text-slate-500 flex-1 truncate dark:text-slate-400">
                             {getCategoryConfig(slice.cat).label}
                           </span>
-                          <span className="text-[11px] font-semibold text-slate-700">{slice.percentage}%</span>
+                          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-400">{slice.percentage}%</span>
                         </div>
                       ))}
                     </div>

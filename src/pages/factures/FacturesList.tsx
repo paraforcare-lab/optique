@@ -149,7 +149,7 @@ export function FacturesList() {
     try {
       const { data, error } = await supabase
         .from('parametres')
-        .select('id,user_id,nom_societe,nom,adresse,ville,telephone,email,ice,logo_url,couleur_principale,watermark_text')
+        .select('id,user_id,nom_societe,nom,adresse,ville,telephone,email,ice,logo_url,couleur_principale,watermark_text,activer_filigrane')
         .eq('user_id', String(user.id))
         .single();
 
@@ -164,10 +164,11 @@ export function FacturesList() {
       }
 
       if (data) {
-        const cleanLogoUrl = !data.logo_url || data.logo_url === 'image.png' || !data.logo_url.startsWith('http')
+        const cleanLogoUrl = !data.logo_url || data.logo_url === 'image.png'
           ? ''
           : data.logo_url;
         setEntreprise({
+          userId: user.id,
           nomEntreprise: data.nom_societe || data.nom || '',
           adresse: data.adresse || '',
           ville: data.ville || '',
@@ -177,6 +178,7 @@ export function FacturesList() {
           logoUrl: cleanLogoUrl,
           couleurPrincipale: data.couleur_principale || '#267E54',
           watermarkText: data.watermark_text || 'ParaGestion',
+          activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
         });
       }
     } catch (error) {

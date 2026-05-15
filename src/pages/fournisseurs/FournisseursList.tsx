@@ -168,8 +168,8 @@ export function FournisseursList() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-sky-50 border border-sky-200/50">
-            <Truck className="h-5 w-5 text-sky-500" />
+          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-sky-50 border border-sky-200/50 dark:bg-[#0F172A]/60 dark:border-white/10">
+            <Truck className="h-5 w-5 text-sky-500 dark:text-blue-400" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-foreground">Fournisseurs</h2>
@@ -192,9 +192,9 @@ export function FournisseursList() {
               Nouveau Fournisseur
             </Button>
           } />
-          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20">
+          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20 dark:bg-[#0F172A] dark:border-white/10">
             <div className="flex flex-col h-full">
-              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm">
+              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm dark:bg-[#0F172A] dark:border-white/10">
                 <div className="max-w-7xl mx-auto w-full">
                   <DialogTitle className="text-2xl font-black text-foreground">
                     {editingFournisseur ? 'Modifier le fournisseur' : 'Nouveau Fournisseur'}
@@ -208,7 +208,7 @@ export function FournisseursList() {
               </DialogHeader>
               <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-7xl mx-auto">
-                  <div className="rounded-[6px] border border-slate-200 bg-white p-8">
+                  <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:bg-[#0F172A] dark:border-white/10">
                     <FournisseurForm
                       initialData={editingFournisseur}
                       onSuccess={() => {
@@ -230,27 +230,27 @@ export function FournisseursList() {
         <div className="lg:col-span-3 space-y-4">
           {/* Search */}
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none dark:text-slate-500" />
             <Input
               type="text"
               placeholder="Rechercher par nom, code ou email..."
-              className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm"
+              className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm dark:bg-[#0F172A] dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
           {/* Table */}
-          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden">
+          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden dark:bg-[#0F172A] dark:border-white/10">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-slate-100">
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-[120px]">Code</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Fournisseur</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Contact</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">ICE</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-right">Actions</TableHead>
+                <TableRow className="border-b border-slate-100 dark:border-white/10">
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-[120px] dark:text-slate-400">Code</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 dark:text-slate-400">Fournisseur</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 dark:text-slate-400">Type</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 dark:text-slate-400">Contact</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 dark:text-slate-400">ICE</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-right dark:text-slate-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -267,10 +267,10 @@ export function FournisseursList() {
                   <TableRow>
                     <TableCell colSpan={6} className="h-48 text-center">
                       <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100">
-                          <Truck className="h-8 w-8 text-slate-300" />
+                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100 dark:bg-[#0F172A]/40 dark:border-white/10">
+                          <Truck className="h-8 w-8 text-slate-300 dark:text-slate-600" />
                         </div>
-                        <p className="text-sm text-slate-500 font-medium">
+                        <p className="text-sm text-slate-500 font-medium dark:text-slate-400">
                           {searchQuery ? 'Aucun fournisseur trouvé' : 'Aucun fournisseur enregistré'}
                         </p>
                         {!searchQuery && (
@@ -294,25 +294,25 @@ export function FournisseursList() {
                     return (
                       <TableRow
                         key={fournisseur.id}
-                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
+                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors dark:border-white/10 dark:hover:bg-white/[0.02]"
                       >
                         <TableCell className="px-4 py-5">
-                          <span className="text-xs font-mono text-slate-500">
+                          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
                             {fournisseur.code || `F${fournisseur.id}`}
                           </span>
                         </TableCell>
                         <TableCell className="px-4 py-5">
                           <div className="flex items-center gap-2.5">
-                            <Avatar size="sm" className="h-7 w-7 border border-slate-200">
+                            <Avatar size="sm" className="h-7 w-7 border border-slate-200 dark:border-white/10">
                               <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`} />
-                              <AvatarFallback className="text-[10px] font-semibold bg-slate-100 text-slate-600">
+                              <AvatarFallback className="text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                                 {initials}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="text-sm font-semibold text-slate-800">{displayName}</p>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-white">{displayName}</p>
                               {(fournisseur.adresse || fournisseur.ville) && (
-                                <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 dark:text-slate-500">
                                   <MapPin className="h-3 w-3" />
                                   {fournisseur.ville || fournisseur.adresse}
                                 </p>
@@ -324,8 +324,8 @@ export function FournisseursList() {
                           <span className={cn(
                             "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium",
                             fournisseur.type === 'entreprise'
-                              ? "bg-sky-50 text-sky-700 border border-sky-200/50"
-                              : "bg-amber-50 text-amber-700 border border-amber-200/50"
+                              ? "bg-sky-50 text-sky-700 border border-sky-200/50 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20"
+                              : "bg-amber-50 text-amber-700 border border-amber-200/50 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
                           )}>
                             {fournisseur.type === 'entreprise' ? (
                               <Building2 className="h-3 w-3 mr-1" />
@@ -338,14 +338,14 @@ export function FournisseursList() {
                         <TableCell className="px-4 py-5">
                           <div className="space-y-0.5">
                             {fournisseur.email && (
-                              <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                                <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                              <p className="text-xs text-slate-500 flex items-center gap-1.5 dark:text-slate-400">
+                                <Mail className="h-3 w-3 text-slate-400 shrink-0 dark:text-slate-500" />
                                 {fournisseur.email}
                               </p>
                             )}
                             {fournisseur.telephone && (
-                              <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                              <p className="text-xs text-slate-500 flex items-center gap-1.5 dark:text-slate-400">
+                                <Phone className="h-3 w-3 text-slate-400 shrink-0 dark:text-slate-500" />
                                 {fournisseur.telephone}
                               </p>
                             )}
@@ -355,7 +355,7 @@ export function FournisseursList() {
                           </div>
                         </TableCell>
                         <TableCell className="px-4 py-5">
-                          <span className="text-xs font-mono text-slate-400">
+                          <span className="text-xs font-mono text-slate-400 dark:text-slate-500">
                             {fournisseur.ice || '-'}
                           </span>
                         </TableCell>
@@ -364,7 +364,7 @@ export function FournisseursList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px]"
+                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/5"
                               onClick={() => handleEdit(fournisseur)}
                               title="Modifier"
                             >
@@ -373,7 +373,7 @@ export function FournisseursList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px]"
+                              className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:text-slate-500 dark:hover:text-red-400 dark:hover:bg-red-500/10"
                               onClick={() => {
                                 setFournisseurToDelete(fournisseur.id);
                                 setDeleteConfirmOpen(true);
@@ -392,15 +392,15 @@ export function FournisseursList() {
             </Table>
 
             {!isLoading && paginatedFournisseurs.length > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-                <p className="text-xs text-slate-400">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/10">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredFournisseurs.length)} sur {filteredFournisseurs.length}
                 </p>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
                     disabled={currentPage === 1}
                     onClick={() => handlePageChange(currentPage - 1)}
                   >
@@ -414,8 +414,8 @@ export function FournisseursList() {
                       className={cn(
                         "h-8 min-w-[32px] rounded-[4px] text-sm font-medium",
                         page === currentPage
-                          ? "bg-slate-100 text-slate-800"
-                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                          ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-white"
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/5"
                       )}
                       onClick={() => handlePageChange(page)}
                     >
@@ -425,7 +425,7 @@ export function FournisseursList() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
                     disabled={currentPage === totalPages}
                     onClick={() => handlePageChange(currentPage + 1)}
                   >
@@ -439,35 +439,35 @@ export function FournisseursList() {
 
         {/* Right Column - Summary */}
         <div className="lg:col-span-1 space-y-4">
-          <Card className="border border-slate-200 shadow-none rounded-[6px]">
-            <CardHeader className="px-4 py-4 border-b border-slate-100">
-              <CardTitle className="text-sm font-semibold text-slate-700">Aperçu des Fournisseurs</CardTitle>
+          <Card className="border border-slate-200 shadow-none rounded-[6px] dark:bg-[#0F172A] dark:border-white/10">
+            <CardHeader className="px-4 py-4 border-b border-slate-100 dark:border-white/10">
+              <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Aperçu des Fournisseurs</CardTitle>
             </CardHeader>
             <CardContent className="px-4 py-4 space-y-5">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-sky-50 border border-sky-200/50 shrink-0">
-                  <Truck className="h-4 w-4 text-sky-500" />
+                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-sky-50 border border-sky-200/50 shrink-0 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20">
+                  <Truck className="h-4 w-4 text-sky-500 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-500">Total fournisseurs</p>
-                  <p className="text-lg font-bold text-slate-800">{fournisseursCount}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Total fournisseurs</p>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white">{fournisseursCount}</p>
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4 space-y-3">
+              <div className="border-t border-slate-100 dark:border-white/10 pt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-sky-500" />
-                    <span className="text-xs text-slate-500">Entreprises</span>
+                    <Building2 className="h-4 w-4 text-sky-500 dark:text-blue-400" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Entreprises</span>
                   </div>
-                  <span className="text-sm font-semibold text-slate-700">{entreprisesCount}</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{entreprisesCount}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-amber-500" />
-                    <span className="text-xs text-slate-500">Particuliers</span>
+                    <User className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Particuliers</span>
                   </div>
-                  <span className="text-sm font-semibold text-slate-700">{particuliersCount}</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{particuliersCount}</span>
                 </div>
               </div>
             </CardContent>

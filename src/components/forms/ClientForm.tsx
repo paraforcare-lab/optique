@@ -169,21 +169,21 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
             name="type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold">Type de client</FormLabel>
+                <FormLabel className="text-sm font-semibold dark:text-slate-300">Type de client</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger className="h-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10">
+                    <SelectTrigger className="h-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 dark:bg-slate-950/50 dark:border-white/10 dark:text-white [&_.lucide-chevron-down]:dark:text-slate-500">
                       <SelectValue placeholder="Sélectionnez" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="entreprise">
+                  <SelectContent className="dark:bg-slate-900 dark:border-white/10">
+                    <SelectItem value="entreprise" className="dark:text-white dark:focus:bg-white/5">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-primary" />
                         <span>Entreprise</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="particulier">
+                    <SelectItem value="particulier" className="dark:text-white dark:focus:bg-white/5">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-emerald-600" />
                         <span>Particulier</span>
@@ -201,13 +201,13 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
             name="nom"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-semibold">
+                <FormLabel className="text-sm font-semibold dark:text-slate-300">
                   {isEntreprise ? 'Nom de la société *' : 'Nom complet *'}
                 </FormLabel>
                 <FormControl>
                   <Input 
                     placeholder={isEntreprise ? 'Tech Solutions SARL' : 'Ahmed Benali'} 
-                    className="h-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    className="h-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 dark:bg-slate-950/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                     {...field} 
                   />
                 </FormControl>
@@ -229,14 +229,14 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-muted-foreground">Email</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground dark:text-slate-300">Email</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-500" />
                       <Input 
                         type="email"
                         placeholder="contact@exemple.com" 
-                        className="h-12 pl-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        className="h-12 pl-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 dark:bg-slate-950/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                         {...field} 
                       />
                     </div>
@@ -251,13 +251,13 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
               name="telephone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-muted-foreground">Téléphone</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground dark:text-slate-300">Téléphone</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-500" />
                       <Input 
                         placeholder="+212 6 00 00 00 00" 
-                        className="h-12 pl-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        className="h-12 pl-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 dark:bg-slate-950/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                         {...field} 
                       />
                     </div>
@@ -281,13 +281,13 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
               name="adresse"
               render={({ field }) => (
                 <FormItem className="md:col-span-2">
-                  <FormLabel className="text-sm font-medium text-muted-foreground">Adresse complète</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground dark:text-slate-300">Adresse complète</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <MapPin className="absolute left-4 top-4 h-4 w-4 text-muted-foreground" />
+                      <MapPin className="absolute left-4 top-4 h-4 w-4 text-muted-foreground dark:text-slate-500" />
                       <Textarea 
                         placeholder="123 Rue Exemple, Quartier..." 
-                        className="min-h-[80px] pl-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 resize-none"
+                        className="min-h-[80px] pl-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 resize-none dark:bg-slate-950/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                         {...field} 
                       />
                     </div>
@@ -302,11 +302,11 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
               name="ville"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-muted-foreground">Ville</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground dark:text-slate-300">Ville</FormLabel>
                   <FormControl>
                     <Input 
                       placeholder="Casablanca" 
-                      className="h-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                      className="h-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 dark:bg-slate-950/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                       {...field} 
                     />
                   </FormControl>
@@ -319,8 +319,8 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
 
         {/* Enterprise-specific fields */}
         {isEntreprise && (
-          <div className="space-y-4 p-4 rounded-[6px] bg-indigo-50/30 border border-indigo-200/50">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <div className="space-y-4 p-4 rounded-[6px] bg-indigo-50/30 border border-indigo-200/50 dark:bg-[#0F172A] dark:border-white/10">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground dark:text-white">
               <CreditCard className="h-4 w-4 text-primary" />
               Informations fiscales (Entreprise)
             </div>
@@ -331,11 +331,11 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
                 name="ice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-muted-foreground">ICE</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground dark:text-slate-300">ICE</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="15 chiffres" 
-                        className="h-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 font-mono"
+                        className="h-12 rounded-xl border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/10 font-mono dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
                         {...field} 
                       />
                     </FormControl>
@@ -348,7 +348,7 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
         )}
 
         {/* Submit Button */}
-        <div className="flex justify-end pt-6 border-t border-border/50">
+        <div className="flex justify-end pt-6 border-t border-border/50 dark:border-white/10">
           <Button 
             type="submit"
             disabled={form.formState.isSubmitting}

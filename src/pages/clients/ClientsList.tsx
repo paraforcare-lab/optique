@@ -166,8 +166,8 @@ export function ClientsList() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50">
-            <Users className="h-5 w-5 text-emerald-500" />
+          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50 dark:bg-emerald-500/10 dark:border-emerald-500/20">
+            <Users className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-foreground">Clients</h2>
@@ -190,9 +190,9 @@ export function ClientsList() {
               Nouveau Client
             </Button>
           } />
-          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20">
+          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20 dark:bg-slate-900 dark:border-white/10">
             <div className="flex flex-col h-full">
-              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm">
+              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm dark:bg-slate-900 dark:border-white/10">
                 <div className="max-w-7xl mx-auto w-full">
                   <DialogTitle className="text-2xl font-black text-foreground">
                     {editingClient ? 'Modifier le client' : 'Nouveau Client'}
@@ -206,7 +206,7 @@ export function ClientsList() {
               </DialogHeader>
               <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-7xl mx-auto">
-                  <div className="rounded-[6px] border border-slate-200 bg-white p-8">
+                  <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:bg-slate-900 dark:border-white/10">
                     <ClientForm
                       initialData={editingClient}
                       onSuccess={() => {
@@ -228,27 +228,27 @@ export function ClientsList() {
         <div className="lg:col-span-3 space-y-4">
           {/* Search */}
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none dark:text-slate-500" />
             <Input
               type="text"
               placeholder="Rechercher par nom, code, email ou téléphone..."
-              className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm"
+              className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm dark:bg-[#0F172A] dark:border-white/10 dark:text-white dark:placeholder:text-slate-400"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
           {/* Table */}
-          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden">
+          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden dark:bg-slate-900/60 dark:border-white/10">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-slate-100">
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-[120px]">Code</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Client</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Contact</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">ICE</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-right">Actions</TableHead>
+                <TableRow className="border-b border-slate-100 dark:border-white/5">
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-[120px] dark:text-slate-400">Code</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 dark:text-slate-400">Client</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 dark:text-slate-400">Type</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 dark:text-slate-400">Contact</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 dark:text-slate-400">ICE</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-right dark:text-slate-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -265,10 +265,10 @@ export function ClientsList() {
                   <TableRow>
                     <TableCell colSpan={6} className="h-48 text-center">
                       <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100">
-                          <Users className="h-8 w-8 text-slate-300" />
+                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100 dark:bg-slate-900/40 dark:border-white/5">
+                          <Users className="h-8 w-8 text-slate-300 dark:text-slate-600" />
                         </div>
-                        <p className="text-sm text-slate-500 font-medium">
+                        <p className="text-sm text-slate-500 font-medium dark:text-slate-400">
                           {searchQuery ? 'Aucun client trouvé' : 'Aucun client enregistré'}
                         </p>
                         {!searchQuery && (
@@ -291,25 +291,25 @@ export function ClientsList() {
                     return (
                       <TableRow
                         key={client.id}
-                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
+                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors dark:border-white/5 dark:hover:bg-white/[0.02]"
                       >
                         <TableCell className="px-4 py-5">
-                          <span className="text-xs font-mono text-slate-500">
+                          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
                             {client.code || `C${client.id}`}
                           </span>
                         </TableCell>
                         <TableCell className="px-4 py-5">
                           <div className="flex items-center gap-2.5">
-                            <Avatar size="sm" className="h-7 w-7 border border-slate-200">
+                            <Avatar size="sm" className="h-7 w-7 border border-slate-200 dark:border-white/10">
                               <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${client.nom}`} />
-                              <AvatarFallback className="text-[10px] font-semibold bg-slate-100 text-slate-600">
+                              <AvatarFallback className="text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                                 {initials}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="text-sm font-semibold text-slate-800">{client.nom || '-'}</p>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-white">{client.nom || '-'}</p>
                               {client.adresse && (
-                                <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 dark:text-slate-500">
                                   <MapPin className="h-3 w-3" />
                                   {client.adresse}
                                 </p>
@@ -321,8 +321,8 @@ export function ClientsList() {
                           <span className={cn(
                             "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium",
                             client.type === 'entreprise'
-                              ? "bg-sky-50 text-sky-700 border border-sky-200/50"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200/50"
+                              ? "bg-sky-50 text-sky-700 border border-sky-200/50 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20"
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
                           )}>
                             {client.type === 'entreprise' ? (
                               <Building2 className="h-3 w-3 mr-1" />
@@ -335,14 +335,14 @@ export function ClientsList() {
                         <TableCell className="px-4 py-5">
                           <div className="space-y-0.5">
                             {client.email && (
-                              <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                                <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                              <p className="text-xs text-slate-500 flex items-center gap-1.5 dark:text-slate-400">
+                                <Mail className="h-3 w-3 text-slate-400 shrink-0 dark:text-slate-500" />
                                 {client.email}
                               </p>
                             )}
                             {client.telephone && (
-                              <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                              <p className="text-xs text-slate-500 flex items-center gap-1.5 dark:text-slate-400">
+                                <Phone className="h-3 w-3 text-slate-400 shrink-0 dark:text-slate-500" />
                                 {client.telephone}
                               </p>
                             )}
@@ -352,7 +352,7 @@ export function ClientsList() {
                           </div>
                         </TableCell>
                         <TableCell className="px-4 py-5">
-                          <span className="text-xs font-mono text-slate-400">
+                          <span className="text-xs font-mono text-slate-400 dark:text-slate-500">
                             {client.ice || '-'}
                           </span>
                         </TableCell>
@@ -361,7 +361,7 @@ export function ClientsList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px]"
+                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/5"
                               onClick={() => handleEdit(client)}
                               title="Modifier"
                             >
@@ -370,7 +370,7 @@ export function ClientsList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px]"
+                              className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:text-slate-500 dark:hover:text-red-400 dark:hover:bg-red-500/10"
                               onClick={() => {
                                 setClientToDelete(client.id);
                                 setDeleteConfirmOpen(true);
@@ -389,15 +389,15 @@ export function ClientsList() {
             </Table>
 
             {!isLoading && paginatedClients.length > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-                <p className="text-xs text-slate-400">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/5">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredClients.length)} sur {filteredClients.length}
                 </p>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
                     disabled={currentPage === 1}
                     onClick={() => handlePageChange(currentPage - 1)}
                   >
@@ -411,8 +411,8 @@ export function ClientsList() {
                       className={cn(
                         "h-8 min-w-[32px] rounded-[4px] text-sm font-medium",
                         page === currentPage
-                          ? "bg-slate-100 text-slate-800"
-                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                          ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-white"
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/5"
                       )}
                       onClick={() => handlePageChange(page)}
                     >
@@ -422,7 +422,7 @@ export function ClientsList() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
                     disabled={currentPage === totalPages}
                     onClick={() => handlePageChange(currentPage + 1)}
                   >
@@ -436,41 +436,41 @@ export function ClientsList() {
 
         {/* Right Column - Summary */}
         <div className="lg:col-span-1 space-y-4">
-          <Card className="border border-slate-200 shadow-none rounded-[6px]">
-            <CardHeader className="px-4 py-4 border-b border-slate-100">
-              <CardTitle className="text-sm font-semibold text-slate-700">Aperçu des Clients</CardTitle>
+          <Card className="border border-slate-200 shadow-none rounded-[6px] dark:bg-slate-900/60 dark:border-white/10">
+            <CardHeader className="px-4 py-4 border-b border-slate-100 dark:border-white/5">
+              <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Aperçu des Clients</CardTitle>
             </CardHeader>
             <CardContent className="px-4 py-4 space-y-5">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0">
-                  <Users className="h-4 w-4 text-emerald-500" />
+                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:bg-emerald-500/10 dark:border-emerald-500/20">
+                  <Users className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-500">Total clients</p>
-                  <p className="text-lg font-bold text-slate-800">{clientsCount}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Total clients</p>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white">{clientsCount}</p>
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4 space-y-3">
+              <div className="border-t border-slate-100 dark:border-white/5 pt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-sky-500" />
-                    <span className="text-xs text-slate-500">Entreprises</span>
+                    <Building2 className="h-4 w-4 text-sky-500 dark:text-sky-400" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Entreprises</span>
                   </div>
-                  <span className="text-sm font-semibold text-slate-700">{entreprisesCount}</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{entreprisesCount}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-emerald-500" />
-                    <span className="text-xs text-slate-500">Particuliers</span>
+                    <User className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Particuliers</span>
                   </div>
-                  <span className="text-sm font-semibold text-slate-700">{particuliersCount}</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{particuliersCount}</span>
                 </div>
               </div>
 
               {clientsCount > 0 && (
-                <div className="border-t border-slate-100 pt-4">
-                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden flex">
+                <div className="border-t border-slate-100 dark:border-white/5 pt-4">
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
                     <div
                       className="h-full bg-sky-400 transition-all"
                       style={{ width: `${(entreprisesCount / clientsCount) * 100}%` }}
@@ -481,10 +481,10 @@ export function ClientsList() {
                     />
                   </div>
                   <div className="flex justify-between mt-1.5">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
                       {((entreprisesCount / clientsCount) * 100).toFixed(0)}% entreprises
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
                       {((particuliersCount / clientsCount) * 100).toFixed(0)}% particuliers
                     </span>
                   </div>

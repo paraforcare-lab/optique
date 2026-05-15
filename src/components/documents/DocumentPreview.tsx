@@ -193,30 +193,22 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
               }}
             >
               {/* ===== WATERMARK ===== */}
-              <div className="watermark">{entreprise?.watermarkText || 'ParaGestion'}</div>
+              {entreprise?.activerFiligrane !== false && (
+                <div className="watermark">{entreprise?.watermarkText || 'ParaGestion'}</div>
+              )}
 
               {page.isFirst ? (
                 <>
                   {/* ===== HEADER: Brand Left + Title Right ===== */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: type === 'bon_livraison' ? 16 : 12 }}>
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <div style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 8,
-                        border: '1px solid #d1d5db',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#000',
-                        fontWeight: 900,
-                        fontSize: '14pt',
-                        flexShrink: 0,
-                      }}>
                         {entreprise?.logoUrl ? (
-                          <img src={entreprise.logoUrl} alt="Logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
-                        ) : 'PG'}
-                      </div>
+                          <img src={entreprise.logoUrl} alt="Logo" style={{ width: 120, height: 60, objectFit: 'contain', flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ fontSize: '18pt', fontWeight: 700, color: '#000', letterSpacing: 1, flexShrink: 0 }}>
+                            {(entreprise?.nomEntreprise || entreprise?.nom || 'PARAGESTION').substring(0, 4).toUpperCase()}
+                          </div>
+                        )}
                       <div style={{ fontSize: '8pt', lineHeight: 1.5, color: '#475569' }}>
                         <div style={{ fontWeight: 700, fontSize: '10pt', color: '#000', marginBottom: 1 }}>
                           {entreprise?.nom || entreprise?.nomEntreprise || 'Nom de l\'entreprise'}

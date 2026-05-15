@@ -137,7 +137,7 @@ export function BonsCommandeList() {
     try {
       const { data, error } = await supabase
         .from('parametres')
-        .select('id,user_id,nom_societe,nom,adresse,ville,telephone,email,ice,logo_url,couleur_principale,watermark_text')
+        .select('id,user_id,nom_societe,nom,adresse,ville,telephone,email,ice,logo_url,couleur_principale,watermark_text,activer_filigrane')
         .eq('user_id', String(user.id))
         .single();
 
@@ -151,10 +151,11 @@ export function BonsCommandeList() {
       }
 
       if (data) {
-        const cleanLogoUrl = !data.logo_url || data.logo_url === 'image.png' || !data.logo_url.startsWith('http')
+        const cleanLogoUrl = !data.logo_url || data.logo_url === 'image.png'
           ? ''
           : data.logo_url;
         setEntreprise({
+          userId: user.id,
           nomEntreprise: data.nom_societe || data.nom || '',
           adresse: data.adresse || '',
           ville: data.ville || '',
@@ -164,6 +165,7 @@ export function BonsCommandeList() {
           logoUrl: cleanLogoUrl,
           couleurPrincipale: data.couleur_principale || '#267E54',
           watermarkText: data.watermark_text || 'ParaGestion',
+          activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
         });
       }
     } catch (error) {
@@ -373,8 +375,8 @@ export function BonsCommandeList() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50">
-            <ShoppingCart className="h-5 w-5 text-emerald-500" />
+          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
+            <ShoppingCart className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-foreground">Bons de Commande</h2>
@@ -391,15 +393,15 @@ export function BonsCommandeList() {
           <DialogTrigger render={
             <Button
               onClick={openNewForm}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none dark:rounded-sm"
             >
               <Plus className="mr-2 h-4 w-4" />
               Nouveau Bon
             </Button>
           } />
-          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20">
+          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20 dark:bg-slate-900">
             <div className="flex flex-col h-full">
-              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm">
+              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm dark:bg-slate-900/50">
                 <div className="max-w-7xl mx-auto w-full">
                   <DialogTitle className="text-2xl font-black text-foreground">
                     {editingBon ? 'Modifier le bon de commande' : 'Nouveau Bon de Commande'}
@@ -413,7 +415,7 @@ export function BonsCommandeList() {
               </DialogHeader>
               <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-7xl mx-auto">
-                  <div className="rounded-[6px] border border-slate-200 bg-white p-8">
+                  <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:border-white/10 dark:bg-slate-900 dark:rounded-sm">
                     <BonCommandeForm
                       initialData={editingBon}
                       onSuccess={() => {
@@ -440,13 +442,13 @@ export function BonsCommandeList() {
               <Input
                 type="search"
                 placeholder="Rechercher par numéro ou fournisseur..."
-                className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm"
+                className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm dark:bg-transparent dark:border-white/10 dark:rounded-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-10 w-[140px] bg-white border-slate-200 rounded-[4px] shadow-none text-sm">
+              <SelectTrigger className="h-10 w-[140px] bg-white border-slate-200 rounded-[4px] shadow-none text-sm dark:bg-transparent dark:border-white/10 dark:rounded-sm">
                 <Filter className="h-3.5 w-3.5 text-slate-400 mr-2" />
                 <SelectValue placeholder="Statut" />
               </SelectTrigger>
@@ -460,10 +462,10 @@ export function BonsCommandeList() {
           </div>
 
           {/* Table */}
-          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden">
+          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden dark:border-white/10 dark:rounded-sm">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-slate-100">
+                <TableRow className="border-b border-slate-100 dark:border-white/5">
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Fournisseur</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">N° Bon</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Date</TableHead>
@@ -487,10 +489,10 @@ export function BonsCommandeList() {
                   <TableRow>
                     <TableCell colSpan={7} className="h-48 text-center">
                       <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100">
+                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100 dark:bg-slate-900/40 dark:border-white/5 dark:rounded-sm">
                           <Package className="h-8 w-8 text-slate-300" />
                         </div>
-                        <p className="text-sm text-slate-500 font-medium">
+                        <p className="text-sm text-slate-500 font-medium dark:text-slate-400">
                           {searchQuery || statusFilter !== 'all'
                             ? 'Aucun bon trouvé'
                             : 'Aucun bon de commande créé'}
@@ -517,7 +519,7 @@ export function BonsCommandeList() {
                     return (
                       <TableRow
                         key={bon.id}
-                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
+                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors dark:border-white/5 dark:hover:bg-white/[0.03]"
                       >
                         <TableCell className="px-4 py-5">
                           <div className="flex items-center gap-3">
@@ -528,7 +530,7 @@ export function BonsCommandeList() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="text-sm font-semibold text-slate-800">
+                              <p className="text-sm font-semibold text-slate-800 dark:text-white">
                                 {bon.fournisseur?.nom || bon.fournisseur?.nomSociete || '-'}
                               </p>
                               <p className="text-xs text-slate-400">
@@ -538,22 +540,22 @@ export function BonsCommandeList() {
                           </div>
                         </TableCell>
                         <TableCell className="px-4 py-5">
-                          <span className="text-sm font-mono font-medium text-slate-700">{bon.numero}</span>
+                          <span className="text-sm font-mono font-medium text-slate-700 dark:text-white">{bon.numero}</span>
                         </TableCell>
                         <TableCell className="px-4 py-5">
-                          <span className="text-sm text-slate-500">
+                          <span className="text-sm text-slate-500 dark:text-slate-400">
                             {format(new Date(bon.dateCommande || bon.date), 'dd MMM yyyy', { locale: fr })}
                           </span>
                         </TableCell>
                         <TableCell className="px-4 py-5">
-                          <span className="text-sm text-slate-500">
+                          <span className="text-sm text-slate-500 dark:text-slate-400">
                             {bon.dateLivraisonPrevue
                               ? format(new Date(bon.dateLivraisonPrevue), 'dd MMM yyyy', { locale: fr })
                               : '-'}
                           </span>
                         </TableCell>
                         <TableCell className="px-4 py-5 text-right">
-                          <span className="text-sm font-bold text-slate-800">
+                          <span className="text-sm font-bold text-slate-800 dark:text-white">
                             {formatCurrency(bon.montantTtc)}
                           </span>
                         </TableCell>
@@ -566,9 +568,10 @@ export function BonsCommandeList() {
                               <SelectValue>
                                 <span className={cn(
                                   "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium",
-                                  status.bgColor
+                                  status.bgColor,
+                                  bon.statut === 'livré' && "dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20"
                                 )}>
-                                  <StatusIcon className={cn("h-3 w-3", status.color)} />
+                                  <StatusIcon className={cn("h-3 w-3", status.color, bon.statut === 'livré' && "dark:text-violet-300")} />
                                   {status.label}
                                 </span>
                               </SelectValue>
@@ -593,7 +596,7 @@ export function BonsCommandeList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px]"
+                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
                               onClick={() => handleDownload(bon)}
                               title="Télécharger PDF"
                             >
@@ -602,7 +605,7 @@ export function BonsCommandeList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px]"
+                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
                               onClick={() => handleEdit(bon)}
                               title="Modifier"
                             >
@@ -612,7 +615,7 @@ export function BonsCommandeList() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px]"
+                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
                                 onClick={() => {
                                   setBonToDelete(bon.id);
                                   setDeleteConfirmOpen(true);
@@ -625,7 +628,7 @@ export function BonsCommandeList() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px]"
+                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
                                 onClick={() => handleStatusChange(bon.id, 'annulé')}
                                 title="Annuler"
                               >
@@ -642,7 +645,7 @@ export function BonsCommandeList() {
             </Table>
 
             {!isLoading && paginatedBons.length > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/5">
                 <p className="text-xs text-slate-400">
                   {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredBons.length)} sur {filteredBons.length}
                 </p>
@@ -650,7 +653,7 @@ export function BonsCommandeList() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
                     disabled={currentPage === 1}
                     onClick={() => handlePageChange(currentPage - 1)}
                   >
@@ -662,10 +665,10 @@ export function BonsCommandeList() {
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        "h-8 min-w-[32px] rounded-[4px] text-sm font-medium",
+                        "h-8 min-w-[32px] rounded-[4px] text-sm font-medium dark:rounded-sm",
                         page === currentPage
-                          ? "bg-slate-100 text-slate-800"
-                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                          ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-white"
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:text-white dark:hover:bg-white/5"
                       )}
                       onClick={() => handlePageChange(page)}
                     >
@@ -675,7 +678,7 @@ export function BonsCommandeList() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
                     disabled={currentPage === totalPages}
                     onClick={() => handlePageChange(currentPage + 1)}
                   >
@@ -689,50 +692,50 @@ export function BonsCommandeList() {
 
         {/* Right Column - Summary */}
         <div className="lg:col-span-1">
-          <Card className="border border-slate-200 shadow-none rounded-[6px]">
-            <CardHeader className="px-4 py-4 border-b border-slate-100">
-              <CardTitle className="text-sm font-semibold text-slate-700">Analyse des Achats</CardTitle>
+          <Card className="border border-slate-200 shadow-none rounded-[6px] dark:border-white/10 dark:rounded-sm">
+            <CardHeader className="px-4 py-4 border-b border-slate-100 dark:border-white/5">
+              <CardTitle className="text-sm font-semibold text-slate-700 dark:text-white">Analyse des Achats</CardTitle>
             </CardHeader>
             <CardContent className="px-4 py-4 space-y-5">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0">
-                  <ShoppingCart className="h-4 w-4 text-emerald-600" />
+                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
+                  <ShoppingCart className="h-4 w-4 text-emerald-600 dark:text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-500">Montant engagé ce mois</p>
-                  <p className="text-lg font-bold text-emerald-600">{formatCurrency(monthValue)}</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(monthValue)}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0">
-                  <Package className="h-4 w-4 text-emerald-600" />
+                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
+                  <Package className="h-4 w-4 text-emerald-600 dark:text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-500">Commandes passées</p>
-                  <p className="text-lg font-bold text-slate-800">{monthCount} commande{monthCount !== 1 ? 's' : ''}</p>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white">{monthCount} commande{monthCount !== 1 ? 's' : ''}</p>
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4 space-y-3">
+              <div className="border-t border-slate-100 pt-4 space-y-3 dark:border-white/5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500">En attente</span>
                   <span className="font-semibold text-amber-600">{pendingOrders}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500">Livrées</span>
-                  <span className="font-semibold text-violet-600">{deliveredOrders}</span>
+                  <span className="font-semibold text-violet-600 dark:text-slate-400">{deliveredOrders}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500">Annulées</span>
-                  <span className="font-semibold text-rose-500">{cancelledOrders}</span>
+                  <span className="font-semibold text-rose-500 dark:text-slate-400">{cancelledOrders}</span>
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4">
+              <div className="border-t border-slate-100 pt-4 dark:border-white/5">
                 <Link
                   to="/fournisseurs"
-                  className="flex items-center gap-2 rounded-[6px] bg-slate-50 border border-slate-200/50 px-3 py-2.5 hover:bg-slate-100 transition-colors"
+                  className="flex items-center gap-2 rounded-[6px] bg-slate-50 border border-slate-200/50 px-3 py-2.5 hover:bg-slate-100 transition-colors dark:rounded-sm dark:bg-slate-900/40 dark:border-white/10 dark:hover:bg-slate-900/60"
                 >
                   <Building2 className="h-4 w-4 text-slate-500" />
                   <div className="flex-1">

@@ -158,7 +158,7 @@ export function DevisList() {
     try {
       const { data, error } = await supabase
         .from('parametres')
-        .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,watermark_text')
+        .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,watermark_text,activer_filigrane')
         .eq('user_id', String(user.id))
         .single();
 
@@ -173,10 +173,11 @@ export function DevisList() {
       }
 
       if (data) {
-        const cleanLogoUrl = !data.logo_url || data.logo_url === 'image.png' || !data.logo_url.startsWith('http')
+        const cleanLogoUrl = !data.logo_url || data.logo_url === 'image.png'
           ? ''
           : data.logo_url;
         setEntreprise({
+          userId: user.id,
           nomEntreprise: data.nom_societe || data.nom || '',
           adresse: data.adresse || '',
           ville: data.ville || '',
@@ -196,6 +197,7 @@ export function DevisList() {
           rib: data.rib || '',
           swift: data.swift || '',
           watermarkText: data.watermark_text || 'ParaGestion',
+          activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
         });
       } else {
         setEntreprise(null);

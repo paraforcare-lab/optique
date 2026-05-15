@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { supabase } from './supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -202,6 +203,7 @@ export interface DocumentItem {
 
 export interface DocumentData {
   documentType: 'facture' | 'devis' | 'bon_commande' | 'bon_livraison';
+  userId?: string;
   numero: string;
   date: string;
   reference?: string;
@@ -442,10 +444,13 @@ function generateHTML(data: DocumentData): string {
   <!-- HEADER -->
   <div class="header-section">
     <div class="brand-left">
-      <div class="brand-logo">PG</div>
+      ${data.company.logo
+        ? `<img src="${data.company.logo}" alt="Logo" style="width:120px;height:60px;object-fit:contain;display:block;margin-bottom:4px;" />`
+        : `<div style="font-size:18pt;font-weight:700;color:#000;letter-spacing:1px;margin-bottom:4px;">${(data.company.nom || 'PARAGESTION').substring(0, 4).toUpperCase()}</div>`
+      }
       <div>
-        <div class="brand-name">ParaGestion</div>
-        <div class="brand-sub">${data.company.nom || 'Solution de Gestion'}</div>
+        <div class="brand-name">${data.company.nom || 'ParaGestion'}</div>
+        <div class="brand-sub">Solution de Gestion</div>
       </div>
     </div>
     <div class="title-right">
@@ -555,6 +560,51 @@ function generateHTML(data: DocumentData): string {
 </html>`;
 }
 
+async function imageUrlToBase64(url: string): Promise<string | null> {
+  try {
+    if (url.startsWith('data:')) return url;
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || 'image/png';
+    const base64 = Buffer.from(buffer).toString('base64');
+    return `data:${contentType};base64,${base64}`;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveLogo(data: DocumentData): Promise<string | undefined> {
+  if (data.company.logo) {
+    console.log('[PDF] Logo already provided in request data');
+    return data.company.logo;
+  }
+  if (!data.userId) {
+    console.log('[PDF] No userId provided, skipping logo fetch');
+    return undefined;
+  }
+  try {
+    const { data: row } = await supabase
+      .from('parametres')
+      .select('logo_url')
+      .eq('user_id', data.userId)
+      .maybeSingle();
+    if (row?.logo_url) {
+      console.log('[PDF] Logo URL retrieved from parametres');
+      const base64 = await imageUrlToBase64(row.logo_url);
+      if (base64) {
+        console.log('[PDF] Logo converted to Base64 successfully');
+        return base64;
+      }
+      console.warn('[PDF] Base64 conversion failed, falling back to raw URL');
+      return null;
+    }
+    console.log('[PDF] No logo_url found in parametres');
+  } catch (err) {
+    console.error('[PDF] Error fetching logo:', err);
+  }
+  return undefined;
+}
+
 export async function generatePDF(data: DocumentData): Promise<Buffer> {
   const html = generateHTML(data);
 
@@ -570,7 +620,7 @@ export async function generatePDF(data: DocumentData): Promise<Buffer> {
 
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'load' });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const pdf = await page.pdf({
       format: 'A4',
@@ -616,6 +666,8 @@ export async function generatePDFController(req: any, res: any) {
         error: 'Informations société requises: rc, if_number, ice',
       });
     }
+
+    data.company.logo = await resolveLogo(data);
 
     const pdfBuffer = await generatePDF(data);
 

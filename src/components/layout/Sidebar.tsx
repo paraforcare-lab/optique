@@ -111,7 +111,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
       )}
 
       <div className={cn(
-        "flex flex-col h-full transition-all duration-300 ease-out relative z-50 bg-[#0F172A] dark:bg-[#0B1222]",
+        "flex flex-col h-full transition-all duration-300 ease-out relative z-50 bg-[#0F172A] dark:bg-[#0b1222] border-r border-slate-200/10 dark:border-white/5",
         isCollapsed ? "w-20" : "w-64",
         "fixed lg:relative inset-y-0 left-0",
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -122,7 +122,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
           size="icon"
           onClick={onToggle}
           className={cn(
-            "hidden lg:flex absolute -right-3 top-20 h-8 w-8 rounded-sm bg-[#0F172A] dark:bg-[#0B1222] border border-white/10 text-slate-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white transition-all duration-200 z-50"
+            "hidden lg:flex absolute -right-3 top-20 h-8 w-8 rounded-sm bg-[#0F172A] dark:bg-[#0b1222] border border-white/10 text-slate-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white transition-all duration-200 z-50"
           )}
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -193,7 +193,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
                           title={isCollapsed ? item.name : undefined}
                           className={cn(
                             isActive 
-                              ? 'bg-white/5 text-white' 
+                              ? 'bg-white/10 text-white' 
                               : 'text-slate-400 hover:bg-white/5 hover:text-white',
                             'relative group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all',
                             isCollapsed ? "justify-center" : ""
@@ -204,9 +204,9 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
                           )}
                           <item.icon
                             className={cn(
-                              isActive ? 'text-white' : 'text-slate-500 group-hover:text-white',
+                              isActive ? 'text-white opacity-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]' : 'text-slate-400 opacity-70 group-hover:text-white group-hover:opacity-100',
                               isCollapsed ? "h-5 w-5" : "mr-3 h-4 w-4",
-                              'flex-shrink-0 transition-colors'
+                              'flex-shrink-0 transition-all duration-200'
                             )}
                           />
                           {!isCollapsed && <span className="truncate">{item.name}</span>}

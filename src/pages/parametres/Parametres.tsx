@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -17,11 +17,11 @@ import { toast } from 'sonner'
 import {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import Cropper from 'react-easy-crop'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -43,7 +43,9 @@ import {
   Monitor,
   Upload,
   ImageIcon,
-  Check
+  Check,
+  ChevronRight,
+  Crop
 } from 'lucide-react';
 
 interface ParametresFormValues {
@@ -101,19 +103,24 @@ const parametresSchema = z.object({
 });
 
 export function Parametres() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
   const [parametresId, setParametresId] = useState<string | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  const CACHED_PARAMS_KEY = 'pg_cached_params';
   const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>(() => {
     return (localStorage.getItem('pg_theme') as 'light' | 'dark' | 'system') || 'system';
   });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   
   const form = useForm<ParametresFormValues>({
     resolver: zodResolver(parametresSchema),
@@ -167,29 +174,35 @@ export function Parametres() {
 
   useEffect(() => {
     const fetchParametres = async () => {
+      if (authLoading) return;
+      
       if (!user?.id) {
         setIsLoading(false);
         return;
       }
       
       try {
-        console.log('Fetching parametres for user:', user.id);
+        const cached = localStorage.getItem(CACHED_PARAMS_KEY);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            form.reset(parsed);
+          } catch {}
+        }
+        
         const { data, error } = await supabase
           .from('parametres')
-          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,watermark_text,activer_filigrane,created_at,updated_at')
+          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,created_at,updated_at')
           .eq('user_id', user.id)
           .single();
-        
-        console.log('Fetch result:', { data, error });
         
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching parametres:', error);
         }
         
         if (data) {
-          console.log('Setting form with data:', data);
           setParametresId(data.id);
-          form.reset({
+          const mapped = {
             nomSociete: data.nom_societe || data.nom || '',
             adresse: data.adresse || '',
             ville: data.ville || '',
@@ -212,20 +225,23 @@ export function Parametres() {
             conditionsPaiementDefaut: data.conditions_paiement_defaut || '',
             piedPageDefaut: data.pied_page_defaut || '',
             activerDroitTimbre: data.activer_droit_timbre !== undefined ? data.activer_droit_timbre : true,
-            watermarkText: data.watermark_text || 'ParaGestion',
-            activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : JSON.parse(localStorage.getItem('pg_watermark') || 'true'),
-          });
+            watermarkText: data.watermark_text || data.texte_filigrane || 'ParaGestion',
+            activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
+          };
+          form.reset(mapped);
+          localStorage.setItem(CACHED_PARAMS_KEY, JSON.stringify(mapped));
           setLogoPreview(null);
         }
       } catch (error) {
         console.error('Failed to fetch parametres', error);
+        toast.error('Erreur de chargement des paramètres');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchParametres();
-  }, [form, user]);
+  }, [form, user, authLoading]);
 
   useEffect(() => {
     const applyTheme = (mode: 'light' | 'dark' | 'system') => {
@@ -312,8 +328,9 @@ export function Parametres() {
         conditions_paiement_defaut: data.conditionsPaiementDefaut,
         pied_page_defaut: data.piedPageDefaut,
         activer_droit_timbre: data.activerDroitTimbre,
-        watermark_text: data.watermarkText,
         activer_filigrane: data.activerFiligrane,
+        texte_filigrane: data.watermarkText,
+        watermark_text: data.watermarkText,
       };
 
       localStorage.setItem('pg_watermark', JSON.stringify(data.activerFiligrane));
@@ -327,7 +344,7 @@ export function Parametres() {
           .from('parametres')
           .update(fields)
           .eq('id', parametresId)
-          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,watermark_text,activer_filigrane,created_at,updated_at')
+          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,created_at,updated_at')
           .single();
         result = response.data;
         error = response.error;
@@ -335,7 +352,7 @@ export function Parametres() {
         const response = await supabase
           .from('parametres')
           .insert([{ ...fields, user_id: user.id }])
-          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,watermark_text,activer_filigrane,created_at,updated_at')
+          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,created_at,updated_at')
           .single();
         result = response.data;
         error = response.error;
@@ -351,7 +368,8 @@ export function Parametres() {
 
       localStorage.removeItem(STORAGE_KEY);
       setIsModified(false);
-      form.reset(result);
+      form.reset(data);
+      localStorage.setItem(CACHED_PARAMS_KEY, JSON.stringify(data));
       toast.success('Paramètres enregistrés avec succès');
     } catch (err: any) {
       console.error('Error saving parametres:', err);
@@ -361,6 +379,45 @@ export function Parametres() {
       isSavingRef.current = false;
     }
   }
+
+  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const getCroppedImg = useCallback(async (imageSrc: string, pixelCrop: { x: number; y: number; width: number; height: number }): Promise<string> => {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = imageSrc;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+    const ctx = canvas.getContext('2d')!;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+      0, 0, pixelCrop.width, pixelCrop.height
+    );
+
+    return canvas.toDataURL('image/png');
+  }, []);
+
+  const handleCropConfirm = useCallback(async () => {
+    if (!logoPreview || !croppedAreaPixels) return;
+    try {
+      const croppedImage = await getCroppedImg(logoPreview, croppedAreaPixels);
+      setLogoPreview(croppedImage);
+      form.setValue('logoUrl', croppedImage);
+      setCropDialogOpen(false);
+    } catch (e) {
+      console.error('Crop failed', e);
+      toast.error('Échec du recadrage');
+    }
+  }, [logoPreview, croppedAreaPixels, form, getCroppedImg]);
 
   if (isLoading) {
     return (
@@ -374,79 +431,91 @@ export function Parametres() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-500">
+    <div className="space-y-8 max-w-5xl mx-auto animate-in fade-in duration-500 bg-white dark:bg-[#0F172A]">
+      {/* Breadcrumb */}
+      <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-500">
+        Paramètres / Profil
+      </p>
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-indigo-50 border border-indigo-200/50">
-            <Building2 className="h-5 w-5 text-indigo-500" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Paramètres de l'entreprise</h2>
-            <p className="text-sm text-muted-foreground">
-              Ces informations apparaîtront sur vos factures et devis
-            </p>
-          </div>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Paramètres</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+          Gérez les paramètres de votre compte et vos préférences.
+        </p>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
-          {isModified && (
-            <div className="bg-amber-50 border border-amber-200 rounded-[6px] p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-amber-100 p-2 rounded-full">
-                  <FileText className="h-4 w-4 text-amber-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-amber-800">Modifications non enregistrées</p>
-                  <p className="text-sm text-amber-600">Veuillez enregistrer vos modifications</p>
-                </div>
+          {/* Navigation Cards */}
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            <button
+              type="button"
+              onClick={() => setActiveTab('general')}
+                            className={`flex items-center gap-4 p-5 rounded-2xl border text-left w-full bg-white border-slate-200 dark:bg-[#0b1222] dark:border-white/5 ${
+                activeTab === 'general' ? 'ring-2 ring-primary/20 border-primary bg-slate-50 dark:border-primary/50 dark:bg-slate-800/50' : ''
+              }`}
+            >
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800/50 shrink-0">
+                <Building2 className="h-6 w-6 text-blue-500 dark:text-blue-400" />
+                {tabErrors.general && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-[#0b1222]" />}
               </div>
-              <Button type="submit" size="sm" disabled={isSaving} className="bg-amber-500 hover:bg-amber-600 text-white rounded-[4px]">
-                {isSaving ? 'Enregistrement...' : 'Enregistrer'}
-              </Button>
-            </div>
-          )}
-          <div className="bg-muted/50 p-4 md:p-6 rounded-[6px] space-y-4 md:space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 rounded-[6px]">
-                <TabsTrigger
-                  value="general"
-                  className="rounded-[4px] data-[state=active]:bg-white data-[state=active]:shadow-none data-[state=active]:text-indigo-600 font-semibold relative"
-                >
-                  {tabErrors.general && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />}
-                  <Building2 className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Informations</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="fiscal"
-                  className="rounded-[4px] data-[state=active]:bg-white data-[state=active]:shadow-none data-[state=active]:text-indigo-600 font-semibold relative"
-                >
-                  {tabErrors.fiscal && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />}
-                  <FileText className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Fiscalité</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="personalisation"
-                  className="rounded-[4px] data-[state=active]:bg-white data-[state=active]:shadow-none data-[state=active]:text-indigo-600 font-semibold relative"
-                >
-                  {tabErrors.personalisation && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />}
-                  <Palette className="h-4 w-4 mr-2" />
-                  <span className="hidden md:inline">Personnalisation</span>
-                </TabsTrigger>
-              </TabsList>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-900 dark:text-white">Profil</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Informations de l'entreprise</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600 shrink-0" />
+            </button>
 
-              {/* General Tab */}
-              <TabsContent value="general" className="mt-6 md:mt-8">
-              <Card className="border border-slate-200 shadow-none rounded-[6px]">
-                <CardHeader className="border-b border-slate-100 px-6 py-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab('fiscal')}
+              className={`flex items-center gap-4 p-5 rounded-2xl border text-left w-full bg-white border-slate-200 dark:bg-[#0b1222] dark:border-white/5 ${
+                activeTab === 'fiscal' ? 'ring-2 ring-primary/20 border-primary bg-slate-50 dark:border-primary/50 dark:bg-slate-800/50' : ''
+              }`}
+            >
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800/50 shrink-0 relative">
+                <FileText className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
+                {tabErrors.fiscal && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-[#0b1222]" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-900 dark:text-white">Fiscalité</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Identifiants fiscaux et bancaires</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600 shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('personalisation')}
+              className={`flex items-center gap-4 p-5 rounded-2xl border text-left w-full bg-white border-slate-200 dark:bg-[#0b1222] dark:border-white/5 ${
+                activeTab === 'personalisation' ? 'ring-2 ring-primary/20 border-primary bg-slate-50 dark:border-primary/50 dark:bg-slate-800/50' : ''
+              }`}
+            >
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800/50 shrink-0 relative">
+                <Palette className="h-6 w-6 text-purple-500 dark:text-purple-400" />
+                {tabErrors.personalisation && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-[#0b1222]" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-900 dark:text-white">Apparence</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 truncate">Thème, logo et contenu des documents</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600 shrink-0" />
+            </button>
+          </div>
+
+          {/* Content Area */}
+          <div className="p-6 rounded-2xl border border-slate-200 bg-white dark:bg-[#0b1222] dark:border-white/5">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsContent value="general" className="mt-0">
+              <Card className="border border-slate-100 rounded-2xl dark:bg-[#0b1222] dark:border-white/5">
+                <CardHeader className="border-b border-slate-100 px-6 py-5 dark:border-white/5">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-[4px] bg-indigo-50 border border-indigo-200/50">
-                      <Building2 className="h-4 w-4 text-indigo-500" />
+                    <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800/50">
+                      <Building2 className="h-5 w-5 text-blue-500 dark:text-blue-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm font-semibold text-slate-700">Informations de l'entreprise</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-200">Informations de l'entreprise</CardTitle>
                       <CardDescription>Coordonnées et informations légales</CardDescription>
                     </div>
                   </div>
@@ -458,9 +527,9 @@ export function Parametres() {
                       name="nomSociete"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Nom de la société *</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Nom de la société *</FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -471,9 +540,9 @@ export function Parametres() {
                       name="formeJuridique"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Forme Juridique</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Forme Juridique</FormLabel>
                           <FormControl>
-                            <Input placeholder="ex: SARL, SARL AU" className="h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                            <Input placeholder="ex: SARL, SARL AU" className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -487,9 +556,9 @@ export function Parametres() {
                       name="capitalSocial"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Capital Social</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Capital Social</FormLabel>
                           <FormControl>
-                            <Input placeholder="ex: 100 000 DH" className="h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                            <Input placeholder="ex: 100 000 DH" className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -500,11 +569,11 @@ export function Parametres() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Email *</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Email *</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input type="email" className="pl-10 h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-500" />
+                              <Input type="email" className="pl-10 h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -519,11 +588,11 @@ export function Parametres() {
                       name="telephone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Téléphone *</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Téléphone *</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input className="pl-10 h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-500" />
+                              <Input className="pl-10 h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -535,11 +604,11 @@ export function Parametres() {
                       name="siteWeb"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Site Web</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Site Web</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input placeholder="https://..." className="pl-10 h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-500" />
+                              <Input placeholder="https://..." className="pl-10 h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -553,11 +622,11 @@ export function Parametres() {
                     name="adresse"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground font-semibold">Adresse *</FormLabel>
+                        <FormLabel className="text-foreground font-semibold dark:text-slate-300">Adresse *</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input className="pl-10 h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground dark:text-slate-500" />
+                            <Input className="pl-10 h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -571,9 +640,9 @@ export function Parametres() {
                       name="codePostal"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Code Postal *</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Code Postal *</FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -584,9 +653,9 @@ export function Parametres() {
                       name="ville"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Ville *</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Ville *</FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -597,16 +666,15 @@ export function Parametres() {
               </Card>
             </TabsContent>
 
-            {/* Fiscal Tab */}
-            <TabsContent value="fiscal" className="mt-6 md:mt-8 space-y-6">
-              <Card className="border border-slate-200 shadow-none rounded-[6px]">
-                <CardHeader className="border-b border-slate-100 px-6 py-4">
+            <TabsContent value="fiscal" className="mt-0 space-y-6">
+              <Card className="border border-slate-100 rounded-2xl dark:bg-[#0b1222] dark:border-white/5">
+                <CardHeader className="border-b border-slate-100 px-6 py-5 dark:border-white/5">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-[4px] bg-indigo-50 border border-indigo-200/50">
-                      <FileText className="h-4 w-4 text-indigo-500" />
+                    <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800/50">
+                      <FileText className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm font-semibold text-slate-700">Identifiants Fiscaux & Légaux</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-200">Identifiants Fiscaux & Légaux</CardTitle>
                       <CardDescription>ICE, RC, IF, patente et CNSS</CardDescription>
                     </div>
                   </div>
@@ -618,11 +686,11 @@ export function Parametres() {
                       name="ice"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">ICE</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">ICE</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input className="pl-10 h-11 bg-white border-border/50 focus:border-primary font-mono" {...field} />
+                              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-500" />
+                              <Input className="pl-10 h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 font-mono" {...field} />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -634,9 +702,9 @@ export function Parametres() {
                       name="rc"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Registre de Commerce (RC)</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Registre de Commerce (RC)</FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -650,9 +718,9 @@ export function Parametres() {
                       name="ifNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Identifiant Fiscal (IF)</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Identifiant Fiscal (IF)</FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-white border-border/50 focus:border-primary font-mono" {...field} />
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 font-mono" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -663,9 +731,9 @@ export function Parametres() {
                       name="tpPatente"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Taxe Professionnelle</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Taxe Professionnelle</FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -676,9 +744,9 @@ export function Parametres() {
                       name="cnss"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">N° CNSS</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">N° CNSS</FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-white border-border/50 focus:border-primary font-mono" {...field} />
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 font-mono" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -688,14 +756,14 @@ export function Parametres() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-slate-200 shadow-none rounded-[6px]">
-                <CardHeader className="border-b border-slate-100 px-6 py-4">
+              <Card className="border border-slate-100 rounded-2xl dark:bg-[#0b1222] dark:border-white/5">
+                <CardHeader className="border-b border-slate-100 px-6 py-5 dark:border-white/5">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-[4px] bg-indigo-50 border border-indigo-200/50">
-                      <Landmark className="h-4 w-4 text-indigo-500" />
+                    <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800/50">
+                      <Landmark className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm font-semibold text-slate-700">Coordonnées Bancaires</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-200">Coordonnées Bancaires</CardTitle>
                       <CardDescription>Informations pour les virements</CardDescription>
                     </div>
                   </div>
@@ -707,11 +775,11 @@ export function Parametres() {
                       name="banque"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Nom de la banque</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Nom de la banque</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input placeholder="ex: Attijariwafa Bank" className="pl-10 h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                              <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-500" />
+                              <Input placeholder="ex: Attijariwafa Bank" className="pl-10 h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -723,9 +791,9 @@ export function Parametres() {
                       name="swift"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground font-semibold">Code SWIFT / BIC</FormLabel>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Code SWIFT / BIC</FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-white border-border/50 focus:border-primary font-mono uppercase" {...field} />
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 font-mono uppercase" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -738,9 +806,9 @@ export function Parametres() {
                     name="rib"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground font-semibold">RIB</FormLabel>
+                        <FormLabel className="text-foreground font-semibold dark:text-slate-300">RIB</FormLabel>
                         <FormControl>
-                          <Input placeholder="000000000000000000000000" className="h-11 bg-white border-border/50 focus:border-primary font-mono" {...field} />
+                          <Input placeholder="000000000000000000000000" className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 font-mono" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -749,14 +817,14 @@ export function Parametres() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-slate-200 shadow-none rounded-[6px]">
-                <CardHeader className="border-b border-slate-100 px-6 py-4">
+              <Card className="border border-slate-100 rounded-2xl dark:bg-[#0b1222] dark:border-white/5">
+                <CardHeader className="border-b border-slate-100 px-6 py-5 dark:border-white/5">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-[4px] bg-indigo-50 border border-indigo-200/50">
-                      <CreditCard className="h-4 w-4 text-indigo-500" />
+                    <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800/50">
+                      <CreditCard className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm font-semibold text-slate-700">Options de Facturation</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-200">Options de Facturation</CardTitle>
                       <CardDescription>Configuration des factures</CardDescription>
                     </div>
                   </div>
@@ -766,7 +834,7 @@ export function Parametres() {
                     control={form.control}
                     name="activerDroitTimbre"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between p-4 rounded-[6px] border border-slate-200 bg-slate-50/30">
+                      <FormItem className="flex flex-row items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/30 dark:border-white/5 dark:bg-[#0b1222]">
                         <div className="space-y-0.5 flex-1">
                           <FormLabel className="text-base font-semibold cursor-pointer">Droit de Timbre (0.25%)</FormLabel>
                           <p className="text-sm text-muted-foreground">
@@ -787,36 +855,35 @@ export function Parametres() {
               </Card>
             </TabsContent>
 
-            {/* Personalization Tab */}
-            <TabsContent value="personalisation" className="mt-6 md:mt-8 space-y-6">
-              <Card className="border border-slate-200 shadow-none rounded-[6px]">
-                <CardHeader className="border-b border-slate-100 px-6 py-4">
+            <TabsContent value="personalisation" className="mt-0 space-y-6">
+              <Card className="border border-slate-100 rounded-2xl dark:bg-[#0b1222] dark:border-white/5">
+                <CardHeader className="border-b border-slate-100 px-6 py-5 dark:border-white/5">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-[4px] bg-indigo-50 border border-indigo-200/50">
-                      <Palette className="h-4 w-4 text-indigo-500" />
+                    <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800/50">
+                      <Palette className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm font-semibold text-slate-700">Apparence</CardTitle>
-                      <CardDescription>Personnalisez le logo et les couleurs</CardDescription>
+                      <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-200">Apparence</CardTitle>
+                      <CardDescription>Personnalisez le thème, le logo et les couleurs</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-8">
                   {/* Theme Selection Cards */}
                   <div className="space-y-3">
-                    <FormLabel className="text-foreground font-semibold">Thème</FormLabel>
+                    <FormLabel className="text-foreground font-semibold dark:text-slate-300">Thème</FormLabel>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Light Mode */}
                       <div
                         onClick={() => setThemeMode('light')}
-                        className={`relative cursor-pointer rounded-[6px] border-2 p-4 transition-all hover:shadow-md ${
+                        className={`relative cursor-pointer rounded-xl border-2 p-4 ${
                           themeMode === 'light'
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
+                            ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                            : 'border-slate-200 bg-white hover:border-slate-300 dark:border-white/5 dark:bg-[#0b1222] dark:hover:border-white/10'
                         }`}
                       >
                         <div className="space-y-3">
-                          <div className="h-20 rounded-[4px] bg-gradient-to-b from-white to-slate-50 border border-slate-200 flex items-center justify-center">
+                          <div className="h-20 rounded-lg bg-gradient-to-b from-white to-slate-50 border border-slate-200 flex items-center justify-center">
                             <div className="w-full px-3 space-y-1.5">
                               <div className="flex items-center gap-2 mb-2">
                                 <div className="h-2 w-2 rounded-full bg-slate-300" />
@@ -833,7 +900,7 @@ export function Parametres() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Sun className="h-4 w-4 text-amber-500" />
-                              <span className="text-sm font-medium text-foreground">Light Mode</span>
+                              <span className="text-sm font-medium text-foreground dark:text-white">Light Mode</span>
                             </div>
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                               themeMode === 'light' ? 'border-primary bg-primary' : 'border-slate-300'
@@ -847,14 +914,14 @@ export function Parametres() {
                       {/* Dark Mode */}
                       <div
                         onClick={() => setThemeMode('dark')}
-                        className={`relative cursor-pointer rounded-[6px] border-2 p-4 transition-all hover:shadow-md ${
+                        className={`relative cursor-pointer rounded-xl border-2 p-4 ${
                           themeMode === 'dark'
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
+                            ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                            : 'border-slate-200 bg-white hover:border-slate-300 dark:border-white/5 dark:bg-[#0b1222] dark:hover:border-white/10'
                         }`}
                       >
                         <div className="space-y-3">
-                          <div className="h-20 rounded-[4px] bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center">
+                          <div className="h-20 rounded-lg bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center">
                             <div className="w-full px-3 space-y-1.5">
                               <div className="flex items-center gap-2 mb-2">
                                 <div className="h-2 w-2 rounded-full bg-slate-600" />
@@ -871,7 +938,7 @@ export function Parametres() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Moon className="h-4 w-4 text-indigo-400" />
-                              <span className="text-sm font-medium text-foreground">Dark Mode</span>
+                              <span className="text-sm font-medium text-foreground dark:text-white">Dark Mode</span>
                             </div>
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                               themeMode === 'dark' ? 'border-primary bg-primary' : 'border-slate-300'
@@ -885,14 +952,14 @@ export function Parametres() {
                       {/* System Preferences */}
                       <div
                         onClick={() => setThemeMode('system')}
-                        className={`relative cursor-pointer rounded-[6px] border-2 p-4 transition-all hover:shadow-md ${
+                        className={`relative cursor-pointer rounded-xl border-2 p-4 ${
                           themeMode === 'system'
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
+                            ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                            : 'border-slate-200 bg-white hover:border-slate-300 dark:border-white/5 dark:bg-[#0b1222] dark:hover:border-white/10'
                         }`}
                       >
                         <div className="space-y-3">
-                          <div className="h-20 rounded-[4px] bg-gradient-to-b from-slate-100 to-slate-200 border border-slate-300 flex items-center justify-center">
+                          <div className="h-20 rounded-lg bg-gradient-to-b from-slate-100 to-slate-200 border border-slate-300 flex items-center justify-center">
                             <div className="w-full px-3 space-y-1.5">
                               <div className="flex items-center gap-2 mb-2">
                                 <div className="h-2 w-2 rounded-full bg-slate-400" />
@@ -912,7 +979,7 @@ export function Parametres() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Monitor className="h-4 w-4 text-slate-500" />
-                              <span className="text-sm font-medium text-foreground">Système</span>
+                              <span className="text-sm font-medium text-foreground dark:text-white">Système</span>
                             </div>
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                               themeMode === 'system' ? 'border-primary bg-primary' : 'border-slate-300'
@@ -927,41 +994,13 @@ export function Parametres() {
 
                   <Separator />
 
-                  {/* Color Accent Picker */}
-                  <FormField
-                    control={form.control}
-                    name="couleurPrincipale"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground font-semibold">Couleur d'accent</FormLabel>
-                        <FormControl>
-                          <div className="flex gap-3">
-                            <Input
-                              type="color"
-                              className="w-14 h-11 p-1 rounded-[6px] cursor-pointer"
-                              value={field.value || '#267E54'}
-                              onChange={(e) => field.onChange(e.target.value)}
-                            />
-                            <Input
-                              className="flex-1 h-11 bg-white border-border/50 focus:border-primary font-mono uppercase"
-                              {...field}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Separator />
-
                   {/* Logo Management */}
                   <div className="space-y-3">
-                    <FormLabel className="text-foreground font-semibold">Logo</FormLabel>
+                    <FormLabel className="text-foreground font-semibold dark:text-slate-300">Logo</FormLabel>
                     <div className="flex flex-col md:flex-row gap-6">
                       {/* Logo Preview */}
                       <div className="flex-shrink-0">
-                        <div className="w-36 h-36 rounded-[6px] border-2 border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center overflow-hidden">
+                        <div className="w-36 h-36 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center overflow-hidden dark:border-white/5 dark:bg-[#0b1222]/40">
                           {(form.watch('logoUrl') || logoPreview) && !logoError ? (
                             <img
                               src={logoPreview || form.watch('logoUrl')}
@@ -978,18 +1017,29 @@ export function Parametres() {
                         </div>
                       </div>
 
-                      {/* Upload and URL Controls */}
+                      {/* Upload and Crop Controls */}
                       <div className="flex-1 space-y-4">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col gap-3">
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             onClick={() => fileInputRef.current?.click()}
-                            className="h-10 rounded-[4px] border-slate-200"
+                            className="h-10 rounded-xl border-slate-200 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5 self-start"
                           >
                             <Upload className="h-4 w-4 mr-2" />
                             Modifier le logo
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!form.watch('logoUrl') && !logoPreview}
+                            onClick={() => setCropDialogOpen(true)}
+                            className="h-10 rounded-xl border-emerald-200 text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/20 dark:disabled:hover:bg-transparent self-start"
+                          >
+                            <Crop className="h-4 w-4 mr-2" />
+                            Recadrer l'image
                           </Button>
                           <input
                             ref={fileInputRef}
@@ -1010,42 +1060,71 @@ export function Parametres() {
                             }}
                           />
                         </div>
-
-                        <FormField
-                          control={form.control}
-                          name="logoUrl"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-sm text-muted-foreground">URL du logo</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="https://example.com/logo.png"
-                                  className="h-11 bg-white border-border/50 focus:border-primary"
-                                  {...field}
-                                  onChange={(e) => {
-                                    field.onChange(e.target.value);
-                                    setLogoPreview(null);
-                                  }}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border border-slate-200 shadow-none rounded-[6px]">
-                <CardHeader className="border-b border-slate-100 px-6 py-4">
+              {/* Crop Dialog */}
+              <Dialog open={cropDialogOpen} onOpenChange={setCropDialogOpen}>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Recadrer le logo</DialogTitle>
+                  </DialogHeader>
+                  <div className="relative w-full h-80 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900">
+                    {logoPreview && (
+                      <Cropper
+                        image={logoPreview}
+                        crop={crop}
+                        zoom={zoom}
+                        aspect={1}
+                        onCropChange={setCrop}
+                        onZoomChange={setZoom}
+                        onCropComplete={onCropComplete}
+                      />
+                    )}
+                  </div>
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-[4px] bg-indigo-50 border border-indigo-200/50">
-                      <FileText className="h-4 w-4 text-indigo-500" />
+                    <span className="text-sm text-slate-500 dark:text-slate-400">Zoom</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={3}
+                      step={0.1}
+                      value={zoom}
+                      onChange={(e) => setZoom(Number(e.target.value))}
+                      className="flex-1 h-2 rounded-full appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-emerald-500"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setCropDialogOpen(false)}
+                      className="rounded-xl"
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleCropConfirm}
+                      className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white"
+                    >
+                      Confirmer le recadrage
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Card className="border border-slate-100 rounded-2xl dark:bg-[#0b1222] dark:border-white/5">
+                <CardHeader className="border-b border-slate-100 px-6 py-5 dark:border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800/50">
+                      <FileText className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm font-semibold text-slate-700">Contenu des Documents</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-200">Contenu des Documents</CardTitle>
                       <CardDescription>Texte par défaut pour vos factures</CardDescription>
                     </div>
                   </div>
@@ -1056,9 +1135,9 @@ export function Parametres() {
                     name="conditionsPaiementDefaut"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground font-semibold">Conditions de paiement par défaut</FormLabel>
+                        <FormLabel className="text-foreground font-semibold dark:text-slate-300">Conditions de paiement par défaut</FormLabel>
                         <FormControl>
-                          <Input placeholder="ex: Paiement à la réception sous 30 jours" className="h-11 bg-white border-border/50 focus:border-primary" {...field} />
+                          <Input placeholder="ex: Paiement à la réception sous 30 jours" className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1070,11 +1149,11 @@ export function Parametres() {
                     name="piedPageDefaut"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-foreground font-semibold">Pied de page par défaut</FormLabel>
+                        <FormLabel className="text-foreground font-semibold dark:text-slate-300">Pied de page par défaut</FormLabel>
                         <FormControl>
                           <Textarea 
                             placeholder="ex: Merci de votre confiance. ParaGestion - Votre système de gestion parapharmaceutique." 
-                            className="min-h-[80px] bg-white border-border/50 focus:border-primary" 
+                            className="min-h-[80px] bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500" 
                             {...field} 
                           />
                         </FormControl>
@@ -1088,7 +1167,7 @@ export function Parametres() {
                       control={form.control}
                       name="activerFiligrane"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between p-4 rounded-[6px] border border-slate-200 bg-slate-50/30">
+                        <FormItem className="flex flex-row items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/30 dark:border-white/5 dark:bg-[#0b1222]">
                           <div className="space-y-0.5 flex-1">
                             <FormLabel className="text-base font-semibold cursor-pointer">Filigrane</FormLabel>
                             <p className="text-sm text-muted-foreground">
@@ -1117,7 +1196,7 @@ export function Parametres() {
                           <FormControl>
                             <Input
                               placeholder="ParaGestion"
-                              className={`h-11 bg-white border-border/50 focus:border-primary transition-all ${
+                              className={`h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 transition-all ${
                                 !form.watch('activerFiligrane') ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
                               disabled={!form.watch('activerFiligrane')}
@@ -1131,16 +1210,16 @@ export function Parametres() {
                     />
                   </div>
                 </CardContent>
-</Card>
-              </TabsContent>
-            </Tabs>
+              </Card>
+            </TabsContent>
+          </Tabs>
           </div>
 
-          <div className="flex justify-end pt-6">
+          <div className="flex justify-end pt-6 border-t border-slate-200 dark:border-white/5">
             <Button 
               type="submit" 
               disabled={isSaving}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-[4px] h-10 px-6 shadow-none"
+              className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl h-10 px-6 shadow-none"
             >
               {isSaving ? (
                 <>

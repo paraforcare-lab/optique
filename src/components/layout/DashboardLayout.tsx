@@ -79,7 +79,7 @@ export function DashboardLayout() {
   }, [hasHighPriority, unreadCount]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-[#0F172A]">
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -101,7 +101,7 @@ export function DashboardLayout() {
         </div>
 
         {/* Header */}
-        <header className="bg-background border-b border-border px-6 lg:px-8 py-4 shrink-0">
+        <header className="bg-white dark:bg-[#0F172A] border-b border-slate-200 dark:border-white/10 px-6 lg:px-8 py-4 shrink-0">
           <div className="flex items-center justify-between gap-6">
             {/* Left: Title & Status */}
             <div className="min-w-0">
@@ -183,7 +183,7 @@ export function DashboardLayout() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+        <main className="flex-1 h-full overflow-y-auto overscroll-none p-4 lg:p-8 bg-white dark:bg-[#0F172A]">
           <div className="max-w-[1600px] mx-auto">
             <Outlet />
           </div>

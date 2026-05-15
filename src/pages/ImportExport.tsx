@@ -285,20 +285,20 @@ export function ImportExport() {
     <>
       {/* Linking Progress Dialog */}
       <Dialog open={isLinking} onOpenChange={setIsLinking}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md dark:bg-[#0b1222] dark:border-white/5">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 dark:text-white">
               <Loader2 className="h-5 w-5 animate-spin text-[#267E54]" />
               Liaison en cours
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="dark:text-slate-400">
               {linkingMessage || 'Veuillez patienter pendant que nous lions les clients et fournisseurs...'}
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-8">
             <div className="flex flex-col items-center gap-4">
               <div className="h-12 w-12 border-4 border-[#267E54]/30 border-t-[#267E54] rounded-full animate-spin" />
-              <p className="text-sm text-muted-foreground">Cette opération peut prendre quelques secondes...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Cette opération peut prendre quelques secondes...</p>
             </div>
           </div>
         </DialogContent>
@@ -306,38 +306,38 @@ export function ImportExport() {
 
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6 md:space-y-8">
       <div className="flex flex-col space-y-2">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Import / Export</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Import / Export</h1>
+        <p className="text-muted-foreground dark:text-slate-400">
           Gérez vos sauvegardes et exportez vos données pour votre comptabilité.
         </p>
       </div>
 
-      <div className="bg-muted/50 p-4 md:p-6 rounded-xl md:rounded-2xl space-y-4 md:space-y-6">
+      <div className="bg-white dark:bg-[#0b1222] border-slate-200 dark:border-white/5 p-4 md:p-6 rounded-xl md:rounded-2xl space-y-4 md:space-y-6 shadow-none">
           <Tabs defaultValue="export" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 rounded-xl md:rounded-2xl">
-              <TabsTrigger value="export">Export</TabsTrigger>
-              <TabsTrigger value="import">Import</TabsTrigger>
-              <TabsTrigger value="comptable">Comptable</TabsTrigger>
-              <TabsTrigger value="reset" className="text-red-500">Reset</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 rounded-xl md:rounded-2xl dark:bg-slate-800/50">
+              <TabsTrigger value="export" className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">Export</TabsTrigger>
+              <TabsTrigger value="import" className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">Import</TabsTrigger>
+              <TabsTrigger value="comptable" className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">Comptable</TabsTrigger>
+              <TabsTrigger value="reset" className="text-red-500 dark:text-red-400 data-[state=active]:dark:bg-slate-700">Reset</TabsTrigger>
             </TabsList>
 
             <TabsContent value="export" className="mt-6 md:mt-8">
-          <Card>
+          <Card className="bg-white dark:bg-[#0b1222] border-slate-200 dark:border-white/5 shadow-none">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="h-5 w-5 text-[#267E54]" />
+              <CardTitle className="flex items-center gap-2 dark:text-white">
+                <Download className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
                 Sauvegarde Complète
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-slate-400">
                 Téléchargez l'intégralité de vos données (produits, factures, clients, etc.) dans un seul fichier Excel.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 md:space-y-6">
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-start gap-3">
-                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+              <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-4 rounded-lg flex items-start gap-3">
+                <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-blue-900 text-sm">Recommandation</p>
-                  <p className="text-blue-800 text-sm">Nous vous conseillons d'exporter une sauvegarde complète au moins une fois par semaine pour sécuriser vos données.</p>
+                  <p className="font-semibold text-blue-900 dark:text-blue-300 text-sm">Recommandation</p>
+                  <p className="text-blue-800 dark:text-blue-400 text-sm">Nous vous conseillons d'exporter une sauvegarde complète au moins une fois par semaine pour sécuriser vos données.</p>
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row justify-center py-4 sm:py-8 gap-4">
@@ -345,7 +345,7 @@ export function ImportExport() {
                   size="lg" 
                   onClick={handleFullBackupExport}
                   disabled={isExporting}
-                  className="bg-[#267E54] hover:bg-[#1e6643] w-full sm:max-w-xs"
+                  className="bg-[#267E54] hover:bg-[#1e6643] w-full sm:max-w-xs rounded-xl shadow-none dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white"
                 >
                   {isExporting ? (
                     <>
@@ -365,32 +365,32 @@ export function ImportExport() {
         </TabsContent>
 
         <TabsContent value="import" className="mt-6 md:mt-8">
-          <Card>
+          <Card className="bg-white dark:bg-[#0b1222] border-slate-200 dark:border-white/5 shadow-none">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5 text-orange-500" />
+              <CardTitle className="flex items-center gap-2 dark:text-white">
+                <Upload className="h-5 w-5 text-orange-500 dark:text-orange-400" />
                 Restaurer une Sauvegarde
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-slate-400">
                 Importez un fichier Excel précédemment exporté pour restaurer vos données.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 md:space-y-6">
-              <div className="bg-red-50 border border-red-200 p-4 rounded-lg flex items-start gap-3">
-                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+              <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 rounded-lg flex items-start gap-3">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-red-900 text-sm">Attention</p>
-                  <p className="text-red-800 text-sm">L'importation peut écraser ou modifier vos données actuelles. Assurez-vous d'avoir une sauvegarde récente avant de procéder.</p>
+                  <p className="font-semibold text-red-900 dark:text-red-300 text-sm">Attention</p>
+                  <p className="text-red-800 dark:text-red-400 text-sm">L'importation peut écraser ou modifier vos données actuelles. Assurez-vous d'avoir une sauvegarde récente avant de procéder.</p>
                 </div>
               </div>
               
-              <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 space-y-4">
-                <div className="bg-muted p-4 rounded-full">
-                  <FileJson className="h-8 w-8 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg p-12 space-y-4 dark:bg-slate-900/50">
+                <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-full">
+                  <FileJson className="h-8 w-8 text-slate-400 dark:text-slate-500" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium">Glissez votre fichier ici ou cliquez pour parcourir</p>
-                  <p className="text-xs text-muted-foreground mt-1">Format accepté: .xlsx uniquement</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Glissez votre fichier ici ou cliquez pour parcourir</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Format accepté: .xlsx uniquement</p>
                 </div>
                 <Input 
                   type="file" 
@@ -404,6 +404,7 @@ export function ImportExport() {
                   variant="outline"
                   disabled={isImporting}
                   onClick={() => document.getElementById('backup-upload')?.click()}
+                  className="rounded-xl shadow-none dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-600"
                 >
                   <span className="cursor-pointer flex items-center">
                     {isImporting ? (
@@ -425,52 +426,52 @@ export function ImportExport() {
         </TabsContent>
 
         <TabsContent value="comptable" className="mt-6 md:mt-8">
-          <Card>
+          <Card className="bg-white dark:bg-[#0b1222] border-slate-200 dark:border-white/5 shadow-none">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5 text-blue-500" />
+              <CardTitle className="flex items-center gap-2 dark:text-white">
+                <FileSpreadsheet className="h-5 w-5 text-blue-500 dark:text-blue-400" />
                 Export pour Comptabilité
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-slate-400">
                 Générez un fichier Excel structuré par onglets pour faciliter le travail de votre comptable.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 md:space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3 p-4 border rounded-lg">
-                  <div className="bg-green-100 p-2 rounded-full">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <div className="flex items-start gap-3 p-4 border border-slate-200 dark:border-white/5 rounded-lg bg-white dark:bg-[#0b1222]">
+                  <div className="bg-green-100 dark:bg-slate-800/50 p-2 rounded-full">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Ventes & Achats</p>
-                    <p className="text-xs text-muted-foreground">Historique complet des factures et bons de commande.</p>
+                    <p className="font-medium text-sm text-slate-900 dark:text-white">Ventes & Achats</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Historique complet des factures et bons de commande.</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 border rounded-lg">
-                  <div className="bg-green-100 p-2 rounded-full">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <div className="flex items-start gap-3 p-4 border border-slate-200 dark:border-white/5 rounded-lg bg-white dark:bg-[#0b1222]">
+                  <div className="bg-green-100 dark:bg-slate-800/50 p-2 rounded-full">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Dépenses</p>
-                    <p className="text-xs text-muted-foreground">Détail des charges et frais de fonctionnement.</p>
+                    <p className="font-medium text-sm text-slate-900 dark:text-white">Dépenses</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Détail des charges et frais de fonctionnement.</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 border rounded-lg">
-                  <div className="bg-green-100 p-2 rounded-full">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <div className="flex items-start gap-3 p-4 border border-slate-200 dark:border-white/5 rounded-lg bg-white dark:bg-[#0b1222]">
+                  <div className="bg-green-100 dark:bg-slate-800/50 p-2 rounded-full">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Analyse TVA</p>
-                    <p className="text-xs text-muted-foreground">Calcul automatique de la TVA collectée et déductible.</p>
+                    <p className="font-medium text-sm text-slate-900 dark:text-white">Analyse TVA</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Calcul automatique de la TVA collectée et déductible.</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 border rounded-lg">
-                  <div className="bg-green-100 p-2 rounded-full">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <div className="flex items-start gap-3 p-4 border border-slate-200 dark:border-white/5 rounded-lg bg-white dark:bg-[#0b1222]">
+                  <div className="bg-green-100 dark:bg-slate-800/50 p-2 rounded-full">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Paiements</p>
-                    <p className="text-xs text-muted-foreground">Suivi des règlements et des impayés.</p>
+                    <p className="font-medium text-sm text-slate-900 dark:text-white">Paiements</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Suivi des règlements et des impayés.</p>
                   </div>
                 </div>
               </div>
@@ -480,7 +481,7 @@ export function ImportExport() {
                   size="lg" 
                   onClick={handleComptableExport}
                   disabled={isComptableExporting}
-                  className="bg-blue-600 hover:bg-blue-700 w-full sm:max-w-xs"
+                  className="bg-blue-600 hover:bg-blue-700 w-full sm:max-w-xs rounded-xl shadow-none dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white"
                 >
                   {isComptableExporting ? (
                     <>
@@ -500,22 +501,22 @@ export function ImportExport() {
         </TabsContent>
 
         <TabsContent value="reset" className="mt-6 md:mt-8">
-          <Card className="border-red-200">
+          <Card className="bg-white dark:bg-[#0b1222] border-red-200 dark:border-red-500/20 shadow-none">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-600">
+              <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
                 <Trash2 className="h-5 w-5" />
                 Réinitialisation Totale
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-slate-400">
                 Supprimez définitivement toutes les données de l'application. Cette action est irréversible.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 md:space-y-6">
-              <div className="bg-red-50 border border-red-200 p-4 rounded-lg flex items-start gap-3">
-                <ShieldAlert className="h-5 w-5 text-red-600 mt-0.5" />
+              <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 rounded-lg flex items-start gap-3">
+                <ShieldAlert className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-red-900 text-sm">Zone de Danger</p>
-                  <p className="text-red-800 text-sm">
+                  <p className="font-semibold text-red-900 dark:text-red-300 text-sm">Zone de Danger</p>
+                  <p className="text-red-800 dark:text-red-400 text-sm">
                     En cliquant sur le bouton ci-dessous, vous supprimerez tous les clients, produits, factures, et historiques. 
                     Assurez-vous d'avoir exporté une sauvegarde avant de continuer.
                   </p>
@@ -527,7 +528,7 @@ export function ImportExport() {
                   variant="destructive"
                   size="lg"
                   onClick={() => setIsResetDialogOpen(true)}
-                  className="w-full sm:max-w-xs"
+                  className="w-full sm:max-w-xs rounded-xl shadow-none"
                 >
                   <Trash2 className="mr-2 h-5 w-5" />
                   Réinitialiser toutes les données
@@ -540,45 +541,48 @@ export function ImportExport() {
         </div>
 
         <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-md sm:max-w-[425px]">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md sm:max-w-[425px] dark:bg-[#0b1222] dark:border-white/5">
           <DialogHeader>
-            <DialogTitle className="text-red-600 flex items-center gap-2">
+            <DialogTitle className="text-red-600 dark:text-red-400 flex items-center gap-2">
               <ShieldAlert className="h-5 w-5" />
               Confirmation de sécurité
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="dark:text-slate-400">
               Cette action est extrêmement dangereuse. Pour confirmer la suppression de TOUTES les données, veuillez saisir vos identifiants de connexion.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="dark:text-slate-300">Email</Label>
               <Input 
                 id="email" 
                 type="email" 
                 placeholder="votre@email.com" 
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
+                className="dark:bg-slate-800/50 dark:border-slate-700 dark:text-white"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password" className="dark:text-slate-300">Mot de passe</Label>
               <Input 
                 id="password" 
                 type="password" 
                 value={resetPassword}
                 onChange={(e) => setResetPassword(e.target.value)}
+                className="dark:bg-slate-800/50 dark:border-slate-700 dark:text-white"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isResetting}>
+            <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isResetting} className="rounded-xl shadow-none dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-600">
               Annuler
             </Button>
             <Button 
               variant="destructive" 
               onClick={handleResetDatabase}
               disabled={isResetting}
+              className="rounded-xl shadow-none"
             >
               {isResetting ? (
                 <>

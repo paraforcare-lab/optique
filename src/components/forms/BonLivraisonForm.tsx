@@ -258,15 +258,15 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
-            <Label className="text-slate-700 font-semibold">Fournisseur *</Label>
+            <Label className="text-slate-700 font-semibold dark:text-slate-300">Fournisseur *</Label>
             <Select
               value={form.watch('fournisseurId') || ""}
               onValueChange={(val) => form.setValue('fournisseurId', val)}
             >
-              <SelectTrigger className="bg-white border-slate-300">
+              <SelectTrigger className="bg-white border-slate-300 dark:bg-slate-950/50 dark:border-white/10 dark:text-white [&_.lucide-chevron-down]:dark:text-slate-500">
                 <SelectValue placeholder="Sélectionner un fournisseur" />
               </SelectTrigger>
               <SelectContent>
@@ -283,20 +283,20 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-700 font-semibold">Date d'émission *</Label>
-            <Input type="date" className="bg-white border-slate-300" {...form.register('dateEmission')} />
+            <Label className="text-slate-700 font-semibold dark:text-slate-300">Date d'émission *</Label>
+            <Input type="date" className="bg-white border-slate-300 dark:bg-slate-950/50 dark:border-white/10 dark:text-white dark:[color-scheme:dark]" {...form.register('dateEmission')} />
             {form.formState.errors.dateEmission && (
               <p className="text-xs text-red-500 font-medium">{form.formState.errors.dateEmission.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-700 font-semibold">Statut *</Label>
+            <Label className="text-slate-700 font-semibold dark:text-slate-300">Statut *</Label>
             <Select
               value={form.watch('statut') || ""}
               onValueChange={(val) => form.setValue('statut', val)}
             >
-              <SelectTrigger className="bg-white border-slate-300">
+              <SelectTrigger className="bg-white border-slate-300 dark:bg-slate-950/50 dark:border-white/10 dark:text-white [&_.lucide-chevron-down]:dark:text-slate-500">
                 <SelectValue placeholder="Sélectionner un statut" />
               </SelectTrigger>
               <SelectContent>
@@ -310,13 +310,13 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between border-b pb-2">
-          <h3 className="text-lg font-bold text-slate-800">Lignes de livraison</h3>
+        <div className="flex items-center justify-between border-b pb-2 dark:border-white/5">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">Lignes de livraison</h3>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="border-blue-200 text-blue-700 hover:bg-blue-50"
+            className="border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-500/30 dark:text-blue-400 dark:hover:bg-blue-500/10"
             onClick={() =>
               append({ designation: '', quantite: 1, prixUnitaireHt: 0, tva: 20 })
             }
@@ -326,32 +326,32 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
           </Button>
         </div>
 
-        <div className="border border-slate-200 rounded-[6px] overflow-hidden">
+        <div className="border border-slate-200 rounded-[6px] overflow-hidden dark:border-white/10 dark:rounded-sm">
           <table className="w-full text-sm">
-            <thead className="bg-slate-100 border-b border-slate-200">
+            <thead className="bg-slate-100 border-b border-slate-200 dark:bg-slate-900/60 dark:border-white/10">
               <tr>
-                <th className="p-3 text-left font-semibold text-slate-600">Produit</th>
-                <th className="p-3 text-left font-semibold text-slate-600">Désignation *</th>
-                <th className="p-3 text-right font-semibold text-slate-600 w-24">Qté *</th>
-                <th className="p-3 text-right font-semibold text-slate-600 w-32">Prix HT</th>
-                <th className="p-3 text-right font-semibold text-slate-600 w-24">TVA %</th>
-                <th className="p-3 text-right font-semibold text-slate-600 w-32">Total HT</th>
+                <th className="p-3 text-left font-semibold text-slate-600 dark:text-slate-400">Produit</th>
+                <th className="p-3 text-left font-semibold text-slate-600 dark:text-slate-400">Désignation *</th>
+                <th className="p-3 text-right font-semibold text-slate-600 dark:text-slate-400 w-24">Qté *</th>
+                <th className="p-3 text-right font-semibold text-slate-600 dark:text-slate-400 w-32">Prix HT</th>
+                <th className="p-3 text-right font-semibold text-slate-600 dark:text-slate-400 w-24">TVA %</th>
+                <th className="p-3 text-right font-semibold text-slate-600 dark:text-slate-400 w-32">Total HT</th>
                 <th className="p-3 w-12"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
               {fields.map((field, index) => {
                 const ligne = watchLignes[index];
                 const totalHt = (ligne?.quantite || 0) * (ligne?.prixUnitaireHt || 0);
 
                 return (
-                  <tr key={field.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={field.id} className="hover:bg-slate-50/50 transition-colors dark:hover:bg-white/[0.03]">
                     <td className="p-2">
                       <Select
                         value={form.watch(`lignes.${index}.produitId`) || ""}
                         onValueChange={(val) => handleProduitSelect(index, val)}
                       >
-                        <SelectTrigger className="h-9 bg-white border-slate-200">
+                        <SelectTrigger className="h-9 bg-white border-slate-200 dark:bg-slate-950/50 dark:border-white/10 [&_.lucide-chevron-down]:dark:text-slate-500">
                           <SelectValue placeholder="Choisir..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -365,7 +365,7 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
                     </td>
                     <td className="p-2">
                       <Input
-                        className="h-9 bg-white border-slate-200"
+                        className="h-9 bg-white border-slate-200 dark:bg-slate-950/50 dark:border-white/10 dark:text-white"
                         {...form.register(`lignes.${index}.designation`)}
                       />
                     </td>
@@ -373,7 +373,7 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
                       <Input
                         type="number"
                         step="0.01"
-                        className="h-9 text-right bg-white border-slate-200"
+                        className="h-9 text-right bg-white border-slate-200 dark:bg-slate-950/50 dark:border-white/10 dark:text-white"
                         {...form.register(`lignes.${index}.quantite`, { valueAsNumber: true })}
                       />
                     </td>
@@ -381,7 +381,7 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
                       <Input
                         type="number"
                         step="0.01"
-                        className="h-9 text-right bg-white border-slate-200"
+                        className="h-9 text-right bg-white border-slate-200 dark:bg-slate-950/50 dark:border-white/10 dark:text-white"
                         {...form.register(`lignes.${index}.prixUnitaireHt`, { valueAsNumber: true })}
                       />
                     </td>
@@ -389,11 +389,11 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
                       <Input
                         type="number"
                         step="0.01"
-                        className="h-9 text-right bg-white border-slate-200"
+                        className="h-9 text-right bg-white border-slate-200 dark:bg-slate-950/50 dark:border-white/10 dark:text-white"
                         {...form.register(`lignes.${index}.tva`, { valueAsNumber: true })}
                       />
                     </td>
-                    <td className="p-2 text-right font-semibold text-slate-700 align-middle">
+                    <td className="p-2 text-right font-semibold text-slate-700 align-middle dark:text-white">
                       {formatCurrency(totalHt)}
                     </td>
                     <td className="p-2 text-center align-middle">
@@ -401,7 +401,7 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
+                        className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-rose-500/70 dark:hover:text-rose-500 dark:hover:bg-white/5"
                         onClick={() => remove(index)}
                         disabled={fields.length === 1}
                       >
@@ -419,39 +419,39 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
       <div className="flex flex-col md:flex-row gap-8">
         <div className="flex-1">
           <div className="space-y-2">
-            <Label className="text-slate-700 font-semibold">Notes</Label>
+            <Label className="text-slate-700 font-semibold dark:text-slate-300">Notes</Label>
             <Textarea 
               {...form.register('notes')} 
               placeholder="Notes pour le client ou le transporteur..." 
-              className="min-h-[100px] bg-white border-slate-300"
+              className="min-h-[100px] bg-white border-slate-300 dark:bg-slate-950/50 dark:border-white/10 dark:text-white"
             />
           </div>
         </div>
 
         <div className="w-full md:w-80">
-          <div className="bg-slate-50 p-6 rounded-[6px] border border-slate-200 space-y-4">
+          <div className="bg-slate-50 p-6 rounded-[6px] border border-slate-200 space-y-4 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium">Total HT</span>
-              <span className="font-bold text-slate-800">{formatCurrency(totals.ht)}</span>
+              <span className="text-slate-500 font-medium dark:text-slate-400">Total HT</span>
+              <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(totals.ht)}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium">Total TVA</span>
-              <span className="font-bold text-slate-800">{formatCurrency(totals.tva)}</span>
+              <span className="text-slate-500 font-medium dark:text-slate-400">Total TVA</span>
+              <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(totals.tva)}</span>
             </div>
-            <div className="h-px bg-slate-200 my-2" />
+            <div className="h-px bg-slate-200 my-2 dark:bg-white/10" />
             <div className="flex justify-between items-center">
-              <span className="text-slate-900 font-bold text-lg">Total TTC</span>
-              <span className="text-2xl font-black text-blue-600">{formatCurrency(totals.ttc)}</span>
+              <span className="text-slate-900 font-bold text-lg dark:text-white">Total TTC</span>
+              <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{formatCurrency(totals.ttc)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end items-center space-x-4 pt-6 border-t">
-        <Button type="button" variant="ghost" onClick={() => onSuccess()} className="text-slate-500 hover:text-slate-700">
+      <div className="flex justify-end items-center space-x-4 pt-6 border-t dark:border-white/5">
+        <Button type="button" variant="ghost" onClick={() => onSuccess()} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
           Annuler
         </Button>
-        <Button type="submit" disabled={isLoading} className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 h-10 rounded-[4px] shadow-none">
+        <Button type="submit" disabled={isLoading} className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 h-10 rounded-[4px] shadow-none dark:rounded-sm">
           {isLoading ? 'Enregistrement...' : 'Enregistrer le bon de livraison'}
         </Button>
       </div>
