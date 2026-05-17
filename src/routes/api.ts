@@ -2105,8 +2105,8 @@ router.post('/bons-commande', async (req, res) => {
             );
           }
         }
-        // Mark as stock updated
-        await supabaseAdmin.from('bons_commande').update({ stock_updated: true }).eq('id', bon.id);
+        // `stock_updated` column does not exist on bons_commande — state is
+        // derived from `statut` (livré/livrée) instead.
 
         // Create a linked Bon de Livraison
         const { count: blCount } = await supabaseAdmin.from('bons_livraison').select('*', { count: 'exact', head: true });
@@ -2166,10 +2166,12 @@ router.put('/bons-commande/:id', async (req, res) => {
     const { lignes, ...bonData } = req.body;
     const id = req.params.id;
     
-    // Fetch old status for stock update
-    const { data: oldBon } = await supabaseAdmin.from('bons_commande').select('statut, stock_updated, fournisseur_id, numero').eq('id', id).single();
+    // Fetch old status for stock update.
+    // NOTE: `bons_commande` has no `stock_updated` column in the production
+    // schema, so we derive `wasStockUpdated` from the previous statut.
+    const { data: oldBon } = await supabaseAdmin.from('bons_commande').select('statut, fournisseur_id, numero').eq('id', id).single();
     const oldStatut = oldBon?.statut;
-    const wasStockUpdated = oldBon?.stock_updated;
+    const wasStockUpdated = oldStatut === 'livré' || oldStatut === 'livrée';
 
     const updateData: any = {};
     if (bonData.fournisseurId !== undefined) updateData.fournisseur_id = bonData.fournisseurId;
@@ -2259,8 +2261,8 @@ router.put('/bons-commande/:id', async (req, res) => {
             l.prix_unitaire_ht
           );
         }
-        // Mark as stock updated
-        await supabaseAdmin.from('bons_commande').update({ stock_updated: true }).eq('id', id);
+        // `stock_updated` column does not exist on bons_commande — state is
+        // derived from `statut` (livré/livrée) instead.
       }
     } else if (!isNowLivré && wasStockUpdated) {
       // Revert stock if it was updated but status is no longer 'livrée'
@@ -2279,8 +2281,8 @@ router.put('/bons-commande/:id', async (req, res) => {
             l.prix_unitaire_ht
           );
         }
-        // Mark as stock NOT updated
-        await supabaseAdmin.from('bons_commande').update({ stock_updated: false }).eq('id', id);
+        // `stock_updated` column does not exist on bons_commande — state is
+        // derived from `statut` (livré/livrée) instead.
       }
     }
 
@@ -2352,113 +2354,214 @@ router.delete('/bons-commande/:id', async (req, res) => {
 
 router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (req, res) => {
   try {
-    const { statut } = req.body;
-    const id = req.params.id;
+    const { statut } = req.body ?? {};
+    const rawId = req.params.id;
+    const id = parseInt(rawId, 10);
 
-    // Fetch old status for stock update
-    const { data: oldBon } = await supabaseAdmin.from('bons_commande').select('statut, stock_updated, fournisseur_id, numero').eq('id', id).single();
-    const wasStockUpdated = oldBon?.stock_updated;
+    // --- Input validation -----------------------------------------------------
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ error: `Invalid bon de commande id: "${rawId}"` });
+    }
+    if (typeof statut !== 'string' || statut.trim() === '') {
+      return res.status(400).json({ error: 'Field "statut" is required and must be a non-empty string' });
+    }
 
-    const { data: bon, error } = await supabaseAdmin
+    // --- Fetch existing record ------------------------------------------------
+    // NOTE: `bons_commande` does NOT have a `stock_updated` column in the
+    // production schema (see supabase_schema.sql). We therefore derive whether
+    // the stock has already been incremented purely from the previous statut.
+    const { data: oldBon, error: fetchError } = await supabaseAdmin
+      .from('bons_commande')
+      .select('statut, fournisseur_id, numero')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !oldBon) {
+      console.error('[PUT /bons-commande/:id/statut] fetch failed:', fetchError);
+      return res.status(404).json({
+        error: `Bon de commande ${id} introuvable`,
+        details: fetchError?.message,
+      });
+    }
+
+    const isLivréStatus = (s?: string | null) => s === 'livré' || s === 'livrée';
+    const isNowLivré = isLivréStatus(statut);
+    const wasLivré = isLivréStatus(oldBon.statut);
+    const wasStockUpdated = wasLivré; // derived, no DB column needed
+
+    // --- Update statut --------------------------------------------------------
+    const { data: bon, error: updateError } = await supabaseAdmin
       .from('bons_commande')
       .update({ statut })
       .eq('id', id)
       .select()
       .single();
-    if (error) throw error;
 
-    // Stock update logic - handle both livré and livrée
-    const isNowLivré = statut === 'livré' || statut === 'livrée';
-    const waslivré = oldBon?.statut === 'livré' || oldBon?.statut === 'livrée';
-
-    if (isNowLivré && !waslivré) {
-      // Create a linked Bon de Livraison
-      const { count: blCount } = await supabaseAdmin.from('bons_livraison').select('*', { count: 'exact', head: true });
-      const blNumero = `BL/${new Date().getFullYear()}/${String((blCount || 0) + 1).padStart(5, '0')}`;
-      
-      const { data: bonDetails } = await supabaseAdmin.from('bons_commande').select('*').eq('id', id).single();
-      const { data: bonLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-
-      if (bonDetails) {
-        const blData: any = {
-          numero: blNumero,
-          fournisseur_id: bonDetails.fournisseur_id,
-          date_livraison: new Date().toISOString(),
-          statut: 'livré',
-          notes: `GÃ©nÃ©rÃ© automatiquement depuis Bon de Commande ${bonDetails.numero}`,
-          montant_ht: bonDetails.montant_ht || 0,
-          montant_tva: bonDetails.montant_tva || 0,
-          montant_ttc: bonDetails.montant_ttc || 0,
-          bon_commande_id: id
-        };
-
-        const { data: newBL, error: blError } = await supabaseAdmin.from('bons_livraison').insert([blData]).select().single();
-        
-        if (!blError && newBL && bonLignes) {
-          const blLignesData = bonLignes.map((l: any, index: number) => ({
-            bon_livraison_id: newBL.id,
-            produit_id: l.produit_id,
-            reference: l.reference,
-            designation: l.designation,
-            quantite: l.quantite,
-            prix_unitaire_ht: l.prix_unitaire_ht,
-            tva: l.tva,
-            montant_ht: l.montant_ht || (Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0)),
-            montant_ttc: l.montant_ttc || ((Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0)) * (1 + Number(l.tva || 0) / 100)),
-            ordre: l.ordre !== undefined ? l.ordre : index
-          }));
-          await supabaseAdmin.from('bon_livraison_lignes').insert(blLignesData);
-        }
-      }
-    } else if (!isNowLivré && waslivré) {
-      // Delete linked Bon de Livraison
-      await supabaseAdmin.from('bons_livraison').delete().eq('bon_commande_id', id);
+    if (updateError || !bon) {
+      console.error('[PUT /bons-commande/:id/statut] update failed:', updateError);
+      return res.status(500).json({
+        error: 'Failed to update bon de commande status',
+        details: updateError?.message,
+        code: (updateError as any)?.code,
+      });
     }
 
+    // --- Linked Bon de Livraison sync ----------------------------------------
+    if (isNowLivré && !wasLivré) {
+      try {
+        const { count: blCount } = await supabaseAdmin
+          .from('bons_livraison')
+          .select('*', { count: 'exact', head: true });
+        const blNumero = `BL/${new Date().getFullYear()}/${String((blCount || 0) + 1).padStart(5, '0')}`;
+
+        const { data: bonDetails } = await supabaseAdmin
+          .from('bons_commande')
+          .select('*')
+          .eq('id', id)
+          .single();
+        const { data: bonLignes } = await supabaseAdmin
+          .from('bon_commande_lignes')
+          .select('*')
+          .eq('bon_commande_id', id);
+
+        if (bonDetails) {
+          const blData: any = {
+            numero: blNumero,
+            fournisseur_id: bonDetails.fournisseur_id,
+            date_livraison: new Date().toISOString(),
+            statut: 'livré',
+            notes: `Généré automatiquement depuis Bon de Commande ${bonDetails.numero}`,
+            montant_ht: bonDetails.montant_ht || 0,
+            montant_tva: bonDetails.montant_tva || 0,
+            montant_ttc: bonDetails.montant_ttc || 0,
+            bon_commande_id: id,
+          };
+
+          const { data: newBL, error: blError } = await supabaseAdmin
+            .from('bons_livraison')
+            .insert([blData])
+            .select()
+            .single();
+
+          if (blError) {
+            console.warn('[PUT /bons-commande/:id/statut] BL insert failed:', blError);
+          } else if (newBL && bonLignes && bonLignes.length > 0) {
+            const blLignesData = bonLignes.map((l: any, index: number) => ({
+              bon_livraison_id: newBL.id,
+              produit_id: l.produit_id,
+              reference: l.reference,
+              designation: l.designation,
+              quantite: l.quantite,
+              prix_unitaire_ht: l.prix_unitaire_ht,
+              tva: l.tva,
+              montant_ht: l.montant_ht || (Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0)),
+              montant_ttc:
+                l.montant_ttc ||
+                Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0) * (1 + Number(l.tva || 0) / 100),
+              ordre: l.ordre !== undefined ? l.ordre : index,
+            }));
+            const { error: blLignesError } = await supabaseAdmin
+              .from('bon_livraison_lignes')
+              .insert(blLignesData);
+            if (blLignesError) {
+              console.warn('[PUT /bons-commande/:id/statut] BL lignes insert failed:', blLignesError);
+            }
+          }
+        }
+      } catch (blSyncErr) {
+        // Non-fatal: the BC status update already succeeded
+        console.error('[PUT /bons-commande/:id/statut] BL sync error (non-fatal):', blSyncErr);
+      }
+    } else if (!isNowLivré && wasLivré) {
+      // Reverting: remove the auto-generated Bon de Livraison
+      const { error: delErr } = await supabaseAdmin
+        .from('bons_livraison')
+        .delete()
+        .eq('bon_commande_id', id);
+      if (delErr) {
+        console.warn('[PUT /bons-commande/:id/statut] BL delete failed:', delErr);
+      }
+    }
+
+    // --- Stock movement sync --------------------------------------------------
     if (isNowLivré && !wasStockUpdated) {
-      const { data: currentLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-      const { data: b } = await supabaseAdmin.from('bons_commande').select('*, fournisseur:fournisseurs(nom)').eq('id', id).single();
+      const { data: currentLignes } = await supabaseAdmin
+        .from('bon_commande_lignes')
+        .select('*')
+        .eq('bon_commande_id', id);
+      const { data: b } = await supabaseAdmin
+        .from('bons_commande')
+        .select('*, fournisseur:fournisseurs(nom)')
+        .eq('id', id)
+        .single();
+
       if (currentLignes && currentLignes.length > 0) {
         for (const l of currentLignes) {
-          if (l.produit_id) await updateProductStock(
-            l.produit_id, 
-            Number(l.quantite || 0), 
-            'achat', 
-            b?.numero, 
-            `RÃ©ception Bon de Commande ${b?.numero}`,
-            b?.fournisseur?.nom,
-            l.prix_unitaire_ht
-          );
+          if (!l.produit_id) continue;
+          try {
+            await updateProductStock(
+              l.produit_id,
+              Number(l.quantite || 0),
+              'achat',
+              b?.numero,
+              `Réception Bon de Commande ${b?.numero}`,
+              b?.fournisseur?.nom,
+              l.prix_unitaire_ht
+            );
+          } catch (stockErr) {
+            console.error(
+              `[PUT /bons-commande/:id/statut] stock increment failed for produit ${l.produit_id}:`,
+              stockErr
+            );
+          }
         }
-        // Mark as stock updated
-        await supabaseAdmin.from('bons_commande').update({ stock_updated: true }).eq('id', id);
       }
     } else if (!isNowLivré && wasStockUpdated) {
-      // Revert stock â€” use the safe variant so a low/zero stock does not
-      // block the administrative status change. The revert clamps to 0 and
-      // logs a warning if the stock was already consumed.
-      const { data: currentLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-      const { data: b } = await supabaseAdmin.from('bons_commande').select('*, fournisseur:fournisseurs(nom)').eq('id', id).single();
+      // Revert stock — use the safe variant so a low/zero stock does not
+      // block the administrative status change.
+      const { data: currentLignes } = await supabaseAdmin
+        .from('bon_commande_lignes')
+        .select('*')
+        .eq('bon_commande_id', id);
+      const { data: b } = await supabaseAdmin
+        .from('bons_commande')
+        .select('*, fournisseur:fournisseurs(nom)')
+        .eq('id', id)
+        .single();
+
       if (currentLignes && currentLignes.length > 0) {
         for (const l of currentLignes) {
-          if (l.produit_id) await updateProductStockSafe(
-            l.produit_id,
-            -Number(l.quantite || 0),
-            'ajustement',
-            b?.numero,
-            `Annulation RÃ©ception Bon de Commande ${b?.numero}`,
-            b?.fournisseur?.nom,
-            l.prix_unitaire_ht
-          );
+          if (!l.produit_id) continue;
+          try {
+            await updateProductStockSafe(
+              l.produit_id,
+              -Number(l.quantite || 0),
+              'ajustement',
+              b?.numero,
+              `Annulation Réception Bon de Commande ${b?.numero}`,
+              b?.fournisseur?.nom,
+              l.prix_unitaire_ht
+            );
+          } catch (stockErr) {
+            console.error(
+              `[PUT /bons-commande/:id/statut] stock revert failed for produit ${l.produit_id}:`,
+              stockErr
+            );
+          }
         }
-        // Mark as stock NOT updated
-        await supabaseAdmin.from('bons_commande').update({ stock_updated: false }).eq('id', id);
       }
     }
-    res.json(toCamel(bon));
-  } catch (error) {
-    console.error('Error updating status:', error);
-    res.status(500).json({ error: 'Failed to update bon de commande status' });
+
+    return res.json(toCamel(bon));
+  } catch (error: any) {
+    // Top-level safety net — always return JSON, never let the serverless
+    // function crash with an unhandled exception.
+    console.error('[PUT /bons-commande/:id/statut] unhandled error:', error);
+    return res.status(500).json({
+      error: 'Failed to update bon de commande status',
+      details: error?.message || String(error),
+      code: error?.code,
+    });
   }
 });
 

@@ -1,7 +1,11 @@
 import puppeteer from 'puppeteer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { supabase } from './supabase.js';
+// Use the server-side Supabase client. The browser client (./supabase.js)
+// relies on `import.meta.env` which is undefined in the Node.js runtime
+// used by Vercel serverless functions and the local Express server, and
+// throws at module-load time.
+import { supabase } from './supabase.server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

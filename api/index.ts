@@ -4,15 +4,20 @@
  * Vercel routes every /api/* request here via the rewrites in vercel.json.
  * We wrap the existing Express router so no API logic changes are needed.
  *
- * @vercel/node transpiles this TypeScript file automatically before running
- * it in Node.js 20.x — no manual compilation step is required.
+ * IMPORTANT: This file is pre-bundled to api/index.js by esbuild during the
+ * Vercel build step (see the `vercel-build` script in package.json). We use
+ * the `.js` extension on the relative import so that:
+ *   - the local dev runtime (tsx) resolves the TS source transparently, and
+ *   - the bundled output is a single self-contained JS file with no runtime
+ *     resolution of `src/routes/api`, which previously failed on Vercel with
+ *     `ERR_MODULE_NOT_FOUND` because the raw .ts source was shipped as-is
+ *     but Node's ESM loader cannot resolve extensionless bare paths.
  */
 
 import 'dotenv/config'
 import express from 'express'
 import type { Request, Response } from 'express'
-// Import without .js extension — @vercel/node resolves .ts files directly
-import apiRouter from '../src/routes/api'
+import apiRouter from '../src/routes/api.js'
 
 const app = express()
 

@@ -9,3 +9,7 @@ coverage/
 
 .vercel
 .sql
+
+# Bundled Vercel serverless function (built by `npm run build:api`)
+api/index.js
+api/index.js.map
