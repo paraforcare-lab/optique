@@ -1,11 +1,13 @@
 import { forwardRef, useMemo } from 'react'
 import { format, isValid, parseISO } from 'date-fns'
-import { fr } from 'date-fns/locale'
+import { getDateLocale } from '@/lib/utils'
 import { numberToFrenchWords } from '@/lib/numberToWords'
 
 interface DevisDocumentProps {
   devis: any
   entreprise: any
+  /** BCP-47 language tag from i18n.language */
+  lang?: string
 }
 
 const fmt2 = (n: number): string =>
@@ -24,7 +26,7 @@ const pickVal = (obj: any, ...keys: string[]) => {
 
 const pickNum = (obj: any, ...keys: string[]) => safeNum(pickVal(obj, ...keys))
 
-const fmtDate = (d: any): string => {
+const makeFmtDate = (lang?: string) => (d: any): string => {
   if (!d) return '-'
   try {
     let date: Date
@@ -35,19 +37,22 @@ const fmtDate = (d: any): string => {
     } else {
       date = new Date(d)
     }
-    return isValid(date) ? format(date, 'dd/MM/yyyy', { locale: fr }) : '-'
+    return isValid(date) ? format(date, 'dd/MM/yyyy', { locale: getDateLocale(lang) }) : '-'
   } catch {
     return '-'
   }
 }
 
-const fmtDateTime = (d: Date): string => {
-  return format(d, 'dd/MM/yy HH:mm', { locale: fr })
+const makeFmtDateTime = (lang?: string) => (d: Date): string => {
+  return format(d, 'dd/MM/yy HH:mm', { locale: getDateLocale(lang) })
 }
 
 export const DevisDocument = forwardRef<HTMLDivElement, DevisDocumentProps>(
-  ({ devis, entreprise }, ref) => {
+  ({ devis, entreprise, lang }, ref) => {
     if (!devis) return null
+
+    const fmtDate     = makeFmtDate(lang)
+    const fmtDateTime = makeFmtDateTime(lang)
 
     const lignes = devis.lignes || []
     const totalHt = pickNum(devis, 'montantHt', 'montant_ht')

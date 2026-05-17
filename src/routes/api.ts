@@ -1,4 +1,4 @@
-import { Router } from 'express'
+﻿import { Router } from 'express'
 import { supabase, supabaseAdmin } from '../lib/supabase.js'
 
 const router = Router();
@@ -13,7 +13,7 @@ router.post('/create-user', async (req, res) => {
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
+      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractÃ¨res' });
     }
 
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -30,7 +30,7 @@ router.post('/create-user', async (req, res) => {
     res.status(201).json({ 
       success: true, 
       user: { id: data.user.id, email: data.user.email },
-      message: 'Utilisateur créé avec succès'
+      message: 'Utilisateur crÃ©Ã© avec succÃ¨s'
     });
   } catch (error: any) {
     console.error('Unexpected error:', error);
@@ -353,8 +353,8 @@ const updateProductStock = async (
 ) => {
   if (!produitId) return;
   
-  // Fetch current stock
-  const { data: produit, error: fetchError } = await supabase
+  // Always use supabaseAdmin â€” this runs server-side and must bypass RLS
+  const { data: produit, error: fetchError } = await supabaseAdmin
     .from('produits')
     .select('stock_actuel, stock_min, designation, nom, user_id')
     .eq('id', produitId)
@@ -368,15 +368,14 @@ const updateProductStock = async (
   const currentStock = Number(produit.stock_actuel || 0);
   const newStock = currentStock + delta;
   
-  // Prevent negative stock — only block outbound movements (sales/deliveries).
+  // Prevent negative stock â€” only block outbound movements (sales/deliveries).
   // For inbound reversals (undoing a purchase receipt) the caller should use
   // updateProductStockSafe() which clamps to 0 instead of throwing.
   if (newStock < 0) {
-    throw new Error(`Stock insuffisant pour le produit ${produitId}. Stock actuel: ${currentStock}, Tentative de réduction: ${Math.abs(delta)}`);
+    throw new Error(`Stock insuffisant pour le produit ${produitId}. Stock actuel: ${currentStock}, Tentative de rÃ©duction: ${Math.abs(delta)}`);
   }
   
-  // Update stock
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from('produits')
     .update({ stock_actuel: newStock })
     .eq('id', produitId);
@@ -386,7 +385,6 @@ const updateProductStock = async (
     throw updateError;
   }
 
-  // Record movement
   const mData = {
     produit_id: parseInt(produitId),
     type,
@@ -398,16 +396,15 @@ const updateProductStock = async (
     date_mouvement: new Date()
   };
 
-  const { error: mError } = await supabase.from('mouvements_stock').insert([mData]);
+  const { error: mError } = await supabaseAdmin.from('mouvements_stock').insert([mData]);
   if (mError) {
     console.warn(`Stock movement not recorded (table may not exist): ${mError.message}`);
   }
 
-  // Auto-create notification if stock dropped below minimum
   if (delta < 0 && newStock <= Number(produit.stock_min) && Number(produit.stock_min) > 0 && produit.user_id) {
     try {
       const designation = produit.designation || produit.nom || 'Produit';
-      const { data: recentNotifs } = await supabase
+      const { data: recentNotifs } = await supabaseAdmin
         .from('notifications')
         .select('id')
         .eq('user_id', produit.user_id)
@@ -420,7 +417,7 @@ const updateProductStock = async (
         await createNotification(
           produit.user_id,
           'Stock Faible',
-          `${designation} - ${newStock} unités restantes`,
+          `${designation} - ${newStock} unitÃ©s restantes`,
           'warning',
           '/produits'
         );
@@ -439,7 +436,7 @@ const updateProductStock = async (
  * stock would go negative. Instead it clamps the stock to 0 and logs a
  * warning. This is correct behaviour for purchase reversals: the physical
  * goods may already have been consumed, sold, or adjusted, so the ERP should
- * not block the administrative action — it simply records what it can.
+ * not block the administrative action â€” it simply records what it can.
  */
 const updateProductStockSafe = async (
   produitId: any,
@@ -452,23 +449,22 @@ const updateProductStockSafe = async (
 ) => {
   if (!produitId) return;
 
-  const { data: produit, error: fetchError } = await supabase
+  // Always use supabaseAdmin â€” this runs server-side and must bypass RLS
+  const { data: produit, error: fetchError } = await supabaseAdmin
     .from('produits')
     .select('stock_actuel, stock_min, designation, nom, user_id')
     .eq('id', produitId)
     .single();
 
   if (fetchError || !produit) {
-    console.warn(`updateProductStockSafe: product ${produitId} not found — skipping`);
+    console.warn(`updateProductStockSafe: product ${produitId} not found â€” skipping`);
     return;
   }
 
   const currentStock = Number(produit.stock_actuel || 0);
-  // Clamp: never go below 0 for a revert operation
   const newStock = Math.max(0, currentStock + delta);
 
   if (newStock < currentStock + delta) {
-    // Would have gone negative — log the clamping so the admin can audit
     console.warn(
       `updateProductStockSafe: stock clamped to 0 for product ${produitId}. ` +
       `currentStock=${currentStock}, delta=${delta}. ` +
@@ -476,19 +472,16 @@ const updateProductStockSafe = async (
     );
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from('produits')
     .update({ stock_actuel: newStock })
     .eq('id', produitId);
 
   if (updateError) {
     console.error(`updateProductStockSafe: failed to update product ${produitId}:`, updateError);
-    // Do NOT throw — this is a safe variant; a failed revert should not
-    // block the status change that already succeeded.
     return;
   }
 
-  // Record movement
   const mData = {
     produit_id: parseInt(produitId),
     type,
@@ -500,14 +493,14 @@ const updateProductStockSafe = async (
     date_mouvement: new Date()
   };
 
-  const { error: mError } = await supabase.from('mouvements_stock').insert([mData]);
+  const { error: mError } = await supabaseAdmin.from('mouvements_stock').insert([mData]);
   if (mError) {
     console.warn(`Stock movement not recorded: ${mError.message}`);
   }
 };
 
 const handleAvoirLogic = async (factureId: any, newStatut: string, oldStatut: string) => {
-  if (newStatut === 'annulée' && oldStatut !== 'annulée') {
+  if (newStatut === 'annulÃ©e' && oldStatut !== 'annulÃ©e') {
     const { data: existingAvoir } = await supabase.from('avoirs').select('id').eq('facture_id', factureId).single();
     if (!existingAvoir) {
       const { count: avoirCount } = await supabase.from('avoirs').select('*', { count: 'exact', head: true });
@@ -526,11 +519,11 @@ const handleAvoirLogic = async (factureId: any, newStatut: string, oldStatut: st
           montant_tva: Number(facture.montant_tva || 0),
           montant_ttc: Number(facture.montant_ttc || 0),
           notes: `Avoir pour annulation de la facture ${facture.numero}`,
-          statut: 'Généré'
+          statut: 'GÃ©nÃ©rÃ©'
         };
 
         const { data: newAvoir, error: avoirError } = await supabase.from('avoirs').insert([avoirData]).select().single();
-        if (avoirError) throw new Error(`Erreur lors de la création de l'avoir: ${avoirError.message}`);
+        if (avoirError) throw new Error(`Erreur lors de la crÃ©ation de l'avoir: ${avoirError.message}`);
 
         if (newAvoir && factureLignes) {
           const avoirLignesData = factureLignes.map(l => ({
@@ -546,16 +539,16 @@ const handleAvoirLogic = async (factureId: any, newStatut: string, oldStatut: st
             ordre: l.ordre
           }));
           const { error: lignesError } = await supabase.from('avoir_lignes').insert(avoirLignesData);
-          if (lignesError) throw new Error(`Erreur lors de la création des lignes d'avoir: ${lignesError.message}`);
-          await logActivity('création avoir', `Avoir ${avoirNumero} créé pour la facture ${facture.numero}`);
+          if (lignesError) throw new Error(`Erreur lors de la crÃ©ation des lignes d'avoir: ${lignesError.message}`);
+          await logActivity('crÃ©ation avoir', `Avoir ${avoirNumero} crÃ©Ã© pour la facture ${facture.numero}`);
         }
       }
     }
-  } else if (oldStatut === 'annulée' && (newStatut === 'payée' || newStatut === 'reste_a_payer')) {
+  } else if (oldStatut === 'annulÃ©e' && (newStatut === 'payÃ©e' || newStatut === 'reste_a_payer')) {
     const { data: avoir } = await supabase.from('avoirs').select('numero').eq('facture_id', factureId).single();
     if (avoir) {
       await supabase.from('avoirs').delete().eq('facture_id', factureId);
-      await logActivity('suppression avoir', `Avoir ${avoir.numero} supprimé car la facture ${factureId} est revenue au statut ${newStatut}`);
+      await logActivity('suppression avoir', `Avoir ${avoir.numero} supprimÃ© car la facture ${factureId} est revenue au statut ${newStatut}`);
     }
   }
 };
@@ -563,21 +556,21 @@ const handleAvoirLogic = async (factureId: any, newStatut: string, oldStatut: st
 // --- DASHBOARD DATA ---
 router.get('/dashboard-data', async (req, res) => {
   try {
-    const { data: factures } = await supabase.from('factures').select('*').in('statut', ['payée', 'reste_a_payer', 'annulée']);
+    const { data: factures } = await supabase.from('factures').select('*').in('statut', ['payÃ©e', 'reste_a_payer', 'annulÃ©e']);
     const { data: ventesPassagers } = await supabase.from('ventes_passagers').select('*');
-    const { data: bonsCommande } = await supabase.from('bons_commande').select('*').in('statut', ['confirmé', 'livré', 'livrée']);
+    const { data: bonsCommande } = await supabase.from('bons_commande').select('*').in('statut', ['confirmÃ©', 'livré', 'livrée']);
     const { data: depenses } = await supabase.from('depenses').select('*');
     const { data: produits } = await supabase.from('produits').select('*');
     
-    // TVA Collectée: Factures (annulées count as negative) + Ventes Passagers
+    // TVA CollectÃ©e: Factures (annulÃ©es count as negative) + Ventes Passagers
     const tvaFactures = (factures || []).reduce((sum, f) => {
       const val = Number(f.montant_tva || 0);
-      return sum + (f.statut === 'annulée' ? -val : val);
+      return sum + (f.statut === 'annulÃ©e' ? -val : val);
     }, 0);
     const tvaVP = (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.montant_tva || 0), 0);
     const totalTvaCollectee = tvaFactures + tvaVP;
 
-    // TVA Déductible: Bons de Commande + Dépenses
+    // TVA DÃ©ductible: Bons de Commande + DÃ©penses
     const tvaBC = (bonsCommande || []).reduce((sum, bc) => sum + Number(bc.montant_tva || 0), 0);
     const tvaDepenses = (depenses || []).reduce((sum, d) => sum + Number(d.montant_tva || 0), 0);
     const totalTvaDeductible = tvaBC + tvaDepenses;
@@ -587,32 +580,32 @@ router.get('/dashboard-data', async (req, res) => {
     // Ventes Totales (HT)
     const ventesHT = (factures || []).reduce((sum, f) => {
       const val = Number(f.montant_ht || 0);
-      return sum + (f.statut === 'annulée' ? -val : val);
+      return sum + (f.statut === 'annulÃ©e' ? -val : val);
     }, 0) + (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.montant_ht || 0), 0);
 
     // COGS (Cost of Goods Sold)
     const cogsFactures = (factures || []).reduce((sum, f) => {
       const val = Number(f.cogs || 0);
-      return sum + (f.statut === 'annulée' ? -val : val);
+      return sum + (f.statut === 'annulÃ©e' ? -val : val);
     }, 0);
     const cogsVP = (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.cogs || 0), 0);
     const totalCOGS = cogsFactures + cogsVP;
 
-    // Profit: Ventes HT - COGS - Dépenses HT
+    // Profit: Ventes HT - COGS - DÃ©penses HT
     const totalDepensesHT = (depenses || []).reduce((sum, d) => sum + Number(d.montant_ht || 0), 0);
     const profit = ventesHT - totalCOGS - totalDepensesHT;
 
     // Revenue (TTC)
     const totalRevenue = (factures || []).reduce((sum, f) => {
       const val = Number(f.montant_ttc || 0);
-      return sum + (f.statut === 'annulée' ? -val : val);
+      return sum + (f.statut === 'annulÃ©e' ? -val : val);
     }, 0) + (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.montant_ttc || 0), 0);
 
     const unpaidRevenue = (factures || []).filter(f => f.statut === 'reste_a_payer').reduce((sum, f) => sum + Number(f.reste_a_payer || 0), 0);
 
     const range = (req.query.range as string) || '6m';
     const monthlyData = [];
-    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const monthNames = ['Jan', 'FÃ©v', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'AoÃ»', 'Sep', 'Oct', 'Nov', 'DÃ©c'];
     
     if (range === '1m') {
       // Last 30 days
@@ -640,7 +633,7 @@ router.get('/dashboard-data', async (req, res) => {
           name: d.getDate().toString(),
           revenue: dayFactures.reduce((sum, f) => {
             const val = Number(f.montant_ttc || 0);
-            return sum + (f.statut === 'annulée' ? -val : val);
+            return sum + (f.statut === 'annulÃ©e' ? -val : val);
           }, 0) + dayVP.reduce((sum, vp) => sum + Number(vp.montant_ttc || 0), 0),
           expenses: dayDepenses.reduce((sum, d) => sum + Number(d.montant_ttc || 0), 0)
         });
@@ -672,7 +665,7 @@ router.get('/dashboard-data', async (req, res) => {
           name: monthNames[month],
           revenue: monthFactures.reduce((sum, f) => {
             const val = Number(f.montant_ttc || 0);
-            return sum + (f.statut === 'annulée' ? -val : val);
+            return sum + (f.statut === 'annulÃ©e' ? -val : val);
           }, 0) + monthVP.reduce((sum, vp) => sum + Number(vp.montant_ttc || 0), 0),
           expenses: monthDepenses.reduce((sum, d) => sum + Number(d.montant_ttc || 0), 0)
         });
@@ -691,7 +684,7 @@ router.get('/dashboard-data', async (req, res) => {
 
     res.json({
       clientsCount: (await supabase.from('clients').select('*', { count: 'exact', head: true })).count || 0,
-      facturesCount: (await supabase.from('factures').select('*', { count: 'exact', head: true }).in('statut', ['payée', 'reste_a_payer'])).count || 0,
+      facturesCount: (await supabase.from('factures').select('*', { count: 'exact', head: true }).in('statut', ['payÃ©e', 'reste_a_payer'])).count || 0,
       produitsCount: produits?.length || 0,
       totalRevenue,
       unpaidRevenue,
@@ -1010,7 +1003,7 @@ router.post('/produits', async (req, res) => {
       tva: req.body.tauxTva !== undefined ? Number(req.body.tauxTva) : (req.body.tva !== undefined ? Number(req.body.tva) : 20),
       stock_actuel: Number(req.body.stockActuel || 0),
       stock_min: Number(req.body.stockMin || 5),
-      unite: req.body.unite || 'unité'
+      unite: req.body.unite || 'unitÃ©'
     };
 
     // Don't insert into generated columns - they are calculated automatically
@@ -1101,7 +1094,7 @@ router.post('/produits', async (req, res) => {
           produit_id: produit.id,
           type: 'initial',
           quantite: req.body.stockActuel,
-          notes: 'Stock initial à la création du produit',
+          notes: 'Stock initial Ã  la crÃ©ation du produit',
           date_mouvement: new Date()
         }]);
       } catch (mError) {
@@ -1326,7 +1319,7 @@ router.post('/factures', async (req, res) => {
       return res.status(400).json({ error: 'Failed to create facture', details: formatError(factureError) });
     }
 
-    await logActivity('création facture', `Facture ${numero} créée`);
+    await logActivity('crÃ©ation facture', `Facture ${numero} crÃ©Ã©e`);
 
     if (lignes && lignes.length > 0) {
       const lignesData = lignes.map((l: any, index: number) => {
@@ -1359,7 +1352,7 @@ router.post('/factures', async (req, res) => {
       }
 
       // Stock update logic for Factures
-      if (['payée', 'reste_a_payer'].includes(facture.statut)) {
+      if (['payÃ©e', 'reste_a_payer'].includes(facture.statut)) {
         const { data: client } = await supabase.from('clients').select('nom').eq('id', facture.client_id).single();
         for (const l of lignesData) {
           if (l.produit_id) {
@@ -1438,7 +1431,7 @@ router.put('/factures/:id', async (req, res) => {
     const newStatut = updateData.statut;
 
     // Avoir creation BEFORE status update (transactional integrity)
-    if (newStatut === 'annulée' && oldStatut && oldStatut !== 'annulée') {
+    if (newStatut === 'annulÃ©e' && oldStatut && oldStatut !== 'annulÃ©e') {
       await handleAvoirLogic(id, newStatut, oldStatut);
     }
 
@@ -1456,8 +1449,8 @@ router.put('/factures/:id', async (req, res) => {
     if (newStatut && newStatut !== oldStatut) {
       const { data: currentLignes } = await supabase.from('facture_lignes').select('*').eq('facture_id', id);
       if (currentLignes && currentLignes.length > 0) {
-        const isActive = ['payée', 'reste_a_payer'].includes(newStatut);
-        const isCancelled = newStatut === 'annulée';
+        const isActive = ['payÃ©e', 'reste_a_payer'].includes(newStatut);
+        const isCancelled = newStatut === 'annulÃ©e';
         
         if (!oldStockUpdated && isActive) {
           const { data: client } = await supabase.from('clients').select('nom').eq('id', oldFacture.client_id || updateData.client_id).single();
@@ -1494,7 +1487,7 @@ router.put('/factures/:id', async (req, res) => {
     }
 
     // Avoir deletion (reverse case) after status update
-    if (oldStatut === 'annulée' && newStatut && newStatut !== 'annulée') {
+    if (oldStatut === 'annulÃ©e' && newStatut && newStatut !== 'annulÃ©e') {
       await handleAvoirLogic(id, newStatut, oldStatut);
     }
 
@@ -1556,7 +1549,7 @@ router.delete('/factures/:id', async (req, res) => {
   try {
     const { data: facture } = await supabase.from('factures').select('statut').eq('id', req.params.id).single();
     if (facture && facture.statut !== 'brouillon') {
-      return res.status(400).json({ error: 'Impossible de supprimer une facture validée. Veuillez l\'annuler.' });
+      return res.status(400).json({ error: 'Impossible de supprimer une facture validÃ©e. Veuillez l\'annuler.' });
     }
     const { error } = await supabase.from('factures').delete().eq('id', req.params.id);
     if (error) throw error;
@@ -1577,12 +1570,12 @@ router.put('/factures/:id/statut', async (req, res) => {
     const oldStockUpdated = oldFacture?.stock_updated;
 
     // Avoir creation BEFORE status update (transactional integrity)
-    if (statut === 'annulée' && oldStatut && oldStatut !== 'annulée') {
+    if (statut === 'annulÃ©e' && oldStatut && oldStatut !== 'annulÃ©e') {
       await handleAvoirLogic(id, statut, oldStatut);
     }
 
     const updatePayload: any = { statut };
-    if (['payée', 'annulée'].includes(statut)) {
+    if (['payÃ©e', 'annulÃ©e'].includes(statut)) {
       updatePayload.reste_a_payer = 0;
     }
 
@@ -1598,8 +1591,8 @@ router.put('/factures/:id/statut', async (req, res) => {
     if (statut && statut !== oldStatut) {
       const { data: currentLignes } = await supabase.from('facture_lignes').select('*').eq('facture_id', id);
       if (currentLignes && currentLignes.length > 0) {
-        const isActive = ['payée', 'reste_a_payer'].includes(statut);
-        const isCancelled = statut === 'annulée';
+        const isActive = ['payÃ©e', 'reste_a_payer'].includes(statut);
+        const isCancelled = statut === 'annulÃ©e';
         
         if (!oldStockUpdated && isActive) {
           const { data: client } = await supabase.from('clients').select('nom').eq('id', oldFacture.client_id).single();
@@ -1634,7 +1627,7 @@ router.put('/factures/:id/statut', async (req, res) => {
     }
 
     // Avoir deletion (reverse case) after status update
-    if (oldStatut === 'annulée' && statut && statut !== 'annulée') {
+    if (oldStatut === 'annulÃ©e' && statut && statut !== 'annulÃ©e') {
       await handleAvoirLogic(id, statut, oldStatut);
     }
 
@@ -1685,11 +1678,11 @@ router.delete('/avoirs/:id', async (req, res) => {
       .eq('id', req.params.id)
       .single();
     
-    if (fetchError || !avoir) return res.status(404).json({ error: 'Avoir non trouvé' });
+    if (fetchError || !avoir) return res.status(404).json({ error: 'Avoir non trouvÃ©' });
     
     const fStatut = (avoir.facture as any)?.statut;
-    if (fStatut !== 'payée' && fStatut !== 'reste_a_payer') {
-      return res.status(400).json({ error: 'Impossible de supprimer un avoir si la facture n\'est pas payée ou reste à payer' });
+    if (fStatut !== 'payÃ©e' && fStatut !== 'reste_a_payer') {
+      return res.status(400).json({ error: 'Impossible de supprimer un avoir si la facture n\'est pas payÃ©e ou reste Ã  payer' });
     }
 
     const { error } = await supabase.from('avoirs').delete().eq('id', req.params.id);
@@ -1754,7 +1747,7 @@ router.post('/devis', async (req, res) => {
       return res.status(400).json({ error: 'Failed to create devis', details: devisError.message });
     }
 
-    await logActivity('création devis', `Devis ${numero} créé`);
+    await logActivity('crÃ©ation devis', `Devis ${numero} crÃ©Ã©`);
 
     if (lignes && lignes.length > 0) {
       const lignesData = lignes.map((l: any, index: number) => {
@@ -1861,7 +1854,7 @@ router.put('/devis/:id', async (req, res) => {
     }
 
     if (updateData.statut) {
-      await logActivity('changement de statut devis', `Devis ${id} : statut mis à jour vers ${updateData.statut}`);
+      await logActivity('changement de statut devis', `Devis ${id} : statut mis Ã  jour vers ${updateData.statut}`);
     }
 
     // Only update lines if provided
@@ -1920,7 +1913,7 @@ router.delete('/devis/:id', async (req, res) => {
   try {
     const { data: devis } = await supabase.from('devis').select('statut').eq('id', req.params.id).single();
     if (devis && devis.statut !== 'brouillon') {
-      return res.status(400).json({ error: 'Impossible de supprimer un devis validé. Veuillez le refuser ou l\'annuler.' });
+      return res.status(400).json({ error: 'Impossible de supprimer un devis validÃ©. Veuillez le refuser ou l\'annuler.' });
     }
     const { error } = await supabase.from('devis').delete().eq('id', req.params.id);
     if (error) throw error;
@@ -1956,7 +1949,7 @@ router.post('/devis/:id/convert', async (req, res) => {
         statut: 'en_attente',
         reste_a_payer: devis.montant_ttc,
         mode_paiement: devis.mode_paiement,
-        notes: `Facture générée à partir du devis ${devis.numero}`
+        notes: `Facture gÃ©nÃ©rÃ©e Ã  partir du devis ${devis.numero}`
       }])
       .select()
       .single();
@@ -2058,7 +2051,7 @@ router.post('/bons-commande', async (req, res) => {
       return res.status(400).json({ error: 'Failed to create bon de commande', details: bonError.message });
     }
 
-    await logActivity('création bon de commande', `Bon de Commande ${numero} créé`);
+    await logActivity('crÃ©ation bon de commande', `Bon de Commande ${numero} crÃ©Ã©`);
 
     if (lignes && lignes.length > 0) {
       const lignesData = lignes.map((l: any, index: number) => {
@@ -2082,12 +2075,12 @@ router.post('/bons-commande', async (req, res) => {
         };
       });
 
-      const { error: lignesError } = await supabase.from('bon_commande_lignes').insert(lignesData);
+      const { error: lignesError } = await supabaseAdmin.from('bon_commande_lignes').insert(lignesData);
       
       if (lignesError) {
         console.error('Error creating bon de commande lines:', JSON.stringify(lignesError, null, 2));
         // Cleanup: delete the bon if lines fail
-        await supabase.from('bons_commande').delete().eq('id', bon.id);
+        await supabaseAdmin.from('bons_commande').delete().eq('id', bon.id);
         return res.status(400).json({ 
           error: 'Error creating bon de commande lines', 
           details: lignesError.message,
@@ -2095,10 +2088,10 @@ router.post('/bons-commande', async (req, res) => {
         });
       }
 
-      // Stock update logic: if status is 'Livrée' or 'Livré', add to stock
-      const isLivré = bon.statut === 'livrée' || bon.statut === 'livré';
-      if (isLivré) {
-        const { data: fournisseur } = await supabase.from('fournisseurs').select('nom').eq('id', bon.fournisseur_id).single();
+      // Stock update logic: if status is 'livrée' or 'livré', add to stock
+      const islivré = bon.statut === 'livrée' || bon.statut === 'livré';
+      if (islivré) {
+        const { data: fournisseur } = await supabaseAdmin.from('fournisseurs').select('nom').eq('id', bon.fournisseur_id).single();
         for (const l of lignesData) {
           if (l.produit_id) {
             await updateProductStock(
@@ -2106,17 +2099,17 @@ router.post('/bons-commande', async (req, res) => {
               Number(l.quantite || 0), 
               'achat', 
               bon.numero, 
-              `Réception Bon de Commande ${bon.numero}`,
+              `RÃ©ception Bon de Commande ${bon.numero}`,
               fournisseur?.nom,
               l.prix_unitaire_ht
             );
           }
         }
         // Mark as stock updated
-        await supabase.from('bons_commande').update({ stock_updated: true }).eq('id', bon.id);
+        await supabaseAdmin.from('bons_commande').update({ stock_updated: true }).eq('id', bon.id);
 
         // Create a linked Bon de Livraison
-        const { count: blCount } = await supabase.from('bons_livraison').select('*', { count: 'exact', head: true });
+        const { count: blCount } = await supabaseAdmin.from('bons_livraison').select('*', { count: 'exact', head: true });
         const blNumero = `BL/${new Date().getFullYear()}/${String((blCount || 0) + 1).padStart(5, '0')}`;
         
         const blData: any = {
@@ -2124,14 +2117,14 @@ router.post('/bons-commande', async (req, res) => {
           fournisseur_id: bon.fournisseur_id,
           date_livraison: new Date().toISOString(),
           statut: 'livré',
-          notes: `Généré automatiquement depuis Bon de Commande ${bon.numero}`,
+          notes: `GÃ©nÃ©rÃ© automatiquement depuis Bon de Commande ${bon.numero}`,
           montant_ht: bon.montant_ht || 0,
           montant_tva: bon.montant_tva || 0,
           montant_ttc: bon.montant_ttc || 0,
           bon_commande_id: bon.id
         };
 
-        const { data: newBL, error: blError } = await supabase.from('bons_livraison').insert([blData]).select().single();
+        const { data: newBL, error: blError } = await supabaseAdmin.from('bons_livraison').insert([blData]).select().single();
         
         if (!blError && newBL && lignesData) {
           const blLignesData = lignesData.map((l: any, index: number) => ({
@@ -2146,7 +2139,7 @@ router.post('/bons-commande', async (req, res) => {
             montant_ttc: l.montant_ttc,
             ordre: l.ordre !== undefined ? l.ordre : index
           }));
-          await supabase.from('bon_livraison_lignes').insert(blLignesData);
+          await supabaseAdmin.from('bon_livraison_lignes').insert(blLignesData);
         }
       }
     }
@@ -2174,7 +2167,7 @@ router.put('/bons-commande/:id', async (req, res) => {
     const id = req.params.id;
     
     // Fetch old status for stock update
-    const { data: oldBon } = await supabase.from('bons_commande').select('statut, stock_updated, fournisseur_id, numero').eq('id', id).single();
+    const { data: oldBon } = await supabaseAdmin.from('bons_commande').select('statut, stock_updated, fournisseur_id, numero').eq('id', id).single();
     const oldStatut = oldBon?.statut;
     const wasStockUpdated = oldBon?.stock_updated;
 
@@ -2198,21 +2191,21 @@ router.put('/bons-commande/:id', async (req, res) => {
     }
 
     if (updateData.statut) {
-      await logActivity('changement de statut bon de commande', `Bon de Commande ${id} : statut mis à jour vers ${updateData.statut}`);
+      await logActivity('changement de statut bon de commande', `Bon de Commande ${id} : statut mis Ã  jour vers ${updateData.statut}`);
     }
 
     // Stock update logic
     const newStatut = updateData.statut || oldStatut;
     const isNowLivré = newStatut === 'livrée' || newStatut === 'livré';
-    const wasLivré = oldStatut === 'livrée' || oldStatut === 'livré';
+    const waslivré = oldStatut === 'livrée' || oldStatut === 'livré';
 
-    if (isNowLivré && !wasLivré) {
+    if (isNowLivré && !waslivré) {
       // Create a linked Bon de Livraison
-      const { count: blCount } = await supabase.from('bons_livraison').select('*', { count: 'exact', head: true });
+      const { count: blCount } = await supabaseAdmin.from('bons_livraison').select('*', { count: 'exact', head: true });
       const blNumero = `BL/${new Date().getFullYear()}/${String((blCount || 0) + 1).padStart(5, '0')}`;
       
-      const { data: bonDetails } = await supabase.from('bons_commande').select('*').eq('id', id).single();
-      const { data: bonLignes } = await supabase.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
+      const { data: bonDetails } = await supabaseAdmin.from('bons_commande').select('*').eq('id', id).single();
+      const { data: bonLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
 
       if (bonDetails) {
         const blData: any = {
@@ -2220,14 +2213,14 @@ router.put('/bons-commande/:id', async (req, res) => {
           fournisseur_id: bonDetails.fournisseur_id,
           date_livraison: new Date().toISOString(),
           statut: 'livré',
-          notes: `Généré automatiquement depuis Bon de Commande ${bonDetails.numero}`,
+          notes: `GÃ©nÃ©rÃ© automatiquement depuis Bon de Commande ${bonDetails.numero}`,
           montant_ht: bonDetails.montant_ht || 0,
           montant_tva: bonDetails.montant_tva || 0,
           montant_ttc: bonDetails.montant_ttc || 0,
           bon_commande_id: id
         };
 
-        const { data: newBL, error: blError } = await supabase.from('bons_livraison').insert([blData]).select().single();
+        const { data: newBL, error: blError } = await supabaseAdmin.from('bons_livraison').insert([blData]).select().single();
         
         if (!blError && newBL && bonLignes) {
           const blLignesData = bonLignes.map((l: any, index: number) => ({
@@ -2242,18 +2235,18 @@ router.put('/bons-commande/:id', async (req, res) => {
             montant_ttc: l.montant_ttc || ((Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0)) * (1 + Number(l.tva || 0) / 100)),
             ordre: l.ordre !== undefined ? l.ordre : index
           }));
-          await supabase.from('bon_livraison_lignes').insert(blLignesData);
+          await supabaseAdmin.from('bon_livraison_lignes').insert(blLignesData);
         }
       }
-    } else if (!isNowLivré && wasLivré) {
+    } else if (!isNowLivré && waslivré) {
       // Delete linked Bon de Livraison
-      await supabase.from('bons_livraison').delete().eq('bon_commande_id', id);
+      await supabaseAdmin.from('bons_livraison').delete().eq('bon_commande_id', id);
     }
 
     if (isNowLivré && !wasStockUpdated) {
-      const { data: currentLignes } = await supabase.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-      const { data: fournisseur } = await supabase.from('fournisseurs').select('nom').eq('id', oldBon.fournisseur_id || updateData.fournisseur_id).single();
-      const { data: b } = await supabase.from('bons_commande').select('numero').eq('id', id).single();
+      const { data: currentLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
+      const { data: fournisseur } = await supabaseAdmin.from('fournisseurs').select('nom').eq('id', oldBon.fournisseur_id || updateData.fournisseur_id).single();
+      const { data: b } = await supabaseAdmin.from('bons_commande').select('numero').eq('id', id).single();
       if (currentLignes && currentLignes.length > 0) {
         for (const l of currentLignes) {
           if (l.produit_id) await updateProductStock(
@@ -2261,19 +2254,19 @@ router.put('/bons-commande/:id', async (req, res) => {
             Number(l.quantite || 0), 
             'achat', 
             b?.numero, 
-            `Réception Bon de Commande ${b?.numero}`,
+            `RÃ©ception Bon de Commande ${b?.numero}`,
             fournisseur?.nom,
             l.prix_unitaire_ht
           );
         }
         // Mark as stock updated
-        await supabase.from('bons_commande').update({ stock_updated: true }).eq('id', id);
+        await supabaseAdmin.from('bons_commande').update({ stock_updated: true }).eq('id', id);
       }
     } else if (!isNowLivré && wasStockUpdated) {
       // Revert stock if it was updated but status is no longer 'livrée'
-      const { data: currentLignes } = await supabase.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-      const { data: fournisseur } = await supabase.from('fournisseurs').select('nom').eq('id', oldBon.fournisseur_id || updateData.fournisseur_id).single();
-      const { data: b } = await supabase.from('bons_commande').select('numero').eq('id', id).single();
+      const { data: currentLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
+      const { data: fournisseur } = await supabaseAdmin.from('fournisseurs').select('nom').eq('id', oldBon.fournisseur_id || updateData.fournisseur_id).single();
+      const { data: b } = await supabaseAdmin.from('bons_commande').select('numero').eq('id', id).single();
       if (currentLignes && currentLignes.length > 0) {
         for (const l of currentLignes) {
           if (l.produit_id) await updateProductStock(
@@ -2281,20 +2274,20 @@ router.put('/bons-commande/:id', async (req, res) => {
             -Number(l.quantite || 0), 
             'ajustement', 
             b?.numero, 
-            `Annulation Réception Bon de Commande ${b?.numero}`,
+            `Annulation RÃ©ception Bon de Commande ${b?.numero}`,
             fournisseur?.nom,
             l.prix_unitaire_ht
           );
         }
         // Mark as stock NOT updated
-        await supabase.from('bons_commande').update({ stock_updated: false }).eq('id', id);
+        await supabaseAdmin.from('bons_commande').update({ stock_updated: false }).eq('id', id);
       }
     }
 
     // Only update lines if provided
     if (lignes !== undefined) {
       // Delete existing lines
-      await supabase.from('bon_commande_lignes').delete().eq('bon_commande_id', id);
+      await supabaseAdmin.from('bon_commande_lignes').delete().eq('bon_commande_id', id);
       
       // Recreate lines
       if (lignes && lignes.length > 0) {
@@ -2318,7 +2311,7 @@ router.put('/bons-commande/:id', async (req, res) => {
             ordre: l.ordre !== undefined ? Number(l.ordre) : index
           };
         });
-        const { error: lignesError } = await supabase.from('bon_commande_lignes').insert(lignesData);
+        const { error: lignesError } = await supabaseAdmin.from('bon_commande_lignes').insert(lignesData);
         if (lignesError) {
           console.error('Error updating bon de commande lines:', JSON.stringify(lignesError, null, 2));
           return res.status(400).json({ error: 'Error updating bon de commande lines', details: lignesError.message || JSON.stringify(lignesError) });
@@ -2345,11 +2338,11 @@ router.put('/bons-commande/:id', async (req, res) => {
 
 router.delete('/bons-commande/:id', async (req, res) => {
   try {
-    const { data: bc } = await supabase.from('bons_commande').select('statut').eq('id', req.params.id).single();
+    const { data: bc } = await supabaseAdmin.from('bons_commande').select('statut').eq('id', req.params.id).single();
     if (bc && bc.statut !== 'brouillon') {
-      return res.status(400).json({ error: 'Impossible de supprimer un bon de commande validé. Veuillez l\'annuler.' });
+      return res.status(400).json({ error: 'Impossible de supprimer un bon de commande validÃ©. Veuillez l\'annuler.' });
     }
-    const { error } = await supabase.from('bons_commande').delete().eq('id', req.params.id);
+    const { error } = await supabaseAdmin.from('bons_commande').delete().eq('id', req.params.id);
     if (error) throw error;
     res.json({ success: true });
   } catch (error) {
@@ -2363,10 +2356,10 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
     const id = req.params.id;
 
     // Fetch old status for stock update
-    const { data: oldBon } = await supabase.from('bons_commande').select('statut, stock_updated, fournisseur_id, numero').eq('id', id).single();
+    const { data: oldBon } = await supabaseAdmin.from('bons_commande').select('statut, stock_updated, fournisseur_id, numero').eq('id', id).single();
     const wasStockUpdated = oldBon?.stock_updated;
 
-    const { data: bon, error } = await supabase
+    const { data: bon, error } = await supabaseAdmin
       .from('bons_commande')
       .update({ statut })
       .eq('id', id)
@@ -2376,15 +2369,15 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
 
     // Stock update logic - handle both livré and livrée
     const isNowLivré = statut === 'livré' || statut === 'livrée';
-    const wasLivré = oldBon?.statut === 'livré' || oldBon?.statut === 'livrée';
+    const waslivré = oldBon?.statut === 'livré' || oldBon?.statut === 'livrée';
 
-    if (isNowLivré && !wasLivré) {
+    if (isNowLivré && !waslivré) {
       // Create a linked Bon de Livraison
-      const { count: blCount } = await supabase.from('bons_livraison').select('*', { count: 'exact', head: true });
+      const { count: blCount } = await supabaseAdmin.from('bons_livraison').select('*', { count: 'exact', head: true });
       const blNumero = `BL/${new Date().getFullYear()}/${String((blCount || 0) + 1).padStart(5, '0')}`;
       
-      const { data: bonDetails } = await supabase.from('bons_commande').select('*').eq('id', id).single();
-      const { data: bonLignes } = await supabase.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
+      const { data: bonDetails } = await supabaseAdmin.from('bons_commande').select('*').eq('id', id).single();
+      const { data: bonLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
 
       if (bonDetails) {
         const blData: any = {
@@ -2392,14 +2385,14 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
           fournisseur_id: bonDetails.fournisseur_id,
           date_livraison: new Date().toISOString(),
           statut: 'livré',
-          notes: `Généré automatiquement depuis Bon de Commande ${bonDetails.numero}`,
+          notes: `GÃ©nÃ©rÃ© automatiquement depuis Bon de Commande ${bonDetails.numero}`,
           montant_ht: bonDetails.montant_ht || 0,
           montant_tva: bonDetails.montant_tva || 0,
           montant_ttc: bonDetails.montant_ttc || 0,
           bon_commande_id: id
         };
 
-        const { data: newBL, error: blError } = await supabase.from('bons_livraison').insert([blData]).select().single();
+        const { data: newBL, error: blError } = await supabaseAdmin.from('bons_livraison').insert([blData]).select().single();
         
         if (!blError && newBL && bonLignes) {
           const blLignesData = bonLignes.map((l: any, index: number) => ({
@@ -2414,17 +2407,17 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
             montant_ttc: l.montant_ttc || ((Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0)) * (1 + Number(l.tva || 0) / 100)),
             ordre: l.ordre !== undefined ? l.ordre : index
           }));
-          await supabase.from('bon_livraison_lignes').insert(blLignesData);
+          await supabaseAdmin.from('bon_livraison_lignes').insert(blLignesData);
         }
       }
-    } else if (!isNowLivré && wasLivré) {
+    } else if (!isNowLivré && waslivré) {
       // Delete linked Bon de Livraison
-      await supabase.from('bons_livraison').delete().eq('bon_commande_id', id);
+      await supabaseAdmin.from('bons_livraison').delete().eq('bon_commande_id', id);
     }
 
     if (isNowLivré && !wasStockUpdated) {
-      const { data: currentLignes } = await supabase.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-      const { data: b } = await supabase.from('bons_commande').select('*, fournisseur:fournisseurs(nom)').eq('id', id).single();
+      const { data: currentLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
+      const { data: b } = await supabaseAdmin.from('bons_commande').select('*, fournisseur:fournisseurs(nom)').eq('id', id).single();
       if (currentLignes && currentLignes.length > 0) {
         for (const l of currentLignes) {
           if (l.produit_id) await updateProductStock(
@@ -2432,20 +2425,20 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
             Number(l.quantite || 0), 
             'achat', 
             b?.numero, 
-            `Réception Bon de Commande ${b?.numero}`,
+            `RÃ©ception Bon de Commande ${b?.numero}`,
             b?.fournisseur?.nom,
             l.prix_unitaire_ht
           );
         }
         // Mark as stock updated
-        await supabase.from('bons_commande').update({ stock_updated: true }).eq('id', id);
+        await supabaseAdmin.from('bons_commande').update({ stock_updated: true }).eq('id', id);
       }
     } else if (!isNowLivré && wasStockUpdated) {
-      // Revert stock — use the safe variant so a low/zero stock does not
+      // Revert stock â€” use the safe variant so a low/zero stock does not
       // block the administrative status change. The revert clamps to 0 and
       // logs a warning if the stock was already consumed.
-      const { data: currentLignes } = await supabase.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-      const { data: b } = await supabase.from('bons_commande').select('*, fournisseur:fournisseurs(nom)').eq('id', id).single();
+      const { data: currentLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
+      const { data: b } = await supabaseAdmin.from('bons_commande').select('*, fournisseur:fournisseurs(nom)').eq('id', id).single();
       if (currentLignes && currentLignes.length > 0) {
         for (const l of currentLignes) {
           if (l.produit_id) await updateProductStockSafe(
@@ -2453,13 +2446,13 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
             -Number(l.quantite || 0),
             'ajustement',
             b?.numero,
-            `Annulation Réception Bon de Commande ${b?.numero}`,
+            `Annulation RÃ©ception Bon de Commande ${b?.numero}`,
             b?.fournisseur?.nom,
             l.prix_unitaire_ht
           );
         }
         // Mark as stock NOT updated
-        await supabase.from('bons_commande').update({ stock_updated: false }).eq('id', id);
+        await supabaseAdmin.from('bons_commande').update({ stock_updated: false }).eq('id', id);
       }
     }
     res.json(toCamel(bon));
@@ -2578,9 +2571,9 @@ router.post('/bons-livraison', async (req, res) => {
         montant_ttc: totalTtc
       }).eq('id', bon.id);
 
-      // Stock update logic: if status is 'Livrée' or 'Livré', add to stock
-      const isLivré = bon.statut === 'livrée' || bon.statut === 'livré';
-      if (isLivré) {
+      // Stock update logic: if status is 'livrée' or 'livré', add to stock
+      const islivré = bon.statut === 'livrée' || bon.statut === 'livré';
+      if (islivré) {
         const { data: fournisseur } = await supabase.from('fournisseurs').select('nom').eq('id', bon.fournisseur_id).single();
         for (const l of lignesData) {
           if (l.produit_id) {
@@ -2589,7 +2582,7 @@ router.post('/bons-livraison', async (req, res) => {
               Number(l.quantite || 0), 
               'achat', 
               bon.numero, 
-              `Réception Bon de Livraison ${bon.numero}`,
+              `RÃ©ception Bon de Livraison ${bon.numero}`,
               fournisseur?.nom,
               l.prix_unitaire_ht
             );
@@ -2648,7 +2641,7 @@ router.put('/bons-livraison/:id', async (req, res) => {
     // Stock update logic
     const newStatut = updateData.statut || oldStatut;
     const isNowLivré = newStatut === 'livrée' || newStatut === 'livré';
-    const wasLivré = oldStatut === 'livrée' || oldStatut === 'livré';
+    const waslivré = oldStatut === 'livrée' || oldStatut === 'livré';
 
     if (isNowLivré && !wasStockUpdated) {
       const { data: currentLignes } = await supabase.from('bon_livraison_lignes').select('*').eq('bon_livraison_id', id);
@@ -2661,7 +2654,7 @@ router.put('/bons-livraison/:id', async (req, res) => {
             Number(l.quantite || 0), 
             'achat', 
             b?.numero, 
-            `Réception Bon de Livraison ${b?.numero}`,
+            `RÃ©ception Bon de Livraison ${b?.numero}`,
             fournisseur?.nom,
             l.prix_unitaire_ht
           );
@@ -2681,7 +2674,7 @@ router.put('/bons-livraison/:id', async (req, res) => {
             -Number(l.quantite || 0), 
             'ajustement', 
             b?.numero, 
-            `Annulation Réception Bon de Livraison ${b?.numero}`,
+            `Annulation RÃ©ception Bon de Livraison ${b?.numero}`,
             fournisseur?.nom,
             l.prix_unitaire_ht
           );
@@ -2747,7 +2740,7 @@ router.delete('/bons-livraison/:id', async (req, res) => {
   try {
     const { data: bl } = await supabase.from('bons_livraison').select('statut').eq('id', req.params.id).single();
     if (bl && bl.statut !== 'en_attente' && bl.statut !== 'brouillon') {
-      return res.status(400).json({ error: 'Impossible de supprimer un bon de livraison validé. Veuillez l\'annuler.' });
+      return res.status(400).json({ error: 'Impossible de supprimer un bon de livraison validÃ©. Veuillez l\'annuler.' });
     }
     const { error } = await supabase.from('bons_livraison').delete().eq('id', req.params.id);
     if (error) throw error;
@@ -2776,7 +2769,7 @@ router.put(['/bons-livraison/:id/statut', '/bons-livraison/:id/status'], async (
 
     // Stock update logic - handle both livré and livrée
     const isNowLivré = statut === 'livré' || statut === 'livrée';
-    const wasLivré = oldBon?.statut === 'livré' || oldBon?.statut === 'livrée';
+    const waslivré = oldBon?.statut === 'livré' || oldBon?.statut === 'livrée';
 
     if (isNowLivré && !wasStockUpdated) {
       const { data: currentLignes } = await supabase.from('bon_livraison_lignes').select('*').eq('bon_livraison_id', id);
@@ -2788,7 +2781,7 @@ router.put(['/bons-livraison/:id/statut', '/bons-livraison/:id/status'], async (
             Number(l.quantite || 0), 
             'achat', 
             b?.numero, 
-            `Réception Bon de Livraison ${b?.numero}`,
+            `RÃ©ception Bon de Livraison ${b?.numero}`,
             b?.fournisseur?.nom,
             l.prix_unitaire_ht
           );
@@ -2807,7 +2800,7 @@ router.put(['/bons-livraison/:id/statut', '/bons-livraison/:id/status'], async (
             -Number(l.quantite || 0), 
             'ajustement', 
             b?.numero, 
-            `Annulation Réception Bon de Livraison ${b?.numero}`,
+            `Annulation RÃ©ception Bon de Livraison ${b?.numero}`,
             b?.fournisseur?.nom,
             l.prix_unitaire_ht
           );
@@ -2859,7 +2852,7 @@ router.post('/ventes-passagers', async (req, res) => {
     
     if (vpError) throw vpError;
 
-    await logActivity('création vente passager', `Vente Passager ${numero} créée`);
+    await logActivity('crÃ©ation vente passager', `Vente Passager ${numero} crÃ©Ã©e`);
 
     if (lignes && lignes.length > 0) {
       const lignesData = lignes.map((l: any) => ({
@@ -2935,24 +2928,24 @@ router.delete('/ventes-passagers/:id', async (req, res) => {
 // --- SMART INSIGHTS ---
 router.get('/smart-insights', async (req, res) => {
   try {
-    const { data: factures } = await supabase.from('factures').select('*').in('statut', ['payée', 'reste_a_payer', 'annulée']);
+    const { data: factures } = await supabase.from('factures').select('*').in('statut', ['payÃ©e', 'reste_a_payer', 'annulÃ©e']);
     const { data: produits } = await supabase.from('produits').select('*');
     const { data: depenses } = await supabase.from('depenses').select('*');
-    const { data: bonsCommande } = await supabase.from('bons_commande').select('*').in('statut', ['confirmé', 'livré', 'livrée']);
+    const { data: bonsCommande } = await supabase.from('bons_commande').select('*').in('statut', ['confirmÃ©', 'livré', 'livrée']);
     
     const insights: any[] = [];
 
     // 1. Performance Insight
     const totalVentes = (factures || []).reduce((sum, f) => {
       const val = Number(f.montant_ttc || 0);
-      return sum + (f.statut === 'annulée' ? -val : val);
+      return sum + (f.statut === 'annulÃ©e' ? -val : val);
     }, 0);
     
     if (totalVentes > 100000) {
       insights.push({
         type: 'performance',
         title: 'Excellente Performance',
-        message: 'Vos ventes ont dépassé 100k MAD ce mois-ci. Continuez ainsi !',
+        message: 'Vos ventes ont dÃ©passÃ© 100k MAD ce mois-ci. Continuez ainsi !',
         status: 'success'
       });
     } else if (totalVentes < 10000) {
@@ -2978,7 +2971,7 @@ router.get('/smart-insights', async (req, res) => {
     // 3. Finance Insight (TVA)
     const tvaCollectee = (factures || []).reduce((sum, f) => {
       const val = Number(f.montant_tva || 0);
-      return sum + (f.statut === 'annulée' ? -val : val);
+      return sum + (f.statut === 'annulÃ©e' ? -val : val);
     }, 0);
     const tvaDeductible = (bonsCommande || []).reduce((sum, bc) => sum + Number(bc.montant_tva || 0), 0) + 
                           (depenses || []).reduce((sum, d) => sum + Number(d.montant_tva || 0), 0);
@@ -2987,8 +2980,8 @@ router.get('/smart-insights', async (req, res) => {
     if (tvaAPayer > 20000) {
       insights.push({
         type: 'finance',
-        title: 'TVA Élevée',
-        message: `TVA à payer estimée: ${tvaAPayer.toFixed(2)} MAD. Prévoyez la trésorerie.`,
+        title: 'TVA Ã‰levÃ©e',
+        message: `TVA Ã  payer estimÃ©e: ${tvaAPayer.toFixed(2)} MAD. PrÃ©voyez la trÃ©sorerie.`,
         status: 'warning'
       });
     }
@@ -3133,7 +3126,7 @@ router.put('/parametres', async (req, res) => {
     }
     
     if (!userId) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
     
     // Build safe fields - use snake_case for database columns
@@ -3297,7 +3290,7 @@ router.post('/depenses', async (req, res) => {
       return res.status(400).json({ error: 'Failed to create depense', details: formatError(insertError) });
     }
 
-    await logActivity('création dépense', `Dépense ${data.reference || ''} créée`);
+    await logActivity('crÃ©ation dÃ©pense', `DÃ©pense ${data.reference || ''} crÃ©Ã©e`);
 
     res.status(201).json(toCamel(depense));
   } catch (error) {
@@ -3380,7 +3373,7 @@ router.post('/mouvements-stock', async (req, res) => {
     
     let finalQty = parseFloat(quantite);
     if (isNaN(finalQty) || finalQty === 0) {
-      return res.status(400).json({ error: 'Quantité invalide' });
+      return res.status(400).json({ error: 'QuantitÃ© invalide' });
     }
 
     // Adjust sign based on type
@@ -3548,22 +3541,22 @@ router.get('/backup/data', async (req, res) => {
 // Mapping French Excel headers to snake_case database columns
 const fieldMappings: Record<string, Record<string, string>> = {
   produits: {
-    'Référence': 'reference',
-    'Désignation': 'designation',
-    'Code à barre': 'codebarre',
+    'RÃ©fÃ©rence': 'reference',
+    'DÃ©signation': 'designation',
+    'Code Ã  barre': 'codebarre',
     'Code barre': 'codebarre',
-    'Catégorie': 'categorie',
+    'CatÃ©gorie': 'categorie',
     'Prix achat': 'prix_achat',
     'Prix vente': 'prix_vente',
-    'Quantité': 'quantite',
+    'QuantitÃ©': 'quantite',
     'Seuil alerte': 'seuil_alerte',
     'TVA': 'taux_tva',
-    'Unité': 'unite'
+    'UnitÃ©': 'unite'
   },
   clients: {
     'Nom': 'nom',
     'Email': 'email',
-    'Téléphone': 'telephone',
+    'TÃ©lÃ©phone': 'telephone',
     'Adresse': 'adresse',
     'Ville': 'ville',
     'Code postal': 'code_postal',
@@ -3572,32 +3565,32 @@ const fieldMappings: Record<string, Record<string, string>> = {
   fournisseurs: {
     'Nom': 'nom',
     'Email': 'email',
-    'Téléphone': 'telephone',
+    'TÃ©lÃ©phone': 'telephone',
     'Adresse': 'adresse',
     'Ville': 'ville',
     'Code postal': 'code_postal',
     'ICE': 'ice'
   },
   factures: {
-    'Numéro': 'numero',
+    'NumÃ©ro': 'numero',
     'Date': 'date',
     'Client': 'client_id',  // Map to ID directly if Excel has ID
     'Montant HT': 'montant_ht',
     'Montant TVA': 'montant_tva',
     'Montant TTC': 'montant_ttc',
     'Statut': 'statut',
-    'Reste à payer': 'reste_a_payer',
-    'Échéance': 'echeance'
+    'Reste Ã  payer': 'reste_a_payer',
+    'Ã‰chÃ©ance': 'echeance'
   },
   facture_lignes: {
     'Facture': 'facture_id',
     'factures_id': 'facture_id',
-    'Numéro facture': 'facture_numero',
-    'Facture numéro': 'facture_numero',
+    'NumÃ©ro facture': 'facture_numero',
+    'Facture numÃ©ro': 'facture_numero',
     'Produit': 'produit_id',
     'produit_id': 'produit_id',
-    'Désignation': 'designation',
-    'Quantité': 'quantite',
+    'DÃ©signation': 'designation',
+    'QuantitÃ©': 'quantite',
     'Prix unitaire': 'prix_unitaire',
     'Total HT': 'total_ht',
     'TVA': 'taux_tva',
@@ -3605,7 +3598,7 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'Total TTC': 'total_ttc'
   },
   bons_commande: {
-    'Numéro': 'numero',
+    'NumÃ©ro': 'numero',
     'Date': 'date',
     'Fournisseur': 'fournisseur_id',  // Map to ID directly if Excel has ID
     'Montant HT': 'montant_ht',
@@ -3618,8 +3611,8 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'bons_commande_id': 'bon_commande_id',
     'Produit': 'produit_id',
     'produit_id': 'produit_id',
-    'Désignation': 'designation',
-    'Quantité': 'quantite',
+    'DÃ©signation': 'designation',
+    'QuantitÃ©': 'quantite',
     'Prix unitaire': 'prix_unitaire',
     'Total HT': 'total_ht',
     'TVA': 'taux_tva',
@@ -3627,7 +3620,7 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'Total TTC': 'total_ttc'
   },
   bons_livraison: {
-    'Numéro': 'numero',
+    'NumÃ©ro': 'numero',
     'Date': 'date',
     'Fournisseur': 'fournisseur_id',  // Map to ID directly if Excel has ID
     'Bon de commande': 'bon_commande_id',
@@ -3638,26 +3631,26 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'bons_livraison_id': 'bon_livraison_id',
     'Produit': 'produit_id',
     'produit_id': 'produit_id',
-    'Désignation': 'designation',
-    'Quantité': 'quantite'
+    'DÃ©signation': 'designation',
+    'QuantitÃ©': 'quantite'
   },
   devis: {
-    'Numéro': 'numero',
+    'NumÃ©ro': 'numero',
     'Date': 'date',
     'Client': 'client_id',  // Map to ID directly if Excel has ID
     'Montant HT': 'montant_ht',
     'Montant TVA': 'montant_tva',
     'Montant TTC': 'montant_ttc',
     'Statut': 'statut',
-    'Validité': 'validite'
+    'ValiditÃ©': 'validite'
   },
   devis_lignes: {
     'Devis': 'devis_id',
     'devis_id': 'devis_id',
     'Produit': 'produit_id',
     'produit_id': 'produit_id',
-    'Désignation': 'designation',
-    'Quantité': 'quantite',
+    'DÃ©signation': 'designation',
+    'QuantitÃ©': 'quantite',
     'Prix unitaire': 'prix_unitaire',
     'Total HT': 'total_ht',
     'TVA': 'taux_tva',
@@ -3665,7 +3658,7 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'Total TTC': 'total_ttc'
   },
   avoirs: {
-    'Numéro': 'numero',
+    'NumÃ©ro': 'numero',
     'Date': 'date',
     'Facture': 'facture_numero',
     'Montant HT': 'montant_ht',
@@ -3678,8 +3671,8 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'avoirs_id': 'avoir_id',
     'Produit': 'produit_id',
     'produit_id': 'produit_id',
-    'Désignation': 'designation',
-    'Quantité': 'quantite',
+    'DÃ©signation': 'designation',
+    'QuantitÃ©': 'quantite',
     'Prix unitaire': 'prix_unitaire',
     'Total HT': 'total_ht',
     'TVA': 'taux_tva',
@@ -3699,8 +3692,8 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'vente_passager_id': 'vente_passager_id',
     'Produit': 'produit_id',
     'produit_id': 'produit_id',
-    'Désignation': 'designation',
-    'Quantité': 'quantite',
+    'DÃ©signation': 'designation',
+    'QuantitÃ©': 'quantite',
     'Prix unitaire': 'prix_unitaire',
     'Total HT': 'total_ht',
     'TVA': 'taux_tva',
@@ -3708,9 +3701,9 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'Total TTC': 'total_ttc'
   },
   depenses: {
-    'Référence': 'reference',
+    'RÃ©fÃ©rence': 'reference',
     'Date': 'date_depense',
-    'Catégorie': 'categorie',
+    'CatÃ©gorie': 'categorie',
     'Description': 'description',
     'Montant HT': 'montant_ht',
     'Montant TVA': 'montant_tva',
@@ -3722,7 +3715,7 @@ const fieldMappings: Record<string, Record<string, string>> = {
     'Adresse': 'adresse',
     'Ville': 'ville',
     'Code postal': 'code_postal',
-    'Téléphone': 'telephone',
+    'TÃ©lÃ©phone': 'telephone',
     'Email': 'email',
     'Site web': 'site_web',
     'ICE': 'ice',
@@ -3749,11 +3742,11 @@ const tableNameMapping: Record<string, string> = {
   'Achats': 'bons_commande',
   'Bons de commande': 'bons_commande',
   'Bons de livraison': 'bons_livraison',
-  'Dépenses': 'depenses',
+  'DÃ©penses': 'depenses',
   'Produits': 'produits',
   'Clients': 'clients',
   'Fournisseurs': 'fournisseurs',
-  'Paramètres': 'parametres',
+  'ParamÃ¨tres': 'parametres',
   'Mouvements de stock': 'mouvements_stock',
   // Line tables
   'facture_lignes': 'facture_lignes',
@@ -3897,12 +3890,12 @@ router.post('/backup/import', async (req, res) => {
     
 // ============================================
     // PHASE 1: Insert clients, fournisseurs, produits
-    // Capture OLD ID → NEW UUID mapping for each
+    // Capture OLD ID â†’ NEW UUID mapping for each
     // ============================================
-    const clientIdMap = new Map<number, string>(); // old_id → new_uuid
+    const clientIdMap = new Map<number, string>(); // old_id â†’ new_uuid
     const fournisseurIdMap = new Map<number, string>();
-    const produitIdMap = new Map<number, string>(); // old_id → new_uuid
-    const produitDesignationMap = new Map<string, string>(); // designation → new_uuid
+    const produitIdMap = new Map<number, string>(); // old_id â†’ new_uuid
+    const produitDesignationMap = new Map<string, string>(); // designation â†’ new_uuid
     
     const phase1Tables = ['clients', 'fournisseurs', 'produits'];
     
@@ -3912,7 +3905,7 @@ router.post('/backup/import', async (req, res) => {
       const rows = dataToImport[table].map((row: any, idx: number) => {
         const transformed = transformRow(table, row, {});
         // Capture OLD ID before removing it (let DB generate new UUID)
-        const oldId = row['id'] || row['Numéro'] || row['Référence'] || idx + 1;
+        const oldId = row['id'] || row['NumÃ©ro'] || row['RÃ©fÃ©rence'] || idx + 1;
         if (table === 'clients') {
           clientIdMap.set(oldId, 'PLACEHOLDER'); // Will update after insert
         } else if (table === 'fournisseurs') {
@@ -3920,7 +3913,7 @@ router.post('/backup/import', async (req, res) => {
         } else if (table === 'produits') {
           produitIdMap.set(oldId, 'PLACEHOLDER');
           // Also map by designation for product linking
-          const designation = transformed.designation || row['Désignation'] || '';
+          const designation = transformed.designation || row['DÃ©signation'] || '';
           if (designation) {
             produitDesignationMap.set(designation.toLowerCase().trim(), 'PLACEHOLDER');
           }
@@ -3942,7 +3935,7 @@ router.post('/backup/import', async (req, res) => {
         // Update mappings with actual UUIDs
         if (inserted) {
           inserted.forEach((newRow: any, idx: number) => {
-            const oldId = dataToImport[table][idx]?.id || dataToImport[table][idx]?.['Numéro'] || dataToImport[table][idx]?.['Référence'] || (idx + 1);
+            const oldId = dataToImport[table][idx]?.id || dataToImport[table][idx]?.['NumÃ©ro'] || dataToImport[table][idx]?.['RÃ©fÃ©rence'] || (idx + 1);
             if (table === 'clients') {
               clientIdMap.set(oldId, newRow.id);
               console.log(`[LINKING] Client OldID: ${oldId} -> New UUID: ${newRow.id}`);
@@ -3951,7 +3944,7 @@ router.post('/backup/import', async (req, res) => {
               console.log(`[LINKING] Fournisseur OldID: ${oldId} -> New UUID: ${newRow.id}`);
             } else if (table === 'produits') {
               produitIdMap.set(oldId, newRow.id);
-              const designation = newRow.designation || dataToImport[table][idx]?.['Désignation'] || '';
+              const designation = newRow.designation || dataToImport[table][idx]?.['DÃ©signation'] || '';
               if (designation) {
                 produitDesignationMap.set(designation.toLowerCase().trim(), newRow.id);
               }
@@ -3965,7 +3958,7 @@ router.post('/backup/import', async (req, res) => {
     // ============================================
     // PHASE 2: Insert factures, devis, etc.
     // Replace client_id with new UUID from Phase 1
-    // Capture parent table OLD ID → NEW UUID mapping
+    // Capture parent table OLD ID â†’ NEW UUID mapping
     // ============================================
     const factureIdMap = new Map<number, string>();
     const devisIdMap = new Map<number, string>();
@@ -3989,7 +3982,7 @@ router.post('/backup/import', async (req, res) => {
       const rows = dataToImport[table].map((row: any, idx: number) => {
         const transformed = transformRow(table, row, {});
         // Capture OLD ID
-        const oldId = row['id'] || row['Numéro'] || idx + 1;
+        const oldId = row['id'] || row['NumÃ©ro'] || idx + 1;
         
         // Replace client/fournisseur FK with new UUID if available
         if (fkField) {
@@ -4062,9 +4055,9 @@ router.post('/backup/import', async (req, res) => {
     // Build numero -> UUID fallback maps for each parent table
     const factureNumeroToId = new Map<string, string>();
     (dataToImport['factures'] || []).forEach((f: any, idx: number) => {
-      const oldId = f['id'] || f['Numéro'] || idx + 1;
+      const oldId = f['id'] || f['NumÃ©ro'] || idx + 1;
       const newId = factureIdMap.get(oldId);
-      const numero = f['Numéro'] || f['numero'] || '';
+      const numero = f['NumÃ©ro'] || f['numero'] || '';
       if (numero && newId) {
         factureNumeroToId.set(numero, newId);
       }
@@ -4118,7 +4111,7 @@ router.post('/backup/import', async (req, res) => {
           
           // Fallback: try to find by numero or position
           if (!newParentId || newParentId === 'PLACEHOLDER') {
-            const rowNumero = row['facture_numero'] || row['Facture numéro'] || row['Numéro facture'] || row[parentExcelField + ' numéro'] || '';
+            const rowNumero = row['facture_numero'] || row['Facture numÃ©ro'] || row['NumÃ©ro facture'] || row[parentExcelField + ' numÃ©ro'] || '';
             if (rowNumero && factureNumeroToId.has(rowNumero)) {
               newParentId = factureNumeroToId.get(rowNumero);
               console.log(`[DATA_CHECK] [NUMERO_FALLBACK] ${parentField}: ${rowNumero} -> ${newParentId}`);
@@ -4150,9 +4143,9 @@ router.post('/backup/import', async (req, res) => {
         // Use database schema column names: montant_ht, montant_ttc (NOT total_ht, total_ttc)
         const transformed: any = {
           [parentField]: newParentId || null,
-          designation: row['Désignation'] || row['designation'] || '',
-          reference: row['Référence'] || row['reference'] || '',
-          quantite: Number(row['Quantité'] || row['quantite'] || 1),
+          designation: row['DÃ©signation'] || row['designation'] || '',
+          reference: row['RÃ©fÃ©rence'] || row['reference'] || '',
+          quantite: Number(row['QuantitÃ©'] || row['quantite'] || 1),
           prix_unitaire_ht: Number(row['Prix unitaire'] || row['prix_unitaire'] || row['prix_unitaire_ht'] || 0),
           tva: Number(row['TVA'] || row['tva'] || row['taux_tva'] || 20),
           montant_ht: Number(row['Montant HT'] || row['montant_ht'] || row['Total HT'] || row['total_ht'] || 0),
@@ -4562,7 +4555,7 @@ router.post('/reset-database', async (req, res) => {
 
     if (authError || !authData.user) {
       console.error('Auth error during reset:', authError);
-      return res.status(401).json({ error: 'Identifiants invalides ou accès refusé' });
+      return res.status(401).json({ error: 'Identifiants invalides ou accÃ¨s refusÃ©' });
     }
 
     const userId = authData.user.id;
@@ -4611,9 +4604,9 @@ router.post('/reset-database', async (req, res) => {
     await supabase.from('logs_activites').delete().eq('user_id', userId);
     await supabase.from('tasks').delete().eq('user_id', userId);
     
-    await logActivity('réinitialisation base de données', `Base de données réinitialisée par ${email}`);
+    await logActivity('rÃ©initialisation base de donnÃ©es', `Base de donnÃ©es rÃ©initialisÃ©e par ${email}`);
     
-    res.json({ success: true, message: 'Base de données réinitialisée avec succès' });
+    res.json({ success: true, message: 'Base de donnÃ©es rÃ©initialisÃ©e avec succÃ¨s' });
   } catch (error) {
     console.error('Reset error:', error);
     res.status(500).json({ error: 'Failed to reset database' });
@@ -4681,7 +4674,7 @@ router.post('/tasks', async (req, res) => {
       .single();
     if (error) {
       if (error.code === '42P01' || error.message?.includes('relation "tasks" does not exist')) {
-        return res.status(400).json({ error: 'La table des tâches n\'est pas encore prête. Veuillez exécuter le script SQL dans Supabase.' });
+        return res.status(400).json({ error: 'La table des tÃ¢ches n\'est pas encore prÃªte. Veuillez exÃ©cuter le script SQL dans Supabase.' });
       }
       console.error('Supabase error creating task:', error);
       return res.status(500).json({ 
@@ -4704,7 +4697,7 @@ router.post('/sql', async (req, res) => {
   try {
     const { sql } = req.body;
     if (!sql) {
-      return res.status(400).json({ error: 'Requête SQL manquante' });
+      return res.status(400).json({ error: 'RequÃªte SQL manquante' });
     }
 
     const { data, error } = await supabase.rpc('execute_sql', { sql });
@@ -4712,7 +4705,7 @@ router.post('/sql', async (req, res) => {
     if (error) {
       console.error('SQL Execution Error:', error);
       return res.status(400).json({ 
-        error: 'Erreur lors de l\'exécution du SQL', 
+        error: 'Erreur lors de l\'exÃ©cution du SQL', 
         details: error.message,
         code: error.code
       });
@@ -4781,7 +4774,7 @@ router.post('/check-stock-alerts', async (req, res) => {
         await createNotification(
           userId,
           'Stock Faible',
-          `${designation} - ${p.stock_actuel} unités restantes`,
+          `${designation} - ${p.stock_actuel} unitÃ©s restantes`,
           'warning',
           '/produits'
         );
@@ -4801,7 +4794,7 @@ router.post('/check-stock-alerts', async (req, res) => {
       await createNotification(
         userId,
         'Paiement en Retard',
-        `${clientName} - Facture ${f.numero} échue depuis le ${f.date_echeance}`,
+        `${clientName} - Facture ${f.numero} Ã©chue depuis le ${f.date_echeance}`,
         'error',
         `/factures?id=${f.id}`
       );
@@ -4823,8 +4816,8 @@ router.post('/check-stock-alerts', async (req, res) => {
       const clientName = (f.client as any)?.nom || 'Client';
       await createNotification(
         userId,
-        'Échéance Proche',
-        `${clientName} - Facture ${f.numero} à payer avant le ${f.date_echeance}`,
+        'Ã‰chÃ©ance Proche',
+        `${clientName} - Facture ${f.numero} Ã  payer avant le ${f.date_echeance}`,
         'info',
         `/factures?id=${f.id}`
       );
@@ -4869,7 +4862,7 @@ const scheduleStockChecks = async () => {
             await createNotification(
               userId,
               'Stock Faible',
-              `${designation} - ${p.stock_actuel} unités restantes`,
+              `${designation} - ${p.stock_actuel} unitÃ©s restantes`,
               'warning',
               '/produits'
             );

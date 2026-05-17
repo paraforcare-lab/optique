@@ -433,7 +433,7 @@ export function BonsLivraisonList() {
       />
 
       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-        <BonLivraisonDocument ref={componentRef} bon={selectedBon} entreprise={entreprise} />
+        <BonLivraisonDocument ref={componentRef} bon={selectedBon} entreprise={entreprise} lang={i18n.language} />
       </div>
 
       {/* Header */}

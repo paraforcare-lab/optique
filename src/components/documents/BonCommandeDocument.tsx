@@ -1,11 +1,13 @@
 import { forwardRef, useMemo } from 'react'
 import { format, isValid, parseISO } from 'date-fns'
-import { fr } from 'date-fns/locale'
+import { getDateLocale } from '@/lib/utils'
 import { numberToFrenchWords } from '@/lib/numberToWords'
 
 interface BonCommandeDocumentProps {
   bon: any
   entreprise: any
+  /** BCP-47 language tag from i18n.language */
+  lang?: string
 }
 
 const fmt2 = (n: number): string =>
@@ -24,7 +26,7 @@ const pickVal = (obj: any, ...keys: string[]) => {
 
 const pickNum = (obj: any, ...keys: string[]) => safeNum(pickVal(obj, ...keys))
 
-const fmtDate = (d: any): string => {
+const makeFmtDate = (lang?: string) => (d: any): string => {
   if (!d) return '-'
   try {
     let date: Date
@@ -35,7 +37,7 @@ const fmtDate = (d: any): string => {
     } else {
       date = new Date(d)
     }
-    return isValid(date) ? format(date, 'dd/MM/yyyy', { locale: fr }) : '-'
+    return isValid(date) ? format(date, 'dd/MM/yyyy', { locale: getDateLocale(lang) }) : '-'
   } catch {
     return '-'
   }
@@ -67,8 +69,10 @@ function computeTvaBuckets(lignes: any[]): TvaBucket[] {
 }
 
 export const BonCommandeDocument = forwardRef<HTMLDivElement, BonCommandeDocumentProps>(
-  ({ bon, entreprise }, ref) => {
+  ({ bon, entreprise, lang }, ref) => {
     if (!bon) return null
+
+    const fmtDate = makeFmtDate(lang)
 
     const lignes = bon.lignes || []
     const totalHt = pickNum(bon, 'montantHt', 'montant_ht')

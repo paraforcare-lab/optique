@@ -591,7 +591,7 @@ export function FacturesList() {
 
       <div style={{ display: 'none' }}>
         {printingFacture && (
-          <FactureDocument ref={printRef} facture={printingFacture} entreprise={entreprise} />
+          <FactureDocument ref={printRef} facture={printingFacture} entreprise={entreprise} lang={i18n.language} />
         )}
       </div>
 

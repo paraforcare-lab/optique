@@ -463,7 +463,7 @@ export function DevisList() {
 
       <div style={{ display: 'none' }}>
         {printingDevis && (
-          <DevisDocument ref={printRef} devis={printingDevis} entreprise={entreprise} />
+          <DevisDocument ref={printRef} devis={printingDevis} entreprise={entreprise} lang={i18n.language} />
         )}
       </div>
 

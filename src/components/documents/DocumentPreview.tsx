@@ -1,6 +1,6 @@
 import { forwardRef, useMemo, type CSSProperties } from 'react'
 import { format, isValid, parseISO } from 'date-fns'
-import { fr } from 'date-fns/locale'
+import { getDateLocale } from '@/lib/utils'
 import { numberToFrenchWords } from '@/lib/numberToWords'
 
 type DocType = 'facture' | 'devis' | 'bon_commande' | 'bon_livraison'
@@ -9,6 +9,8 @@ interface DocumentPreviewProps {
   type: DocType
   data: any
   entreprise: any
+  /** BCP-47 language tag from i18n.language — drives date locale ('ar', 'en', 'fr') */
+  lang?: string
 }
 
 const ITEMS_PER_PAGE = 22
@@ -25,7 +27,8 @@ const safeNum = (v: any, fallback = 0): number => {
   return isNaN(n) ? fallback : n
 }
 
-const fmtDate = (d: any): string => {
+/** Returns a date formatter scoped to the given i18n language tag. */
+const makeFmtDate = (lang?: string) => (d: any): string => {
   if (!d) return '-'
   try {
     let date: Date
@@ -36,7 +39,7 @@ const fmtDate = (d: any): string => {
     } else {
       date = new Date(d)
     }
-    return isValid(date) ? format(date, 'dd/MM/yyyy', { locale: fr }) : '-'
+    return isValid(date) ? format(date, 'dd/MM/yyyy', { locale: getDateLocale(lang) }) : '-'
   } catch {
     return '-'
   }
@@ -89,8 +92,12 @@ function computeTvaBuckets(lignes: any[]): TvaBucket[] {
 }
 
 export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
-  ({ type, data, entreprise }, ref) => {
+  ({ type, data, entreprise, lang }, ref) => {
     if (!data) return null
+
+    // Locale-aware date formatter for this render — uses Arabic/English/French
+    // date-fns locale based on the active UI language.
+    const fmtDate = makeFmtDate(lang)
 
     const docTitle = titles[type]
     const entityNameLabel = entityLabel[type]

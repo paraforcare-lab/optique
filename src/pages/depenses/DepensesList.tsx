@@ -400,7 +400,7 @@ export function DepensesList() {
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.category')}</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.supplier')}</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.payment')}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-start">{t('depenses.col_amount_ttc')}</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-start">{t('depenses.col_amount')}</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-start">{t('shared.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -597,7 +597,7 @@ export function DepensesList() {
                   <Wallet className="h-4 w-4 text-red-500 dark:text-rose-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-500">{t('depenses.sidebar_total_label')}</p>
+                  <p className="text-xs text-slate-500">{t('depenses.sidebar_total')}</p>
                   <p dir="ltr" className="text-lg font-bold text-rose-600 dark:text-rose-400">{formatCurrency(monthTotal)}</p>
                 </div>
               </div>
@@ -609,7 +609,7 @@ export function DepensesList() {
                   <TrendingDown className="h-4 w-4 text-emerald-500" />
                 )}
                 <div className="flex-1">
-                  <p className="text-[11px] text-slate-500 font-medium">{t('depenses.sidebar_vs_last_month')}</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{t('depenses.sidebar_vs_last')}</p>
                   <p dir="ltr" className={cn(
                     "text-sm font-bold",
                     trend >= 0 ? "text-rose-600" : "text-emerald-600"
@@ -622,7 +622,7 @@ export function DepensesList() {
               {/* Pie Chart */}
               {pieSlices.length > 0 && (
                 <div className="border-t border-slate-100 pt-4 dark:border-white/5">
-                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('depenses.sidebar_by_category')}</p>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('depenses.sidebar_by_cat')}</p>
                   <div className="flex items-center gap-4">
                     <svg viewBox="0 0 100 100" className="h-20 w-20 shrink-0">
                       {pieSlices.map((slice, i) => (

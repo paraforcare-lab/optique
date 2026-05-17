@@ -300,7 +300,7 @@ export function AvoirsList() {
       />
       <div style={{ display: 'none' }}>
         {printingAvoir && (
-          <FactureDocument ref={printRef} facture={printingAvoir} entreprise={entreprise} />
+          <FactureDocument ref={printRef} facture={printingAvoir} entreprise={entreprise} lang={i18n.language} />
         )}
       </div>
 

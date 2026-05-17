@@ -250,7 +250,7 @@ export default function VentesPassagers() {
       </style></head><body>
       <h2>Ticket de Vente</h2>
       <p><strong>${vente.numero}</strong></p>
-      <p>${new Date(vente.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+      <p>${new Date(vente.date).toLocaleDateString(dateBcp47, { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
       <table>
         <tr><th>Total HT</th><td style="text-align:right">${formatCurrency(vente.montantHt)}</td></tr>
         <tr><th>TVA</th><td style="text-align:right">${formatCurrency(vente.montantTva)}</td></tr>

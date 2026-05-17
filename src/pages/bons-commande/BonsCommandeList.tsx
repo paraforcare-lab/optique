@@ -370,7 +370,7 @@ export function BonsCommandeList() {
       />
 
       <div className="hidden">
-        <BonCommandeDocument ref={componentRef} bon={selectedBon} entreprise={entreprise} />
+        <BonCommandeDocument ref={componentRef} bon={selectedBon} entreprise={entreprise} lang={i18n.language} />
       </div>
 
       {/* Header */}
