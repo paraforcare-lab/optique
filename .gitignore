@@ -10,6 +10,8 @@ coverage/
 .vercel
 .sql
 
-# Bundled Vercel serverless function (built by `npm run build:api`)
-api/index.js
-api/index.js.map
+# Note: api/index.js is intentionally NOT ignored. It is the prebuilt
+# Vercel serverless function bundle (produced by `npm run build:api`
+# from scripts/api-entry.ts) and MUST be committed so that Vercel
+# can discover it during function registration, which happens before
+# the buildCommand executes.
