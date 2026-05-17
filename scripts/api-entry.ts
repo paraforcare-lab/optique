@@ -30,9 +30,20 @@ const app = express()
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
-// Vercel strips /api from req.url before forwarding to this function,
-// so the router sees paths like /bons-commande/5/statut directly.
-app.use('/', apiRouter)
+// IMPORTANT: when Vercel rewrites a request via an explicit `rewrites` rule
+// (see vercel.json), the original URL is preserved verbatim — the `/api`
+// prefix is NOT stripped. So `PUT /api/bons-commande/5/statut` arrives here
+// with `req.url === "/api/bons-commande/5/statut"`. We therefore mount the
+// router under `/api` so the inner route definitions (e.g. `/bons-commande
+// /:id/statut`) match. This mirrors `server.ts` which also uses `app.use(
+// '/api', apiRouter)`.
+app.use('/api', apiRouter)
+
+// Lightweight health check so we can confirm the function is reachable
+// without depending on Supabase.
+app.get('/api/_health', (_req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() })
+})
 
 // Vercel serverless handler — receives (req, res) for every matched request
 export default function handler(req: Request, res: Response) {
