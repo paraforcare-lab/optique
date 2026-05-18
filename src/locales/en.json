@@ -18,7 +18,36 @@
     "footer_copyright":   "© {{year}} SmartGestion. All rights reserved.",
     "toast_invalid":      "Invalid email or password",
     "toast_success":      "Signed in. Welcome to ParaGestion!",
-    "toast_error":        "An error occurred while signing in"
+    "toast_error":        "An error occurred while signing in",
+
+    "forgot_title":          "Forgot password",
+    "forgot_subtitle":       "Enter your email to receive a reset link",
+    "forgot_submit":         "Send reset link",
+    "forgot_submitting":     "Sending...",
+    "forgot_back_to_login":  "Back to sign in",
+    "forgot_toast_success":  "If an account exists, an email has been sent",
+    "forgot_toast_error":    "Could not send the email. Please try again later.",
+
+    "check_email_title":     "Check your inbox",
+    "check_email_subtitle":  "We sent a reset link to {{email}}",
+    "check_email_hint":      "Click the link in the email to reset your password. The link expires in 1 hour.",
+    "check_email_resend":    "Resend email",
+    "check_email_resending": "Sending...",
+    "check_email_resent":    "Email resent",
+    "check_email_no_email":  "Didn't get the email? Check your spam folder.",
+
+    "reset_title":           "New password",
+    "reset_subtitle":        "Choose a strong new password",
+    "reset_new_password":    "New password",
+    "reset_confirm_password":"Confirm password",
+    "reset_submit":          "Reset password",
+    "reset_submitting":      "Resetting...",
+    "reset_toast_success":   "Password reset. Please sign in.",
+    "reset_toast_error":     "Could not reset the password",
+    "reset_invalid_link":    "Invalid or expired link",
+    "reset_invalid_link_hint": "Request a new reset link.",
+    "reset_password_mismatch":"Passwords do not match",
+    "reset_password_too_short":"Password must be at least 8 characters"
   },
   "dashboard": {
     "header": {

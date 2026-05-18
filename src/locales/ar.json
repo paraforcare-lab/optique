@@ -18,7 +18,36 @@
     "footer_copyright":   "© {{year}} SmartGestion. جميع الحقوق محفوظة.",
     "toast_invalid":      "البريد الإلكتروني أو كلمة المرور غير صحيحة",
     "toast_success":      "تم تسجيل الدخول. مرحباً بك في ParaGestion!",
-    "toast_error":        "حدث خطأ أثناء تسجيل الدخول"
+    "toast_error":        "حدث خطأ أثناء تسجيل الدخول",
+
+    "forgot_title":          "نسيت كلمة المرور",
+    "forgot_subtitle":       "أدخل بريدك الإلكتروني لتلقّي رابط إعادة التعيين",
+    "forgot_submit":         "إرسال الرابط",
+    "forgot_submitting":     "جارٍ الإرسال...",
+    "forgot_back_to_login":  "العودة لتسجيل الدخول",
+    "forgot_toast_success":  "إذا كان الحساب موجوداً، فقد تم إرسال بريد إلكتروني",
+    "forgot_toast_error":    "تعذّر إرسال البريد. حاول مرة أخرى لاحقاً.",
+
+    "check_email_title":     "تحقّق من بريدك الإلكتروني",
+    "check_email_subtitle":  "أرسلنا رابط إعادة التعيين إلى {{email}}",
+    "check_email_hint":      "اضغط على الرابط في البريد لإعادة تعيين كلمة المرور. ينتهي الرابط خلال ساعة واحدة.",
+    "check_email_resend":    "إعادة إرسال البريد",
+    "check_email_resending": "جارٍ الإرسال...",
+    "check_email_resent":    "تم إعادة إرسال البريد",
+    "check_email_no_email":  "لم يصلك البريد؟ تحقّق من مجلّد الرسائل غير المرغوب فيها.",
+
+    "reset_title":           "كلمة مرور جديدة",
+    "reset_subtitle":        "اختر كلمة مرور قوية وجديدة",
+    "reset_new_password":    "كلمة المرور الجديدة",
+    "reset_confirm_password":"تأكيد كلمة المرور",
+    "reset_submit":          "إعادة تعيين كلمة المرور",
+    "reset_submitting":      "جارٍ إعادة التعيين...",
+    "reset_toast_success":   "تم إعادة تعيين كلمة المرور. يرجى تسجيل الدخول.",
+    "reset_toast_error":     "تعذّر إعادة تعيين كلمة المرور",
+    "reset_invalid_link":    "رابط غير صالح أو منتهي الصلاحية",
+    "reset_invalid_link_hint": "اطلب رابط إعادة تعيين جديد.",
+    "reset_password_mismatch":"كلمتا المرور غير متطابقتين",
+    "reset_password_too_short":"يجب أن تتكوّن كلمة المرور من 8 أحرف على الأقل"
   },
   "dashboard": {
     "header": {

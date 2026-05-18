@@ -18,7 +18,36 @@
     "footer_copyright":   "© {{year}} SmartGestion. Tous droits réservés.",
     "toast_invalid":      "Email ou mot de passe incorrect",
     "toast_success":      "Connexion réussie. Bienvenue sur ParaGestion!",
-    "toast_error":        "Une erreur est survenue lors de la connexion"
+    "toast_error":        "Une erreur est survenue lors de la connexion",
+
+    "forgot_title":          "Mot de passe oublié",
+    "forgot_subtitle":       "Saisissez votre email pour recevoir un lien de réinitialisation",
+    "forgot_submit":         "Envoyer le lien",
+    "forgot_submitting":     "Envoi en cours...",
+    "forgot_back_to_login":  "Retour à la connexion",
+    "forgot_toast_success":  "Si un compte existe, un email vous a été envoyé",
+    "forgot_toast_error":    "Impossible d'envoyer l'email. Réessayez plus tard.",
+
+    "check_email_title":     "Vérifiez votre boîte mail",
+    "check_email_subtitle":  "Nous avons envoyé un lien de réinitialisation à {{email}}",
+    "check_email_hint":      "Cliquez sur le lien dans l'email pour réinitialiser votre mot de passe. Le lien expire dans 1 heure.",
+    "check_email_resend":    "Renvoyer l'email",
+    "check_email_resending": "Envoi en cours...",
+    "check_email_resent":    "Email renvoyé",
+    "check_email_no_email":  "Pas d'email reçu ? Vérifiez vos spams.",
+
+    "reset_title":           "Nouveau mot de passe",
+    "reset_subtitle":        "Choisissez un nouveau mot de passe sécurisé",
+    "reset_new_password":    "Nouveau mot de passe",
+    "reset_confirm_password":"Confirmer le mot de passe",
+    "reset_submit":          "Réinitialiser le mot de passe",
+    "reset_submitting":      "Réinitialisation...",
+    "reset_toast_success":   "Mot de passe réinitialisé. Connectez-vous.",
+    "reset_toast_error":     "Impossible de réinitialiser le mot de passe",
+    "reset_invalid_link":    "Lien invalide ou expiré",
+    "reset_invalid_link_hint": "Demandez un nouveau lien de réinitialisation.",
+    "reset_password_mismatch":"Les mots de passe ne correspondent pas",
+    "reset_password_too_short":"Le mot de passe doit comporter au moins 8 caractères"
   },
   "dashboard": {
     "header": {

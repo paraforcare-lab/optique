@@ -6,6 +6,9 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { NotificationsProvider } from './contexts/NotificationsContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { LoginPage } from './pages/auth/LoginPage'
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
+import { CheckEmailPage } from './pages/auth/CheckEmailPage'
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { Workspace } from './pages/Workspace'
 import { Dashboard } from './pages/Dashboard'
@@ -72,6 +75,9 @@ export default function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/check-email" element={<CheckEmailPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardLayout />}>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -116,9 +116,9 @@ export function LoginPage() {
                 <Label htmlFor="password" className="text-sm font-medium text-slate-500">
                   {t('auth.password_label')}
                 </Label>
-                <a href="#" className="text-xs text-emerald-600 font-medium hover:underline">
+                <Link to="/forgot-password" className="text-xs text-emerald-600 font-medium hover:underline">
                   {t('auth.forgot_password')}
-                </a>
+                </Link>
               </div>
               <div className="relative">
                 <Lock className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
