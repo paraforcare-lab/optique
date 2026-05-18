@@ -23,6 +23,9 @@ import { BonsCommandeList } from './pages/bons-commande/BonsCommandeList'
 import { BonsLivraisonList } from './pages/bons-livraison/BonsLivraisonList'
 import { DepensesList } from './pages/depenses/DepensesList'
 import { Parametres } from './pages/parametres/Parametres'
+import { PrescriptionsList } from './pages/prescriptions/PrescriptionsList'
+import { OrdresTravailList } from './pages/ordres-travail/OrdresTravailList'
+import { RendezVousList } from './pages/rendez-vous/RendezVousList'
 import { ImportExport } from './pages/ImportExport'
 import { DatabaseManager } from './pages/DatabaseManager'
 import { SqlEditor } from './pages/SqlEditor'
@@ -94,6 +97,9 @@ export default function App() {
               <Route path="bons-livraison" element={<BonsLivraisonList />} />
               <Route path="depenses" element={<DepensesList />} />
               <Route path="parametres" element={<Parametres />} />
+              <Route path="prescriptions" element={<PrescriptionsList />} />
+              <Route path="ordres-travail" element={<OrdresTravailList />} />
+              <Route path="rendez-vous" element={<RendezVousList />} />
               <Route path="import-export" element={<ImportExport />} />
               <Route path="database" element={<DatabaseManager />} />
               <Route path="sql-editor" element={<SqlEditor />} />

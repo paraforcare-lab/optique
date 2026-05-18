@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Plus, Search, FileEdit, Trash2, Download, ArrowRightLeft, FileText,
   Send, CheckCircle, Ban, XCircle, Package, CalendarDays, Filter,
-  ChevronLeft, ChevronRight, ExternalLink, TrendingUp
+  ChevronLeft, ChevronRight, ExternalLink, TrendingUp, ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,14 +26,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { DevisForm } from '@/components/forms/DevisForm'
 import { DevisDocument } from '@/components/documents/DevisDocument'
 import { useReactToPrint } from 'react-to-print'
@@ -75,7 +67,7 @@ export function DevisList() {
   const [timeFilter, setTimeFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editingDevis, setEditingDevis] = useState<any | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [devisToDelete, setDevisToDelete] = useState<number | null>(null);
@@ -318,7 +310,7 @@ export function DevisList() {
       };
 
       setEditingDevis(mappedData);
-      setIsDialogOpen(true);
+      setShowForm(true);
     } catch (error) {
       toast.error(t('devis.toast_load_error'));
     }
@@ -379,7 +371,12 @@ export function DevisList() {
 
   const openNewForm = () => {
     setEditingDevis(null);
-    setIsDialogOpen(true);
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingDevis(null);
   };
 
   const getStatusConfig = (statut: string) => {
@@ -467,6 +464,35 @@ export function DevisList() {
         )}
       </div>
 
+      {showForm ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={closeForm}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">
+                {editingDevis ? t('devis.dialog_edit') : t('devis.dialog_create')}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {editingDevis
+                  ? t('devis.dialog_subtitle_edit', { number: editingDevis.numero })
+                  : t('devis.dialog_subtitle_create')}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-sm dark:bg-card dark:border-white/10 border border-slate-200 bg-white p-6">
+            <DevisForm
+              initialData={editingDevis}
+              onSuccess={() => {
+                closeForm();
+                fetchDevis();
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -478,47 +504,13 @@ export function DevisList() {
             <p className="text-sm text-muted-foreground">{t('devis.page_subtitle')}</p>
           </div>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setEditingDevis(null);
-        }}>
-          <DialogTrigger render={
-            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm h-10 px-5 shadow-none">
-              <Plus className="me-2 h-4 w-4" />
-              {t('devis.new_button')}
-            </Button>
-          } />
-          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20">
-            <div className="flex flex-col h-full">
-              <DialogHeader className="px-8 py-6 border-b dark:border-white/10 border-border/50 dark:bg-card/50 bg-white/50 backdrop-blur-sm">
-                <div className="max-w-7xl mx-auto w-full">
-                  <DialogTitle className="text-2xl font-black text-foreground">
-                    {editingDevis ? t('devis.dialog_edit') : t('devis.dialog_create')}
-                  </DialogTitle>
-                  <DialogDescription className="mt-1 text-muted-foreground">
-                    {editingDevis
-                      ? t('devis.dialog_subtitle_edit', { number: editingDevis.numero })
-                      : t('devis.dialog_subtitle_create')}
-                  </DialogDescription>
-                </div>
-              </DialogHeader>
-              <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-7xl mx-auto">
-                  <div className="rounded-sm dark:bg-card dark:border-white/10 border border-slate-200 bg-white p-8">
-                    <DevisForm
-                      initialData={editingDevis}
-                      onSuccess={() => {
-                        setIsDialogOpen(false);
-                        setEditingDevis(null);
-                        fetchDevis();
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button
+          onClick={openNewForm}
+          className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm h-10 px-5 shadow-none"
+        >
+          <Plus className="me-2 h-4 w-4" />
+          {t('devis.new_button')}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -849,6 +841,8 @@ export function DevisList() {
           </Card>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

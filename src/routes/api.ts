@@ -209,7 +209,7 @@ ALTER TABLE facture_lignes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE devis_lignes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE bon_livraison_lignes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE bon_commande_lignes DISABLE ROW LEVEL SECURITY;
-ALTER TABLE stock_mouvements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mouvements_stock DISABLE ROW LEVEL SECURITY;
 
 -- Create notifications table if not exists
 CREATE TABLE IF NOT EXISTS notifications (

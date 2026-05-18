@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Plus, Search, FileEdit, Trash2, Package, AlertTriangle,
-  ChevronLeft, ChevronRight, ImageIcon
+  Plus, Search, FileEdit, Trash2, Package, AlertTriangle, ArrowLeft,
+  ChevronLeft, ChevronRight, ImageIcon, Filter
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -18,13 +18,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import { toast } from 'sonner'
 import { ProduitForm } from '@/components/forms/ProduitForm'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -39,6 +39,7 @@ interface Produit {
   designation?: string;
   marque?: string;
   barcode?: string;
+  typeProduit: string;
   prixAchatHt: number;
   prixVenteHt: number;
   prixVenteTtc: number;
@@ -57,7 +58,8 @@ export function ProduitsList() {
   const { user } = useAuth();
   const [produits, setProduits] = useState<Produit[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const [editingProduit, setEditingProduit] = useState<Produit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -72,6 +74,7 @@ export function ProduitsList() {
     designation: p.designation || p.nom || '',
     marque: p.marque || '',
     barcode: p.barcode || '',
+    typeProduit: p.type_produit || 'accessoire',
     prixVenteHt: Number(p.prix_vente_ht || 0),
     prixAchatHt: Number(p.prix_achat_ht || 0),
     prixVenteTtc: Number(p.prix_vente_ttc || 0),
@@ -146,24 +149,35 @@ export function ProduitsList() {
 
   const handleEdit = (produit: Produit) => {
     setEditingProduit(produit);
-    setIsDialogOpen(true);
+    setShowForm(true);
   };
 
   const openNewForm = () => {
     setEditingProduit(null);
-    setIsDialogOpen(true);
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingProduit(null);
   };
 
   const filteredProduits = useMemo(() => {
-    if (!searchQuery.trim()) return produits;
-    const query = searchQuery.toLowerCase();
-    return produits.filter((produit) =>
-      produit.designation?.toLowerCase().includes(query) ||
-      produit.reference?.toLowerCase().includes(query) ||
-      produit.barcode?.toLowerCase().includes(query) ||
-      produit.marque?.toLowerCase().includes(query)
-    );
-  }, [produits, searchQuery]);
+    let filtered = produits;
+    if (typeFilter) {
+      filtered = filtered.filter((p) => p.typeProduit === typeFilter);
+    }
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((produit) =>
+        produit.designation?.toLowerCase().includes(query) ||
+        produit.reference?.toLowerCase().includes(query) ||
+        produit.barcode?.toLowerCase().includes(query) ||
+        produit.marque?.toLowerCase().includes(query)
+      );
+    }
+    return filtered;
+  }, [produits, searchQuery, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProduits.length / ITEMS_PER_PAGE));
   const paginatedProduits = filteredProduits.slice(
@@ -201,6 +215,35 @@ export function ProduitsList() {
         description={t('shared.confirm_delete.body_product')}
       />
 
+      {showForm ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={closeForm}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">
+                {editingProduit ? t('produits.dialog_edit') : t('produits.dialog_create')}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {editingProduit
+                  ? t('produits.dialog_subtitle_edit', { name: editingProduit.designation || editingProduit.nom })
+                  : t('produits.dialog_subtitle_create')}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:bg-[#0F172A] dark:border-white/10">
+            <ProduitForm
+              initialData={editingProduit}
+              onSuccess={() => {
+                closeForm();
+                fetchProduits();
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -215,11 +258,6 @@ export function ProduitsList() {
           </div>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setEditingProduit(null);
-        }}>
-          <DialogTrigger render={
             <Button
               onClick={openNewForm}
               className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none"
@@ -227,53 +265,37 @@ export function ProduitsList() {
               <Plus className="mr-2 h-4 w-4" />
               {t('produits.new_button')}
             </Button>
-          } />
-          <DialogContent fullScreen className="dark:bg-[#0F172A] dark:border-white/10">
-            <div className="flex flex-col h-full">
-              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm dark:bg-[#0F172A] dark:border-white/10">
-                <div className="max-w-7xl mx-auto w-full">
-                  <DialogTitle className="text-2xl font-black text-foreground">
-                    {editingProduit ? t('produits.dialog_edit') : t('produits.dialog_create')}
-                  </DialogTitle>
-                  <DialogDescription className="mt-1 text-muted-foreground">
-                    {editingProduit
-                      ? t('produits.dialog_subtitle_edit', { name: editingProduit.designation || editingProduit.nom })
-                      : t('produits.dialog_subtitle_create')}
-                  </DialogDescription>
-                </div>
-              </DialogHeader>
-              <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-7xl mx-auto">
-                  <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:bg-[#0F172A] dark:border-white/10">
-                    <ProduitForm
-                      initialData={editingProduit}
-                      onSuccess={() => {
-                        setIsDialogOpen(false);
-                        setEditingProduit(null);
-                        fetchProduits();
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column - Table */}
         <div className="lg:col-span-3 space-y-4">
-          {/* Search */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none dark:text-slate-500" />
-            <Input
-              type="text"
-              placeholder={t('produits.search_ph')}
-              className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm dark:bg-[#0F172A] dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          {/* Search & Filter */}
+          <div className="flex items-center gap-3">
+            <div className="relative max-w-md flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none dark:text-slate-500" />
+              <Input
+                type="text"
+                placeholder={t('produits.search_ph')}
+                className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm dark:bg-[#0F172A] dark:border-white/10 dark:text-white dark:placeholder:text-slate-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="h-10 w-44 rounded-[4px] border-slate-200 shadow-none text-sm dark:bg-[#0F172A] dark:border-white/10 dark:text-white">
+                <Filter className="h-4 w-4 mr-2 text-slate-400" />
+                <SelectValue placeholder={t('produits.filter_all_types')} />
+              </SelectTrigger>
+              <SelectContent className="dark:bg-slate-900 dark:border-white/10">
+                <SelectItem value="">{t('produits.filter_all_types')}</SelectItem>
+                <SelectItem value="monture">{t('produits.form.type_monture')}</SelectItem>
+                <SelectItem value="verre">{t('produits.form.type_verre')}</SelectItem>
+                <SelectItem value="lentille">{t('produits.form.type_lentille')}</SelectItem>
+                <SelectItem value="solution">{t('produits.form.type_solution')}</SelectItem>
+                <SelectItem value="accessoire">{t('produits.form.type_accessoire')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Table */}
@@ -361,11 +383,23 @@ export function ProduitsList() {
                             {produit.marque && (
                               <span className="text-[11px] text-slate-400 italic dark:text-slate-500">{produit.marque}</span>
                             )}
-                            {produit.barcode && (
-                              <span className="text-[10px] font-mono text-slate-300 mt-0.5 dark:text-slate-600">
-                                {produit.barcode}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className={cn(
+                                "text-[10px] px-1.5 py-0 h-4 font-medium rounded-[2px] border",
+                                produit.typeProduit === 'monture' && "border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:bg-amber-500/10",
+                                produit.typeProduit === 'verre' && "border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-500/30 dark:text-blue-400 dark:bg-blue-500/10",
+                                produit.typeProduit === 'lentille' && "border-purple-300 text-purple-700 bg-purple-50 dark:border-purple-500/30 dark:text-purple-400 dark:bg-purple-500/10",
+                                produit.typeProduit === 'solution' && "border-cyan-300 text-cyan-700 bg-cyan-50 dark:border-cyan-500/30 dark:text-cyan-400 dark:bg-cyan-500/10",
+                                produit.typeProduit === 'accessoire' && "border-slate-300 text-slate-600 bg-slate-50 dark:border-slate-500/30 dark:text-slate-400 dark:bg-slate-500/10"
+                              )}>
+                                {t(`produits.form.type_${produit.typeProduit}`)}
+                              </Badge>
+                              {produit.barcode && (
+                                <span className="text-[10px] font-mono text-slate-300 dark:text-slate-600">
+                                  {produit.barcode}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="px-4 py-5">
@@ -527,6 +561,8 @@ export function ProduitsList() {
           </Card>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

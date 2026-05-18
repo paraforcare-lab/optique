@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { 
   Sparkles, Stethoscope, LayoutDashboard, FileText, ShoppingCart, Package, 
   Users, Building2, Settings, Database, ChevronLeft, ChevronRight, LogOut,
-  X, Receipt, ClipboardList, Truck, DollarSign, FileCheck
+  X, Receipt, ClipboardList, Truck, DollarSign, FileCheck, Eye, Glasses,
+  FlaskConical, CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,16 @@ const navigationGroups = [
     items: [
       { nameKey: 'navigation.workspace', href: '/', icon: Sparkles },
       { nameKey: 'navigation.dashboard', href: '/dashboard', icon: LayoutDashboard },
+    ]
+  },
+  {
+    id: 'optique',
+    titleKey: 'nav.optique',
+    items: [
+      { nameKey: 'navigation.prescriptions', href: '/prescriptions', icon: Eye },
+      { nameKey: 'navigation.work_orders', href: '/ordres-travail', icon: FlaskConical },
+      { nameKey: 'navigation.appointments', href: '/rendez-vous', icon: CalendarDays },
+      { nameKey: 'navigation.products', href: '/produits', icon: Glasses },
     ]
   },
   {
@@ -45,13 +56,6 @@ const navigationGroups = [
     items: [
       { nameKey: 'navigation.clients', href: '/clients', icon: Users },
       { nameKey: 'navigation.suppliers', href: '/fournisseurs', icon: Building2 },
-    ]
-  },
-  {
-    id: 'stock',
-    titleKey: 'nav.stock',
-    items: [
-      { nameKey: 'navigation.products', href: '/produits', icon: Package },
     ]
   },
   {

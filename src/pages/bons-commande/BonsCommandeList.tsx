@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import {
   Plus, Search, FileEdit, Trash2, Download, ShoppingCart, Package,
   FileText, Clock, CheckCircle, Ban, Truck, Send, ChevronLeft,
-  ChevronRight, CalendarDays, Filter, Building2, ArrowUpRight
+  ChevronRight, CalendarDays, Filter, Building2, ArrowUpRight,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,14 +26,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency, formatCurrencyLocale, formatDate } from '@/lib/utils'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { toast } from 'sonner'
 import { BonCommandeForm } from '@/components/forms/BonCommandeForm'
 import { useReactToPrint } from 'react-to-print'
@@ -75,7 +68,7 @@ export function BonsCommandeList() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editingBon, setEditingBon] = useState<any | null>(null);
   const [entreprise, setEntreprise] = useState<any>(null);
   const [selectedBon, setSelectedBon] = useState<any>(null);
@@ -228,7 +221,7 @@ export function BonsCommandeList() {
       };
 
       setEditingBon(mappedData);
-      setIsDialogOpen(true);
+      setShowForm(true);
     } catch (error) {
       console.error('Error loading bon:', error);
       toast.error(t('bons_commande.toast_load_error'));
@@ -298,7 +291,6 @@ export function BonsCommandeList() {
       toast.success(t('shared.toast.status_updated'));
       fetchBons();
     } catch (error: any) {
-      // Surface the actual server message so the user knows exactly what failed
       toast.error(error?.message || t('shared.toast.update_error'));
     }
   };
@@ -309,7 +301,12 @@ export function BonsCommandeList() {
 
   const openNewForm = () => {
     setEditingBon(null);
-    setIsDialogOpen(true);
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingBon(null);
   };
 
   const filteredBons = useMemo(() => {
@@ -373,25 +370,49 @@ export function BonsCommandeList() {
         <BonCommandeDocument ref={componentRef} bon={selectedBon} entreprise={entreprise} lang={i18n.language} />
       </div>
 
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
-            <ShoppingCart className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
+      {showForm ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={closeForm}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">
+                {editingBon ? t('bons_commande.dialog_edit') : t('bons_commande.dialog_create')}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {editingBon
+                  ? t('bons_commande.dialog_subtitle_edit', { number: editingBon.numero })
+                  : t('bons_commande.dialog_subtitle_create')}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">{t('bons_commande.page_title')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t('bons_commande.page_subtitle')}
-            </p>
+          <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:border-white/10 dark:bg-slate-900 dark:rounded-sm">
+            <BonCommandeForm
+              initialData={editingBon}
+              onSuccess={() => {
+                closeForm();
+                fetchBons();
+              }}
+            />
           </div>
         </div>
+      ) : (
+        <>
+          {/* Header */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
+                <ShoppingCart className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">{t('bons_commande.page_title')}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {t('bons_commande.page_subtitle')}
+                </p>
+              </div>
+            </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setEditingBon(null);
-        }}>
-          <DialogTrigger render={
             <Button
               onClick={openNewForm}
               className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none dark:rounded-sm"
@@ -399,402 +420,365 @@ export function BonsCommandeList() {
               <Plus className="me-2 h-4 w-4" />
               {t('bons_commande.new_button')}
             </Button>
-          } />
-          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20 dark:bg-slate-900">
-            <div className="flex flex-col h-full">
-              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm dark:bg-slate-900/50">
-                <div className="max-w-7xl mx-auto w-full">
-                  <DialogTitle className="text-2xl font-black text-foreground">
-                    {editingBon ? t('bons_commande.dialog_edit') : t('bons_commande.dialog_create')}
-                  </DialogTitle>
-                  <DialogDescription className="mt-1 text-muted-foreground">
-                    {editingBon
-                      ? t('bons_commande.dialog_subtitle_edit', { number: editingBon.numero })
-                      : t('bons_commande.dialog_subtitle_create')}
-                  </DialogDescription>
-                </div>
-              </DialogHeader>
-              <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-7xl mx-auto">
-                  <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:border-white/10 dark:bg-slate-900 dark:rounded-sm">
-                    <BonCommandeForm
-                      initialData={editingBon}
-                      onSuccess={() => {
-                        setIsDialogOpen(false);
-                        setEditingBon(null);
-                        fetchBons();
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Column - Table */}
-        <div className="lg:col-span-3 space-y-4">
-          {/* Search & Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="search"
-                placeholder={t('bons_commande.search_ph')}
-                className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm dark:bg-transparent dark:border-white/10 dark:rounded-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-10 w-[140px] bg-white border-slate-200 rounded-[4px] shadow-none text-sm dark:bg-transparent dark:border-white/10 dark:rounded-sm">
-                <Filter className="h-3.5 w-3.5 text-slate-400 me-2" />
-                <SelectValue placeholder={t('shared.table.status')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('shared.filters.all_statuses')}</SelectItem>
-                {statusOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
-          {/* Table */}
-          <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden dark:border-white/10 dark:rounded-sm">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b border-slate-100 dark:border-white/5">
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.supplier')}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.bon_number')}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.date')}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.delivery')}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-start">{t('shared.table.amount')}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{t('shared.table.status')}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-start">{t('shared.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-48 text-center">
-                      <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-                        <p className="text-sm text-muted-foreground font-medium">{t('shared.empty.loading')}</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : paginatedBons.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-48 text-center">
-                      <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100 dark:bg-slate-900/40 dark:border-white/5 dark:rounded-sm">
-                          <Package className="h-8 w-8 text-slate-300" />
-                        </div>
-                        <p className="text-sm text-slate-500 font-medium dark:text-slate-400">
-                          {searchQuery || statusFilter !== 'all'
-                            ? t('bons_commande.empty_filtered')
-                            : t('bons_commande.empty_all')}
-                        </p>
-                        {!searchQuery && statusFilter === 'all' && (
-                          <Button
-                            variant="outline"
-                            className="mt-1 rounded-[4px] text-sm"
-                            onClick={openNewForm}
-                          >
-                            <Plus className="me-2 h-4 w-4" />
-                            {t('bons_commande.create_first')}
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedBons.map((bon) => {
-                    const status = getStatusConfig(bon.statut);
-                    const StatusIcon = status.icon;
-                    const fournisseurInitial = (bon.fournisseur?.nom || '?').charAt(0).toUpperCase();
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Left Column - Table */}
+            <div className="lg:col-span-3 space-y-4">
+              {/* Search & Filters */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    type="search"
+                    placeholder={t('bons_commande.search_ph')}
+                    className="pl-9 h-10 bg-white border-slate-200 rounded-[4px] focus:border-slate-300 shadow-none text-sm dark:bg-transparent dark:border-white/10 dark:rounded-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-10 w-[140px] bg-white border-slate-200 rounded-[4px] shadow-none text-sm dark:bg-transparent dark:border-white/10 dark:rounded-sm">
+                    <Filter className="h-3.5 w-3.5 text-slate-400 me-2" />
+                    <SelectValue placeholder={t('shared.table.status')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('shared.filters.all_statuses')}</SelectItem>
+                    {statusOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                    return (
-                      <TableRow
-                        key={bon.id}
-                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors dark:border-white/5 dark:hover:bg-white/[0.03]"
-                      >
-                        <TableCell className="px-4 py-5">
-                          <div className="flex items-center gap-3">
-                            <Avatar size="sm" className="h-8 w-8 border border-slate-200">
-                              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bon.fournisseur?.nom}`} />
-                              <AvatarFallback className="text-xs font-semibold bg-slate-100 text-slate-600">
-                                {fournisseurInitial}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                                {bon.fournisseur?.nom || bon.fournisseur?.nomSociete || '-'}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {bon.fournisseur?.email || bon.numero}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-4 py-5">
-                          <span dir="ltr" className="text-sm font-mono font-medium text-slate-700 dark:text-white">{bon.numero}</span>
-                        </TableCell>
-                        <TableCell className="px-4 py-5">
-                          <span
-                            dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}
-                            className="text-sm text-slate-500 dark:text-slate-400"
-                          >
-                            {formatDate(bon.dateCommande || bon.date, 'dd MMM yyyy', i18n.language)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-4 py-5">
-                          <span
-                            dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}
-                            className="text-sm text-slate-500 dark:text-slate-400"
-                          >
-                            {bon.dateLivraisonPrevue
-                              ? formatDate(bon.dateLivraisonPrevue, 'dd MMM yyyy', i18n.language)
-                              : '-'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-4 py-5 text-start">
-                          <span
-                            dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}
-                            className="text-sm font-bold text-slate-800 dark:text-white"
-                          >
-                            {formatCurrencyLocale(bon.montantTtc, i18n.language)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-4 py-5 text-center">
-                          <Select
-                            value={bon.statut}
-                            onValueChange={(val) => handleStatusChange(bon.id, val)}
-                          >
-                            <SelectTrigger className="h-auto w-auto mx-auto bg-transparent border-none shadow-none focus:ring-0 p-0">
-                              <SelectValue>
-                                <span className={cn(
-                                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium",
-                                  status.bgColor,
-                                  bon.statut === 'livré' && "dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20"
-                                )}>
-                                  <StatusIcon className={cn("h-3 w-3", status.color, bon.statut === 'livré' && "dark:text-violet-300")} />
-                                  {status.label}
-                                </span>
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {statusOptions.map(opt => {
-                                const OptIcon = opt.icon;
-                                return (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    <div className="flex items-center gap-2">
-                                      <OptIcon className={cn("h-4 w-4", opt.color)} />
-                                      <span>{opt.label}</span>
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="px-4 py-5 text-start">
-                          <div className="flex justify-end gap-0.5">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
-                              onClick={() => handleDownload(bon)}
-                              title={t('shared.actions.download_pdf')}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
-                              onClick={() => handleEdit(bon)}
-                              title={t('shared.actions.edit')}
-                            >
-                              <FileEdit className="h-4 w-4" />
-                            </Button>
-                            {bon.statut === 'brouillon' ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
-                                onClick={() => {
-                                  setBonToDelete(bon.id);
-                                  setDeleteConfirmOpen(true);
-                                }}
-                                title={t('shared.actions.delete')}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            ) : bon.statut !== 'annulé' ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
-                                onClick={() => handleStatusChange(bon.id, 'annulé')}
-                                title={t('shared.status.cancelled')}
-                              >
-                                <Ban className="h-4 w-4" />
-                              </Button>
-                            ) : null}
+              {/* Table */}
+              <Card className="border border-slate-200 shadow-none rounded-[6px] overflow-hidden dark:border-white/10 dark:rounded-sm">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-slate-100 dark:border-white/5">
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.supplier')}</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.bon_number')}</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.date')}</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.delivery')}</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-start">{t('shared.table.amount')}</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-center">{t('shared.table.status')}</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-start">{t('shared.table.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-48 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                            <p className="text-sm text-muted-foreground font-medium">{t('shared.empty.loading')}</p>
                           </div>
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                    ) : paginatedBons.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-48 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100 dark:bg-slate-900/40 dark:border-white/5 dark:rounded-sm">
+                              <Package className="h-8 w-8 text-slate-300" />
+                            </div>
+                            <p className="text-sm text-slate-500 font-medium dark:text-slate-400">
+                              {searchQuery || statusFilter !== 'all'
+                                ? t('bons_commande.empty_filtered')
+                                : t('bons_commande.empty_all')}
+                            </p>
+                            {!searchQuery && statusFilter === 'all' && (
+                              <Button
+                                variant="outline"
+                                className="mt-1 rounded-[4px] text-sm"
+                                onClick={openNewForm}
+                              >
+                                <Plus className="me-2 h-4 w-4" />
+                                {t('bons_commande.create_first')}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedBons.map((bon) => {
+                        const status = getStatusConfig(bon.statut);
+                        const StatusIcon = status.icon;
+                        const fournisseurInitial = (bon.fournisseur?.nom || '?').charAt(0).toUpperCase();
 
-            {!isLoading && paginatedBons.length > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/5">
-                <p className="text-xs text-slate-400" dir="ltr">
-                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredBons.length)} {t('shared.pagination.of')} {filteredBons.length}
-                </p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
-                    disabled={currentPage === 1}
-                    onClick={() => handlePageChange(currentPage - 1)}
-                  >
-                    <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
-                  </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "h-8 min-w-[32px] rounded-[4px] text-sm font-medium dark:rounded-sm",
-                        page === currentPage
-                          ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-white"
-                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:text-white dark:hover:bg-white/5"
-                      )}
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
-                    disabled={currentPage === totalPages}
-                    onClick={() => handlePageChange(currentPage + 1)}
-                  >
-                    <ChevronRight className="h-4 w-4 rtl:rotate-180" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card>
-        </div>
+                        return (
+                          <TableRow
+                            key={bon.id}
+                            className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors dark:border-white/5 dark:hover:bg-white/[0.03]"
+                          >
+                            <TableCell className="px-4 py-5">
+                              <div className="flex items-center gap-3">
+                                <Avatar size="sm" className="h-8 w-8 border border-slate-200">
+                                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bon.fournisseur?.nom}`} />
+                                  <AvatarFallback className="text-xs font-semibold bg-slate-100 text-slate-600">
+                                    {fournisseurInitial}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                    {bon.fournisseur?.nom || bon.fournisseur?.nomSociete || '-'}
+                                  </p>
+                                  <p className="text-xs text-slate-400">
+                                    {bon.fournisseur?.email || bon.numero}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-4 py-5">
+                              <span dir="ltr" className="text-sm font-mono font-medium text-slate-700 dark:text-white">{bon.numero}</span>
+                            </TableCell>
+                            <TableCell className="px-4 py-5">
+                              <span
+                                dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}
+                                className="text-sm text-slate-500 dark:text-slate-400"
+                              >
+                                {formatDate(bon.dateCommande || bon.date, 'dd MMM yyyy', i18n.language)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-4 py-5">
+                              <span
+                                dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}
+                                className="text-sm text-slate-500 dark:text-slate-400"
+                              >
+                                {bon.dateLivraisonPrevue
+                                  ? formatDate(bon.dateLivraisonPrevue, 'dd MMM yyyy', i18n.language)
+                                  : '-'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-4 py-5 text-start">
+                              <span
+                                dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}
+                                className="text-sm font-bold text-slate-800 dark:text-white"
+                              >
+                                {formatCurrencyLocale(bon.montantTtc, i18n.language)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-4 py-5 text-center">
+                              <Select
+                                value={bon.statut}
+                                onValueChange={(val) => handleStatusChange(bon.id, val)}
+                              >
+                                <SelectTrigger className="h-auto w-auto mx-auto bg-transparent border-none shadow-none focus:ring-0 p-0">
+                                  <SelectValue>
+                                    <span className={cn(
+                                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium",
+                                      status.bgColor,
+                                      bon.statut === 'livré' && "dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20"
+                                    )}>
+                                      <StatusIcon className={cn("h-3 w-3", status.color, bon.statut === 'livré' && "dark:text-violet-300")} />
+                                      {status.label}
+                                    </span>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {statusOptions.map(opt => {
+                                    const OptIcon = opt.icon;
+                                    return (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        <div className="flex items-center gap-2">
+                                          <OptIcon className={cn("h-4 w-4", opt.color)} />
+                                          <span>{opt.label}</span>
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="px-4 py-5 text-start">
+                              <div className="flex justify-end gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
+                                  onClick={() => handleDownload(bon)}
+                                  title={t('shared.actions.download_pdf')}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-[4px] dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
+                                  onClick={() => handleEdit(bon)}
+                                  title={t('shared.actions.edit')}
+                                >
+                                  <FileEdit className="h-4 w-4" />
+                                </Button>
+                                {bon.statut === 'brouillon' ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
+                                    onClick={() => {
+                                      setBonToDelete(bon.id);
+                                      setDeleteConfirmOpen(true);
+                                    }}
+                                    title={t('shared.actions.delete')}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                ) : bon.statut !== 'annulé' ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
+                                    onClick={() => handleStatusChange(bon.id, 'annulé')}
+                                    title={t('shared.status.cancelled')}
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
 
-        {/* Right Column - Summary */}
-        <div className="lg:col-span-1">
-          <Card className="border border-slate-200 shadow-none rounded-[6px] dark:border-white/10 dark:rounded-sm">
-            <CardHeader className="px-4 py-4 border-b border-slate-100 dark:border-white/5">
-              <CardTitle className="text-sm font-semibold text-slate-700 dark:text-white">{t('bons_commande.sidebar_title')}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 py-4 space-y-5">
-
-              {/* ── Montant engagé ce mois ───────────────────────────── */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
-                  <ShoppingCart className="h-4 w-4 text-emerald-600 dark:text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-500 dark:text-muted-foreground">
-                    {t('bons_commande.sidebar_committed')}
-                  </p>
-                  <p dir="ltr" className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(monthValue)}
-                  </p>
-                </div>
-              </div>
-
-              {/* ── Commandes passées ────────────────────────────────── */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
-                  <Package className="h-4 w-4 text-emerald-600 dark:text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-500 dark:text-muted-foreground">
-                    {t('bons_commande.sidebar_orders')}
-                  </p>
-                  {/*
-                   * RTL: number always reads LTR; plural resolved via proper
-                   * locale keys instead of appending a hardcoded English 's'.
-                   * AR: "١ أمر" / "٣ أوامر"
-                   * FR: "1 commande" / "3 commandes"
-                   * EN: "1 order" / "3 orders"
-                   */}
-                  <p className="text-lg font-bold text-slate-800 dark:text-white" dir="ltr">
-                    {monthCount}{' '}
-                    <span className="text-sm font-normal text-slate-400 dark:text-muted-foreground">
-                      {monthCount === 1
-                        ? t('bons_commande.sidebar_order_one')
-                        : t('bons_commande.sidebar_order_other')}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              {/* ── Status breakdown ─────────────────────────────────── */}
-              <div className="border-t border-slate-100 pt-4 space-y-3 dark:border-white/5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 dark:text-muted-foreground">
-                    {t('bons_commande.sidebar_pending')}
-                  </span>
-                  <span dir="ltr" className="font-semibold text-amber-600">{pendingOrders}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 dark:text-muted-foreground">
-                    {t('bons_commande.sidebar_delivered')}
-                  </span>
-                  <span dir="ltr" className="font-semibold text-violet-600 dark:text-slate-400">{deliveredOrders}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 dark:text-muted-foreground">
-                    {t('bons_commande.sidebar_cancelled')}
-                  </span>
-                  <span dir="ltr" className="font-semibold text-rose-500 dark:text-slate-400">{cancelledOrders}</span>
-                </div>
-              </div>
-
-              {/* ── Link to suppliers ────────────────────────────────── */}
-              <div className="border-t border-slate-100 pt-4 dark:border-white/5">
-                <Link
-                  to="/fournisseurs"
-                  className="flex items-center gap-2 rounded-[6px] bg-slate-50 border border-slate-200/50 px-3 py-2.5 hover:bg-slate-100 transition-colors dark:rounded-sm dark:bg-slate-900/40 dark:border-white/10 dark:hover:bg-slate-900/60"
-                >
-                  <Building2 className="h-4 w-4 text-slate-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                      {t('bons_commande.sidebar_view_suppliers')}
+                {!isLoading && paginatedBons.length > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/5">
+                    <p className="text-xs text-slate-400" dir="ltr">
+                      {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredBons.length)} {t('shared.pagination.of')} {filteredBons.length}
                     </p>
-                    <p className="text-[11px] text-slate-400 dark:text-muted-foreground">
-                      {t('bons_commande.sidebar_access_list')}
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
+                        disabled={currentPage === 1}
+                        onClick={() => handlePageChange(currentPage - 1)}
+                      >
+                        <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+                      </Button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          variant="ghost"
+                          size="sm"
+                          className={cn(
+                            "h-8 min-w-[32px] rounded-[4px] text-sm font-medium dark:rounded-sm",
+                            page === currentPage
+                              ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-white"
+                              : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:text-white dark:hover:bg-white/5"
+                          )}
+                          onClick={() => handlePageChange(page)}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:hover:text-white dark:hover:bg-white/5 dark:rounded-sm"
+                        disabled={currentPage === totalPages}
+                        onClick={() => handlePageChange(currentPage + 1)}
+                      >
+                        <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+                      </Button>
+                    </div>
                   </div>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-slate-400 shrink-0 rtl:rotate-180" />
-                </Link>
-              </div>
+                )}
+              </Card>
+            </div>
 
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            {/* Right Column - Summary */}
+            <div className="lg:col-span-1">
+              <Card className="border border-slate-200 shadow-none rounded-[6px] dark:border-white/10 dark:rounded-sm">
+                <CardHeader className="px-4 py-4 border-b border-slate-100 dark:border-white/5">
+                  <CardTitle className="text-sm font-semibold text-slate-700 dark:text-white">{t('bons_commande.sidebar_title')}</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 py-4 space-y-5">
+
+                  {/* ── Montant engagé ce mois ───────────────────────────── */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
+                      <ShoppingCart className="h-4 w-4 text-emerald-600 dark:text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-500 dark:text-muted-foreground">
+                        {t('bons_commande.sidebar_committed')}
+                      </p>
+                      <p dir="ltr" className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(monthValue)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* ── Commandes passées ────────────────────────────────── */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
+                      <Package className="h-4 w-4 text-emerald-600 dark:text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-500 dark:text-muted-foreground">
+                        {t('bons_commande.sidebar_orders')}
+                      </p>
+                      <p className="text-lg font-bold text-slate-800 dark:text-white" dir="ltr">
+                        {monthCount}{' '}
+                        <span className="text-sm font-normal text-slate-400 dark:text-muted-foreground">
+                          {monthCount === 1
+                            ? t('bons_commande.sidebar_order_one')
+                            : t('bons_commande.sidebar_order_other')}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* ── Status breakdown ─────────────────────────────────── */}
+                  <div className="border-t border-slate-100 pt-4 space-y-3 dark:border-white/5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500 dark:text-muted-foreground">
+                        {t('bons_commande.sidebar_pending')}
+                      </span>
+                      <span dir="ltr" className="font-semibold text-amber-600">{pendingOrders}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500 dark:text-muted-foreground">
+                        {t('bons_commande.sidebar_delivered')}
+                      </span>
+                      <span dir="ltr" className="font-semibold text-violet-600 dark:text-slate-400">{deliveredOrders}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500 dark:text-muted-foreground">
+                        {t('bons_commande.sidebar_cancelled')}
+                      </span>
+                      <span dir="ltr" className="font-semibold text-rose-500 dark:text-slate-400">{cancelledOrders}</span>
+                    </div>
+                  </div>
+
+                  {/* ── Link to suppliers ────────────────────────────────── */}
+                  <div className="border-t border-slate-100 pt-4 dark:border-white/5">
+                    <Link
+                      to="/fournisseurs"
+                      className="flex items-center gap-2 rounded-[6px] bg-slate-50 border border-slate-200/50 px-3 py-2.5 hover:bg-slate-100 transition-colors dark:rounded-sm dark:bg-slate-900/40 dark:border-white/10 dark:hover:bg-slate-900/60"
+                    >
+                      <Building2 className="h-4 w-4 text-slate-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                          {t('bons_commande.sidebar_view_suppliers')}
+                        </p>
+                        <p className="text-[11px] text-slate-400 dark:text-muted-foreground">
+                          {t('bons_commande.sidebar_access_list')}
+                        </p>
+                      </div>
+                      <ArrowUpRight className="h-3.5 w-3.5 text-slate-400 shrink-0 rtl:rotate-180" />
+                    </Link>
+                  </div>
+
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

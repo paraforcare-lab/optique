@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Plus, Search, FileEdit, Trash2, Truck, Building2, User,
+  Plus, Search, FileEdit, Trash2, Truck, Building2, User, ArrowLeft,
   ChevronLeft, ChevronRight, Mail, Phone, MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button'
@@ -16,14 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+
 import { toast } from 'sonner'
 import { FournisseurForm } from '@/components/forms/FournisseurForm'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -51,7 +44,7 @@ export function FournisseursList() {
   const { user } = useAuth();
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editingFournisseur, setEditingFournisseur] = useState<Fournisseur | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -115,12 +108,17 @@ export function FournisseursList() {
 
   const handleEdit = (fournisseur: Fournisseur) => {
     setEditingFournisseur(fournisseur);
-    setIsDialogOpen(true);
+    setShowForm(true);
   };
 
   const openNewForm = () => {
     setEditingFournisseur(null);
-    setIsDialogOpen(true);
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingFournisseur(null);
   };
 
   const filteredFournisseurs = useMemo(() => {
@@ -167,6 +165,35 @@ export function FournisseursList() {
         description={t('shared.confirm_delete.body_supplier')}
       />
 
+      {showForm ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={closeForm}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">
+                {editingFournisseur ? t('fournisseurs.dialog_edit') : t('fournisseurs.dialog_create')}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {editingFournisseur
+                  ? t('fournisseurs.dialog_subtitle_edit', { name: editingFournisseur.nom || editingFournisseur.nomSociete })
+                  : t('fournisseurs.dialog_subtitle_create')}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:bg-[#0F172A] dark:border-white/10">
+            <FournisseurForm
+              initialData={editingFournisseur}
+              onSuccess={() => {
+                closeForm();
+                fetchFournisseurs();
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -181,11 +208,6 @@ export function FournisseursList() {
           </div>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setEditingFournisseur(null);
-        }}>
-          <DialogTrigger render={
             <Button
               onClick={openNewForm}
               className="bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none"
@@ -193,38 +215,6 @@ export function FournisseursList() {
               <Plus className="mr-2 h-4 w-4" />
               {t('fournisseurs.new_button')}
             </Button>
-          } />
-          <DialogContent fullScreen className="bg-gradient-to-br from-background to-muted/20 dark:bg-[#0F172A] dark:border-white/10">
-            <div className="flex flex-col h-full">
-              <DialogHeader className="px-8 py-6 border-b border-border/50 bg-white/50 backdrop-blur-sm dark:bg-[#0F172A] dark:border-white/10">
-                <div className="max-w-7xl mx-auto w-full">
-                  <DialogTitle className="text-2xl font-black text-foreground">
-                    {editingFournisseur ? t('fournisseurs.dialog_edit') : t('fournisseurs.dialog_create')}
-                  </DialogTitle>
-                  <DialogDescription className="mt-1 text-muted-foreground">
-                    {editingFournisseur
-                      ? t('fournisseurs.dialog_subtitle_edit', { name: editingFournisseur.nom || editingFournisseur.nomSociete })
-                      : t('fournisseurs.dialog_subtitle_create')}
-                  </DialogDescription>
-                </div>
-              </DialogHeader>
-              <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-7xl mx-auto">
-                  <div className="rounded-[6px] border border-slate-200 bg-white p-8 dark:bg-[#0F172A] dark:border-white/10">
-                    <FournisseurForm
-                      initialData={editingFournisseur}
-                      onSuccess={() => {
-                        setIsDialogOpen(false);
-                        setEditingFournisseur(null);
-                        fetchFournisseurs();
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -476,6 +466,8 @@ export function FournisseursList() {
           </Card>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

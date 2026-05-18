@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Plus, Search, Trash2, ShoppingCart, Receipt, CreditCard, X,
+  Plus, Search, Trash2, ShoppingCart, Receipt, CreditCard, X, ArrowLeft,
   ShoppingBag, CalendarDays, Filter, ChevronLeft, ChevronRight,
   Printer, Eye, User, TrendingUp, DollarSign, FileSpreadsheet, Package,
   Calendar,
@@ -71,7 +71,7 @@ export default function VentesPassagers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [timeFilter, setTimeFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [detailVente, setDetailVente] = useState<VentePassager | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
@@ -150,6 +150,11 @@ export default function VentesPassagers() {
     setPanier(panier.filter((_, i) => i !== index));
   };
 
+  const closeForm = () => {
+    setShowForm(false);
+    setPanier([]);
+  };
+
   const handleSubmit = async () => {
     if (panier.length === 0) {
       toast.error(t('ventes.toast_cart_empty'));
@@ -212,7 +217,7 @@ export default function VentesPassagers() {
       await ensureLowStockNotifications(user?.id);
 
       toast.success(t('ventes.toast_sale_success'));
-      setIsDialogOpen(false);
+      setShowForm(false);
       setPanier([]);
       fetchVentes();
       fetchProduits();
@@ -395,6 +400,183 @@ export default function VentesPassagers() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {showForm ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={closeForm}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">{t('ventes.dialog_create')}</h2>
+              <p className="text-sm text-muted-foreground">{t('ventes.dialog_subtitle_create')}</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Section 1: Information de Vente */}
+            <div className="rounded-sm dark:bg-card dark:border-white/10 border border-slate-200 bg-white overflow-hidden">
+              <div className="flex items-center gap-2.5 px-6 py-4 border-b dark:border-white/10 border-slate-100 dark:bg-card bg-slate-50/50">
+                <ShoppingCart className="h-5 w-5 text-emerald-600" />
+                <span className="text-sm font-bold text-slate-800">{t('ventes.sale_info')}</span>
+              </div>
+              <div className="p-6 space-y-4">
+                <ProductSelector
+                  produits={produits}
+                  onSelect={(produit, qte) => {
+                    const puHt = Number(produit.prixVenteHt ?? 0);
+                    const tvaRate = Number(produit.tauxTva ?? 20);
+                    const mht = puHt * qte;
+                    const mtva = mht * (tvaRate / 100);
+                    const mttc = mht + mtva;
+
+                    const existingIndex = panier.findIndex(item => Number(item.produitId) === Number(produit.id));
+                    if (existingIndex >= 0) {
+                      const existing = panier[existingIndex];
+                      const newQte = existing.quantite + qte;
+                      const newMht = existing.prixUnitaireHt * newQte;
+                      const newMtva = newMht * (existing.tva / 100);
+                      const newMttc = newMht + newMtva;
+
+                      setPanier(panier.map((item, idx) =>
+                        idx === existingIndex
+                          ? { ...item, quantite: newQte, montantHt: newMht, montantTva: newMtva, montantTtc: newMttc }
+                          : item
+                      ));
+                    } else {
+                      setPanier([...panier, {
+                        produitId: produit.id,
+                        designation: produit.designation || t('shared.table.product'),
+                        quantite: qte,
+                        prixUnitaireHt: puHt,
+                        tva: tvaRate,
+                        montantHt: mht,
+                        montantTva: mtva,
+                        montantTtc: mttc,
+                        prixAchatHt: Number(produit.prixAchatHt ?? 0)
+                      }]);
+                    }
+                    toast.success(t('ventes.toast_item_added', { name: produit.designation || t('shared.table.product') }));
+                  }}
+                  trigger={
+                    <Button className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm shadow-none text-base">
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      {t('ventes.select_product')}
+                    </Button>
+                  }
+                />
+                <p className="text-xs text-slate-400 text-center">
+                  {t('ventes.select_product_hint')}
+                </p>
+              </div>
+            </div>
+
+            {/* Section 2: Panier */}
+            <div className="rounded-sm dark:bg-card dark:border-white/10 border border-slate-200 bg-white overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b dark:border-white/10 border-slate-100 dark:bg-card bg-slate-50/50">
+                <div className="flex items-center gap-2.5">
+                  <Package className="h-5 w-5 text-emerald-600" />
+                  <span className="text-sm font-bold text-slate-800">
+                    {t('ventes.cart_title')} <span className="text-slate-400 font-normal">({t(panier.length === 1 ? 'ventes.cart_item_one' : 'ventes.cart_item_other', { count: panier.length })})</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="rounded-sm dark:border-white/10 border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b dark:border-white/10 border-slate-100 dark:bg-card bg-slate-50/30">
+                        <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4">{t('ventes.col_designation')}</TableHead>
+                        <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4 text-right">{t('ventes.col_qty')}</TableHead>
+                        <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4 text-right">{t('ventes.col_unit_price')}</TableHead>
+                        <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4 text-right">{t('ventes.col_vat')}</TableHead>
+                        <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4 text-right">{t('ventes.col_total')}</TableHead>
+                        <TableHead className="w-14 px-5 py-4"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {panier.map((item, index) => (
+                        <TableRow key={index} className="border-b dark:border-white/10 border-slate-100 last:border-0">
+                          <TableCell className="px-5 py-4">
+                            <p className="text-sm font-medium dark:text-card-foreground text-slate-800">{item.designation}</p>
+                          </TableCell>
+                          <TableCell className="px-5 py-4 text-right">
+                            <span className="inline-flex items-center justify-center min-w-[32px] h-7 px-2.5 rounded-sm dark:bg-slate-800 bg-slate-100 text-sm font-bold dark:text-card-foreground text-slate-700">{item.quantite}</span>
+                          </TableCell>
+                          <TableCell className="px-5 py-4 text-right text-sm dark:text-muted-foreground text-slate-500 font-medium">{formatCurrency(item.prixUnitaireHt)}</TableCell>
+                          <TableCell className="px-5 py-4 text-right text-sm dark:text-muted-foreground text-slate-500">{item.tva}%</TableCell>
+                          <TableCell className="px-5 py-4 text-right">
+                            <span className="text-sm font-bold text-emerald-600">{formatCurrency(item.montantTtc)}</span>
+                          </TableCell>
+                          <TableCell className="px-5 py-4 text-right">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[8px]" onClick={() => removeFromPanier(index)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {panier.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-16">
+                            <div className="flex flex-col items-center gap-4">
+                              <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-slate-300">
+                                <rect x="10" y="26" width="52" height="36" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                                <path d="M8 22C8 19.7909 9.79086 18 12 18H60C62.2091 18 64 19.7909 64 22V26H8V22Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                                <path d="M26 34H46" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3" />
+                                <path d="M22 42H50" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3" />
+                                <path d="M24 50H36" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3" />
+                                <circle cx="38" cy="14" r="3" fill="#10B981" stroke="white" strokeWidth="1.5" />
+                              </svg>
+                              <div>
+                                <p className="text-sm font-semibold text-slate-500">{t('ventes.cart_empty_title')}</p>
+                                <p className="text-xs text-slate-400 mt-1">{t('ventes.cart_empty_hint')}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {panier.length > 0 && (
+                <div className="px-6 py-4 border-t dark:border-white/10 border-slate-100 dark:bg-card bg-slate-50/50">
+                  <div className="flex justify-end">
+                    <div className="flex items-center gap-8">
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider">{t('ventes.total_ht')}</p>
+                        <p className="text-lg font-bold dark:text-card-foreground text-slate-800">{formatCurrency(panier.reduce((sum, i) => sum + i.montantHt, 0))}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider">{t('ventes.total_vat')}</p>
+                        <p className="text-lg font-bold dark:text-card-foreground text-slate-800">{formatCurrency(panier.reduce((sum, i) => sum + i.montantTva, 0))}</p>
+                      </div>
+                      <div className="text-right border-l border-emerald-200 pl-8">
+                        <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">{t('ventes.total_ttc')}</p>
+                        <p className="text-2xl font-black text-emerald-600">{formatCurrency(panier.reduce((sum, i) => sum + i.montantTtc, 0))}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={closeForm}
+                className="h-10 px-5 rounded-sm dark:border-white/10 dark:text-muted-foreground border-slate-300 text-slate-600 font-semibold text-sm shadow-none">
+                {t('ventes.btn_cancel')}
+              </Button>
+              <Button onClick={handleSubmit} disabled={panier.length === 0}
+                className="h-10 px-5 rounded-sm bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm shadow-none">
+                <CreditCard className="mr-2 h-4 w-4" />
+                {t('ventes.btn_validate')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -407,202 +589,11 @@ export default function VentesPassagers() {
           </div>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger render={
-            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm h-10 px-5 shadow-none">
+            <Button onClick={() => setShowForm(true)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm h-10 px-5 shadow-none">
               <Plus className="mr-2 h-4 w-4" />
               {t('ventes.new_button')}
             </Button>
-          } />
-          <DialogContent className="sm:max-w-[1000px] w-[95vw] !p-0 gap-0 max-h-[90vh] overflow-y-auto rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_20px_60px_rgba(0,0,0,0.12),0_8px_24px_rgba(0,0,0,0.08)]">
-            <DialogHeader className="px-8 pt-8 pb-0">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-12 w-12 rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20 bg-emerald-50 border border-emerald-200/50 shrink-0">
-                  <ShoppingCart className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div>
-                  <DialogTitle className="text-2xl font-bold dark:text-card-foreground text-slate-900">{t('ventes.dialog_create')}</DialogTitle>
-                  <p className="text-sm dark:text-muted-foreground text-slate-500 mt-0.5">{t('ventes.dialog_subtitle_create')}</p>
-                </div>
-              </div>
-            </DialogHeader>
-
-            <div className="px-8 py-8 space-y-8">
-              {/* Section 1: Information de Vente */}
-              <div className="rounded-sm dark:bg-card dark:border-white/10 border border-slate-200 bg-white overflow-hidden">
-                <div className="flex items-center gap-2.5 px-6 py-4 border-b dark:border-white/10 border-slate-100 dark:bg-card bg-slate-50/50">
-                  <ShoppingCart className="h-5 w-5 text-emerald-600" />
-                  <span className="text-sm font-bold text-slate-800">{t('ventes.sale_info')}</span>
-                </div>
-                <div className="p-6 space-y-4">
-                  <ProductSelector
-                    produits={produits}
-                    onSelect={(produit, qte) => {
-                      const puHt = Number(produit.prixVenteHt ?? 0);
-                      const tvaRate = Number(produit.tauxTva ?? 20);
-                      const mht = puHt * qte;
-                      const mtva = mht * (tvaRate / 100);
-                      const mttc = mht + mtva;
-
-                      const existingIndex = panier.findIndex(item => Number(item.produitId) === Number(produit.id));
-                      if (existingIndex >= 0) {
-                        const existing = panier[existingIndex];
-                        const newQte = existing.quantite + qte;
-                        const newMht = existing.prixUnitaireHt * newQte;
-                        const newMtva = newMht * (existing.tva / 100);
-                        const newMttc = newMht + newMtva;
-
-                        setPanier(panier.map((item, idx) =>
-                          idx === existingIndex
-                            ? { ...item, quantite: newQte, montantHt: newMht, montantTva: newMtva, montantTtc: newMttc }
-                            : item
-                        ));
-                      } else {
-                        setPanier([...panier, {
-                          produitId: produit.id,
-                          designation: produit.designation || t('shared.table.product'),
-                          quantite: qte,
-                          prixUnitaireHt: puHt,
-                          tva: tvaRate,
-                          montantHt: mht,
-                          montantTva: mtva,
-                          montantTtc: mttc,
-                          prixAchatHt: Number(produit.prixAchatHt ?? 0)
-                        }]);
-                      }
-                      toast.success(t('ventes.toast_item_added', { name: produit.designation || t('shared.table.product') }));
-                    }}
-                    trigger={
-                      <Button className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm shadow-none text-base">
-                        <ShoppingCart className="mr-2 h-5 w-5" />
-                        {t('ventes.select_product')}
-                      </Button>
-                    }
-                  />
-                  <p className="text-xs text-slate-400 text-center">
-                    {t('ventes.select_product_hint')}
-                  </p>
-                </div>
-              </div>
-
-              {/* Section 2: Panier */}
-              <div className="rounded-sm dark:bg-card dark:border-white/10 border border-slate-200 bg-white overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b dark:border-white/10 border-slate-100 dark:bg-card bg-slate-50/50">
-                  <div className="flex items-center gap-2.5">
-                    <Package className="h-5 w-5 text-emerald-600" />
-                    <span className="text-sm font-bold text-slate-800">
-                      {t('ventes.cart_title')} <span className="text-slate-400 font-normal">({t(panier.length === 1 ? 'ventes.cart_item_one' : 'ventes.cart_item_other', { count: panier.length })})</span>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <div className="rounded-sm dark:border-white/10 border border-slate-200 overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b dark:border-white/10 border-slate-100 dark:bg-card bg-slate-50/30">
-                          <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4">{t('ventes.col_designation')}</TableHead>
-                          <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4 text-right">{t('ventes.col_qty')}</TableHead>
-                          <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4 text-right">{t('ventes.col_unit_price')}</TableHead>
-                          <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4 text-right">{t('ventes.col_vat')}</TableHead>
-                          <TableHead className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider px-5 py-4 text-right">{t('ventes.col_total')}</TableHead>
-                          <TableHead className="w-14 px-5 py-4"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {panier.map((item, index) => (
-                          <TableRow key={index} className="border-b dark:border-white/10 border-slate-100 last:border-0">
-                            <TableCell className="px-5 py-4">
-                              <p className="text-sm font-medium dark:text-card-foreground text-slate-800">{item.designation}</p>
-                            </TableCell>
-                            <TableCell className="px-5 py-4 text-right">
-                              <span className="inline-flex items-center justify-center min-w-[32px] h-7 px-2.5 rounded-sm dark:bg-slate-800 bg-slate-100 text-sm font-bold dark:text-card-foreground text-slate-700">{item.quantite}</span>
-                            </TableCell>
-                            <TableCell className="px-5 py-4 text-right text-sm dark:text-muted-foreground text-slate-500 font-medium">{formatCurrency(item.prixUnitaireHt)}</TableCell>
-                            <TableCell className="px-5 py-4 text-right text-sm dark:text-muted-foreground text-slate-500">{item.tva}%</TableCell>
-                            <TableCell className="px-5 py-4 text-right">
-                              <span className="text-sm font-bold text-emerald-600">{formatCurrency(item.montantTtc)}</span>
-                            </TableCell>
-                            <TableCell className="px-5 py-4 text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[8px]"
-                                onClick={() => removeFromPanier(index)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {panier.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center py-16">
-                              <div className="flex flex-col items-center gap-4">
-                                <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-slate-300">
-                                  <rect x="10" y="26" width="52" height="36" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                                  <path d="M8 22C8 19.7909 9.79086 18 12 18H60C62.2091 18 64 19.7909 64 22V26H8V22Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                                  <path d="M26 34H46" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3" />
-                                  <path d="M22 42H50" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3" />
-                                  <path d="M24 50H36" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3" />
-                                  <circle cx="38" cy="14" r="3" fill="#10B981" stroke="white" strokeWidth="1.5" />
-                                </svg>
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-500">{t('ventes.cart_empty_title')}</p>
-                                  <p className="text-xs text-slate-400 mt-1">{t('ventes.cart_empty_hint')}</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                {/* Totals */}
-                {panier.length > 0 && (
-                  <div className="px-6 py-4 border-t dark:border-white/10 border-slate-100 dark:bg-card bg-slate-50/50">
-                    <div className="flex justify-end">
-                      <div className="flex items-center gap-8">
-                        <div className="text-right">
-                          <p className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider">{t('ventes.total_ht')}</p>
-                          <p className="text-lg font-bold dark:text-card-foreground text-slate-800">{formatCurrency(panier.reduce((sum, i) => sum + i.montantHt, 0))}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[11px] font-semibold dark:text-muted-foreground text-slate-500 uppercase tracking-wider">{t('ventes.total_vat')}</p>
-                          <p className="text-lg font-bold dark:text-card-foreground text-slate-800">{formatCurrency(panier.reduce((sum, i) => sum + i.montantTva, 0))}</p>
-                        </div>
-                        <div className="text-right border-l border-emerald-200 pl-8">
-                          <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">{t('ventes.total_ttc')}</p>
-                          <p className="text-2xl font-black text-emerald-600">{formatCurrency(panier.reduce((sum, i) => sum + i.montantTtc, 0))}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 px-8 py-5 border-t dark:border-white/10 border-slate-200 dark:bg-card bg-slate-50/50">
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="h-10 px-5 rounded-sm dark:border-white/10 dark:text-muted-foreground border-slate-300 text-slate-600 font-semibold text-sm shadow-none"
-              >
-                {t('ventes.btn_cancel')}
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={panier.length === 0}
-                className="h-10 px-5 rounded-sm bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm shadow-none"
-              >
-                <CreditCard className="mr-2 h-4 w-4" />
-                {t('ventes.btn_validate')}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -673,7 +664,7 @@ export default function VentesPassagers() {
                           <Button
                             variant="outline"
                             className="mt-1 rounded-sm text-sm"
-                            onClick={() => setIsDialogOpen(true)}
+                            onClick={() => setShowForm(true)}
                           >
                             <Plus className="mr-2 h-4 w-4" />
                             {t('ventes.create_first')}
@@ -952,6 +943,8 @@ export default function VentesPassagers() {
           </Card>
         </div>
       </div>
+        </>
+      )}
 
       {/* Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
