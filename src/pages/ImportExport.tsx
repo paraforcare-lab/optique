@@ -104,7 +104,7 @@ export function ImportExport() {
         const worksheet = XLSX.utils.json_to_sheet(data[tableName])
         XLSX.utils.book_append_sheet(workbook, worksheet, tableName.substring(0, 31))
       })
-      XLSX.writeFile(workbook, `ParaGestion_Backup_${new Date().toISOString().split('T')[0]}.xlsx`)
+      XLSX.writeFile(workbook, `OptiGestion_Backup_${new Date().toISOString().split('T')[0]}.xlsx`)
       toast.success(ie('export.toast_success'))
     } catch (error) {
       console.error(error)
@@ -257,7 +257,7 @@ export function ImportExport() {
       ]
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(tvaData), 'TVA')
 
-      XLSX.writeFile(workbook, `ParaGestion_Export_Comptable_${new Date().toISOString().split('T')[0]}.xlsx`)
+      XLSX.writeFile(workbook, `OptiGestion_Export_Comptable_${new Date().toISOString().split('T')[0]}.xlsx`)
       toast.success(ie('comptable.toast_success'))
     } catch (error) {
       console.error(error)

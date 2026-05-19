@@ -1,4 +1,4 @@
-ï»¿import React, { useEffect, useState, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus, Search, FileEdit, Trash2, Download, ArrowRightLeft, FileText,
@@ -79,9 +79,9 @@ export function DevisList() {
 
   const statusOptions: StatutOption[] = [
     { value: 'brouillon', label: t('shared.status.draft'), icon: FileText, color: 'text-slate-700', bgColor: 'dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20 bg-slate-50 text-slate-700 border border-slate-200/50' },
-    { value: 'envoyÃ©', label: t('shared.status.sent'), icon: Send, color: 'text-amber-700', bgColor: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 bg-amber-50 text-amber-700 border border-amber-200/50' },
-    { value: 'acceptÃ©', label: t('shared.status.accepted'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
-    { value: 'refusÃ©', label: t('shared.status.refused'), icon: XCircle, color: 'text-red-700', bgColor: 'dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 bg-red-50 text-red-700 border border-red-200/50' },
+    { value: 'envoyé', label: t('shared.status.sent'), icon: Send, color: 'text-amber-700', bgColor: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 bg-amber-50 text-amber-700 border border-amber-200/50' },
+    { value: 'accepté', label: t('shared.status.accepted'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
+    { value: 'refusé', label: t('shared.status.refused'), icon: XCircle, color: 'text-red-700', bgColor: 'dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 bg-red-50 text-red-700 border border-red-200/50' },
     { value: 'converti', label: t('shared.status.converted'), icon: ArrowRightLeft, color: 'text-violet-700', bgColor: 'dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20 bg-violet-50 text-violet-700 border border-violet-200/50' },
   ];
 
@@ -188,7 +188,7 @@ export function DevisList() {
           banque: data.banque || '',
           rib: data.rib || '',
           swift: data.swift || '',
-          watermarkText: data.watermark_text || 'ParaGestion',
+          watermarkText: data.watermark_text || 'OptiGestion',
           activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
         });
       } else {
@@ -424,9 +424,9 @@ export function DevisList() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const last30Devis = devisList.filter(d => new Date(d.dateEmission) >= thirtyDaysAgo);
-  const attente30 = last30Devis.filter(d => ['brouillon', 'envoyÃ©'].includes(d.statut));
+  const attente30 = last30Devis.filter(d => ['brouillon', 'envoyé'].includes(d.statut));
   const convertis30 = last30Devis.filter(d => d.statut === 'converti');
-  const expires30 = last30Devis.filter(d => ['refusÃ©'].includes(d.statut));
+  const expires30 = last30Devis.filter(d => ['refusé'].includes(d.statut));
   const total30Montant = last30Devis.reduce((sum, d) => sum + (d.montantTtc || 0), 0);
   const conversionRate = last30Devis.length > 0
     ? Math.round((convertis30.length / last30Devis.length) * 100)
@@ -443,10 +443,10 @@ export function DevisList() {
   };
 
   const totalDevis = devisList.length;
-  const devisAcceptes = devisList.filter(d => d.statut === 'acceptÃ©').length;
-  const devisEnAttente = devisList.filter(d => ['brouillon', 'envoyÃ©'].includes(d.statut)).length;
+  const devisAcceptes = devisList.filter(d => d.statut === 'accepté').length;
+  const devisEnAttente = devisList.filter(d => ['brouillon', 'envoyé'].includes(d.statut)).length;
   const totalMontant = devisList.reduce((sum, d) => sum + (d.montantTtc || 0), 0);
-  const montantAcceptes = devisList.filter(d => d.statut === 'acceptÃ©').reduce((sum, d) => sum + (d.montantTtc || 0), 0);
+  const montantAcceptes = devisList.filter(d => d.statut === 'accepté').reduce((sum, d) => sum + (d.montantTtc || 0), 0);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -496,7 +496,7 @@ export function DevisList() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20 bg-emerald-50 border border-emerald-200/50">
+          <div className="flex items-center justify-center h-10 w-10 rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20 bg-blue-50 border border-blue-200/50">
             <FileText className="h-5 w-5 text-emerald-500" />
           </div>
           <div>
@@ -506,7 +506,7 @@ export function DevisList() {
         </div>
         <Button
           onClick={openNewForm}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm h-10 px-5 shadow-none"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-sm h-10 px-5 shadow-none"
         >
           <Plus className="me-2 h-4 w-4" />
           {t('devis.new_button')}
@@ -712,12 +712,12 @@ export function DevisList() {
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            ) : !['refusÃ©', 'converti'].includes(devis.statut) ? (
+                            ) : !['refusé', 'converti'].includes(devis.statut) ? (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 dark:text-muted-foreground dark:hover:text-red-400 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-sm"
-                                onClick={() => handleStatusChange(devis.id, 'refusÃ©')}
+                                onClick={() => handleStatusChange(devis.id, 'refusé')}
                                 title={t('devis.tooltip_refuse')}
                               >
                                 <Ban className="h-4 w-4" />

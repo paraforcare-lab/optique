@@ -95,7 +95,7 @@ export function BonsLivraisonList() {
     { value: 'en_attente', label: t('shared.status.in_progress'), icon: Clock, color: 'text-sky-700', bgColor: 'bg-sky-50 text-sky-700 border border-sky-200/50' },
     { value: 'livré', label: t('shared.status.received'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
     { value: 'partiel', label: t('shared.status.partial'), icon: Clock, color: 'text-orange-700', bgColor: 'bg-orange-50 text-orange-700 border border-orange-200/50' },
-    { value: 'annulé', label: t('shared.status.cancelled'), icon: Ban, color: 'text-slate-600', bgColor: 'bg-slate-50 text-slate-600 border border-slate-200/50' },
+    { value: 'annul�', label: t('shared.status.cancelled'), icon: Ban, color: 'text-slate-600', bgColor: 'bg-slate-50 text-slate-600 border border-slate-200/50' },
   ];
 
   const componentRef = useRef<HTMLDivElement>(null);
@@ -172,7 +172,7 @@ export function BonsLivraisonList() {
           ice: data.ice || '',
           logoUrl: cleanLogoUrl,
           couleurPrincipale: data.couleur_principale || '#267E54',
-          watermarkText: data.watermark_text || 'ParaGestion',
+          watermarkText: data.watermark_text || 'OptiGestion',
           activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
         });
       }
@@ -316,7 +316,7 @@ export function BonsLivraisonList() {
             }
           }
         }
-      } else if (!isBecomingLivré && wasLivré) {
+      } else if (!isBecominglivré && waslivré) {
         const { data: lignes } = await supabase
           .from('bon_livraison_lignes')
           .select('produit_id, quantite')
@@ -471,7 +471,7 @@ export function BonsLivraisonList() {
           {/* Header */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
+              <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-blue-50 border border-blue-200/50 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
                 <Truck className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
               </div>
               <div>
@@ -484,7 +484,7 @@ export function BonsLivraisonList() {
 
             <Button
               onClick={openNewForm}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none dark:rounded-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none dark:rounded-sm"
             >
               <Plus className="me-2 h-4 w-4" />
               {t('bons_livraison.new_button')}
@@ -636,7 +636,7 @@ export function BonsLivraisonList() {
                                     <span className={cn(
                                       "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium",
                                       status.bgColor,
-                                      bon.statut === 'livré' && "dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                                      bon.statut === 'livré' && "dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20"
                                     )}>
                                       <StatusIcon className={cn("h-3 w-3", status.color, bon.statut === 'livré' && "dark:text-emerald-300")} />
                                       {status.label}
@@ -691,12 +691,12 @@ export function BonsLivraisonList() {
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
-                                ) : bon.statut !== 'annulé' ? (
+                                ) : bon.statut !== 'annul�' ? (
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
-                                    onClick={() => handleStatusChange(bon.id, 'annulé')}
+                                    onClick={() => handleStatusChange(bon.id, 'annul�')}
                                     title={t('shared.status.cancelled')}
                                   >
                                     <Ban className="h-4 w-4" />
@@ -767,9 +767,9 @@ export function BonsLivraisonList() {
                 </CardHeader>
                 <CardContent className="px-4 py-4 space-y-5">
 
-                  {/* ── Bons ce mois-ci ─────────────────────────────────── */}
+                  {/* -- Bons ce mois-ci ----------------------------------- */}
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-blue-50 border border-blue-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
                       <Package className="h-4 w-4 text-emerald-600 dark:text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -791,9 +791,9 @@ export function BonsLivraisonList() {
                     </div>
                   </div>
 
-                  {/* ── Valeur stocks entrants ───────────────────────────── */}
+                  {/* -- Valeur stocks entrants ----------------------------- */}
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-blue-50 border border-blue-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
                       <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -806,7 +806,7 @@ export function BonsLivraisonList() {
                     </div>
                   </div>
 
-                  {/* ── En attente de réception ──────────────────────────── */}
+                  {/* -- En attente de r�ception ---------------------------- */}
                   <div className="border-t border-slate-100 pt-4 flex items-center gap-3 dark:border-white/5">
                     <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-sky-50 border border-sky-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
                       <Clock className="h-4 w-4 text-sky-600 dark:text-primary" />
@@ -826,7 +826,7 @@ export function BonsLivraisonList() {
                     </div>
                   </div>
 
-                  {/* ── Link to products ─────────────────────────────────── */}
+                  {/* -- Link to products ----------------------------------- */}
                   <div className="border-t border-slate-100 pt-4 dark:border-white/5">
                     <Link
                       to="/produits"
@@ -855,7 +855,7 @@ export function BonsLivraisonList() {
             <DialogContent className="max-w-xl dark:bg-slate-900 dark:border-white/10">
               <DialogHeader>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50 dark:rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-blue-50 border border-blue-200/50 dark:rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20">
                     <Truck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
@@ -879,7 +879,7 @@ export function BonsLivraisonList() {
                         } catch { return '-'; }
                       })()}
                     </span>
-                    <span className="mx-2 text-slate-300 dark:text-slate-600">·</span>
+                    <span className="mx-2 text-slate-300 dark:text-slate-600">�</span>
                     <span className="font-medium text-slate-700 dark:text-white">
                       {detailBon.fournisseur?.nom || detailBon.fournisseur?.nomSociete || '-'}
                     </span>
@@ -936,7 +936,7 @@ export function BonsLivraisonList() {
                 </Button>
                 {detailBon && (
                   <Button
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-[4px] h-10 shadow-none"
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-[4px] h-10 shadow-none"
                     onClick={() => { handleEdit(detailBon); setIsDetailOpen(false); }}
                   >
                     <FileEdit className="me-2 h-4 w-4" />

@@ -425,7 +425,7 @@ export function ProduitsList() {
                               "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium",
                               produit.stockActuel <= produit.stockMin
                                 ? "bg-rose-50 text-rose-700 border border-rose-200/50 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
-                                : "bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20"
                             )}>
                               {produit.stockActuel} {produit.unite}
                             </span>
@@ -517,7 +517,7 @@ export function ProduitsList() {
             </CardHeader>
             <CardContent className="px-4 py-4 space-y-5">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-amber-50 border border-amber-200/50 shrink-0 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
+                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-amber-50 border border-amber-200/50 shrink-0 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20">
                   <Package className="h-4 w-4 text-amber-500 dark:text-emerald-400" />
                 </div>
                 <div className="flex-1 min-w-0">

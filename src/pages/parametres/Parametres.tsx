@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -151,7 +151,7 @@ export function Parametres() {
       conditionsPaiementDefaut: '',
       piedPageDefaut: '',
       activerDroitTimbre: true,
-      watermarkText: 'ParaGestion',
+      watermarkText: 'OptiGestion',
       activerFiligrane: true,
       codeInpe: '',
     },
@@ -230,7 +230,7 @@ export function Parametres() {
             conditionsPaiementDefaut: data.conditions_paiement_defaut || '',
             piedPageDefaut: data.pied_page_defaut || '',
             activerDroitTimbre: data.activer_droit_timbre !== undefined ? data.activer_droit_timbre : true,
-            watermarkText: data.watermark_text || data.texte_filigrane || 'ParaGestion',
+            watermarkText: data.watermark_text || data.texte_filigrane || 'OptiGestion',
             activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
             codeInpe: data.code_inpe || '',
           };
@@ -1131,7 +1131,7 @@ export function Parametres() {
                     <Button
                       type="button"
                       onClick={handleCropConfirm}
-                      className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white"
+                      className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       {t('parametres.appearance.confirm_crop')}
                     </Button>

@@ -77,9 +77,10 @@ export function LoginPage() {
         <div className="w-full max-w-md bg-white rounded-2xl border border-slate-100 shadow-[0_20px_50px_rgba(8,112,184,0.07)] p-8 md:p-10">
           {/* Logo + headline */}
           <div className="flex flex-col items-center text-center mb-8">
-            <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-[0_4px_12px_rgba(16,185,129,0.3)] mb-4">
+            <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-[0_4px_12px_rgba(59,130,246,0.3)] mb-4">
               <svg className="h-7 w-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
               </svg>
             </div>
             <h1 className="text-xl font-bold text-slate-900">{t('auth.login_title')}</h1>
@@ -105,7 +106,7 @@ export function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
-                  className="h-11 ps-11 bg-slate-50 border-slate-200 rounded-[4px] focus:bg-white focus:border-emerald-500 focus:ring-0 shadow-none text-sm text-slate-900 placeholder:text-slate-400 caret-emerald-500 transition-colors"
+                  className="h-11 ps-11 bg-slate-50 border-slate-200 rounded-[4px] focus:bg-white focus:border-blue-500 focus:ring-0 shadow-none text-sm text-slate-900 placeholder:text-slate-400 caret-blue-500 transition-colors"
                 />
               </div>
             </div>
@@ -116,7 +117,7 @@ export function LoginPage() {
                 <Label htmlFor="password" className="text-sm font-medium text-slate-500">
                   {t('auth.password_label')}
                 </Label>
-                <Link to="/forgot-password" className="text-xs text-emerald-600 font-medium hover:underline">
+                <Link to="/forgot-password" className="text-xs text-blue-600 font-medium hover:underline">
                   {t('auth.forgot_password')}
                 </Link>
               </div>
@@ -154,7 +155,7 @@ export function LoginPage() {
                 id="remember"
                 checked={rememberMe}
                 onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                className="rounded-[4px] border-slate-300 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 h-4 w-4"
+                className="rounded-[4px] border-slate-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 h-4 w-4"
               />
               <label
                 htmlFor="remember"
@@ -169,7 +170,7 @@ export function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-[4px] shadow-[0_4px_14px_rgba(16,185,129,0.35)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.45)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-sm"
+              className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[4px] shadow-[0_4px_14px_rgba(59,130,246,0.35)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.45)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-sm"
             >
               {loading ? (
                 <>

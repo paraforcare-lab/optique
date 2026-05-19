@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, FileText, Download, Trash2, RotateCcw, Receipt, ChevronLeft, ChevronRight, CalendarDays, Filter, Info, ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -69,12 +69,12 @@ export function AvoirsList() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const statusOptions: StatutOption[] = [
-    { value: 'GÃ©nÃ©rÃ©', label: t('shared.status.generated'), color: 'text-blue-700', bgColor: 'dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-blue-50 text-blue-700 border border-blue-200/50' },
+    { value: 'Généré', label: t('shared.status.generated'), color: 'text-blue-700', bgColor: 'dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-blue-50 text-blue-700 border border-blue-200/50' },
     { value: 'en_attente', label: t('shared.status.pending'), color: 'text-amber-700', bgColor: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 bg-amber-50 text-amber-700 border border-amber-200/50' },
-    { value: 'Ã©mis', label: t('shared.status.issued'), color: 'text-amber-700', bgColor: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 bg-amber-50 text-amber-700 border border-amber-200/50' },
-    { value: 'remboursÃ©', label: t('shared.status.refunded'), color: 'text-emerald-700', bgColor: 'dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
-    { value: 'appliquÃ©', label: t('shared.status.applied'), color: 'text-sky-700', bgColor: 'dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20 bg-sky-50 text-sky-700 border border-sky-200/50' },
-    { value: 'annulÃ©', label: t('shared.status.cancelled'), color: 'text-slate-500', bgColor: 'dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20 bg-slate-50 text-slate-600 border border-slate-200/50' },
+    { value: 'émis', label: t('shared.status.issued'), color: 'text-amber-700', bgColor: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 bg-amber-50 text-amber-700 border border-amber-200/50' },
+    { value: 'remboursé', label: t('shared.status.refunded'), color: 'text-emerald-700', bgColor: 'dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
+    { value: 'appliqué', label: t('shared.status.applied'), color: 'text-sky-700', bgColor: 'dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20 bg-sky-50 text-sky-700 border border-sky-200/50' },
+    { value: 'annulé', label: t('shared.status.cancelled'), color: 'text-slate-500', bgColor: 'dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20 bg-slate-50 text-slate-600 border border-slate-200/50' },
   ];
 
   const handlePrint = useReactToPrint({
@@ -149,7 +149,7 @@ export function AvoirsList() {
           email: data.email || '',
           ice: data.ice || '',
           logoUrl: cleanLogoUrl,
-          watermarkText: data.watermark_text || 'ParaGestion',
+          watermarkText: data.watermark_text || 'OptiGestion',
           activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
         });
       }

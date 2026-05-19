@@ -47,7 +47,7 @@ export function DashboardLayout() {
   const subtitle = currentRoute.subtitleKey ? t(currentRoute.subtitleKey) : '';
 
   const userInitial = user?.email?.charAt(0)?.toUpperCase() || 'P';
-  const displayName = user?.email?.split('@')[0] || 'ParaGestion';
+  const displayName = user?.email?.split('@')[0] || 'OptiGestion';
   const { unreadCount, notifications } = useNotifications();
 
   const currentLang = i18n.language?.startsWith('ar') ? 'ar' : i18n.language?.startsWith('en') ? 'en' : 'fr';
@@ -78,11 +78,11 @@ export function DashboardLayout() {
 
   useEffect(() => {
     if (hasHighPriority && unreadCount > 0) {
-      document.title = `Action requise - ParaGestion`;
+      document.title = `Action requise - OptiGestion`;
     } else if (unreadCount > 0) {
-      document.title = `(${unreadCount}) ParaGestion`;
+      document.title = `(${unreadCount}) OptiGestion`;
     } else {
-      document.title = 'ParaGestion';
+      document.title = 'OptiGestion';
     }
   }, [hasHighPriority, unreadCount]);
 
@@ -115,7 +115,7 @@ export function DashboardLayout() {
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {subtitle && <>{subtitle} - </>}
-                <span className="text-emerald-600 font-medium">{t('header.system_active')}</span>
+                <span className="text-blue-600 font-medium">{t('header.system_active')}</span>
               </p>
             </div>
 
@@ -139,11 +139,11 @@ export function DashboardLayout() {
                       {t('header.administrator')}
                     </p>
                   </div>
-                  <Avatar className="h-9 w-9 border-2 border-emerald-500/30 group-hover:border-emerald-400 transition-colors">
+                  <Avatar className="h-9 w-9 border-2 border-blue-500/30 group-hover:border-blue-400 transition-colors">
                     <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
                     <AvatarFallback className={cn(
-                      "bg-emerald-500/10 text-emerald-600 font-bold text-sm dark:text-emerald-300",
-                      "group-hover:bg-emerald-500/20 dark:group-hover:bg-emerald-500/30 transition-colors"
+                      "bg-blue-500/10 text-blue-600 font-bold text-sm dark:text-blue-300",
+                      "group-hover:bg-blue-500/20 dark:group-hover:bg-blue-500/30 transition-colors"
                     )}>
                       {userInitial}
                     </AvatarFallback>

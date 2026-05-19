@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus, Search, FileEdit, Trash2, Download, ShoppingCart, Package,
@@ -80,10 +80,10 @@ export function BonsCommandeList() {
 
   const statusOptions: StatutOption[] = [
     { value: 'brouillon', label: t('shared.status.draft'), icon: FileText, color: 'text-amber-700', bgColor: 'bg-amber-50 text-amber-700 border border-amber-200/50' },
-    { value: 'envoyé', label: t('shared.status.sent'), icon: Send, color: 'text-amber-700', bgColor: 'bg-amber-50 text-amber-700 border border-amber-200/50' },
-    { value: 'confirmé', label: t('shared.status.confirmed'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
-    { value: 'livré', label: t('shared.status.delivered'), icon: Truck, color: 'text-violet-700', bgColor: 'bg-violet-50 text-violet-700 border border-violet-200/50' },
-    { value: 'annulé', label: t('shared.status.cancelled'), icon: Ban, color: 'text-rose-700', bgColor: 'bg-rose-50 text-rose-700 border border-rose-200/50' },
+    { value: 'envoy�', label: t('shared.status.sent'), icon: Send, color: 'text-amber-700', bgColor: 'bg-amber-50 text-amber-700 border border-amber-200/50' },
+    { value: 'confirm�', label: t('shared.status.confirmed'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
+    { value: 'livr�', label: t('shared.status.delivered'), icon: Truck, color: 'text-violet-700', bgColor: 'bg-violet-50 text-violet-700 border border-violet-200/50' },
+    { value: 'annul�', label: t('shared.status.cancelled'), icon: Ban, color: 'text-rose-700', bgColor: 'bg-rose-50 text-rose-700 border border-rose-200/50' },
   ];
 
   const componentRef = useRef<HTMLDivElement>(null);
@@ -163,7 +163,7 @@ export function BonsCommandeList() {
           ice: data.ice || '',
           logoUrl: cleanLogoUrl,
           couleurPrincipale: data.couleur_principale || '#267E54',
-          watermarkText: data.watermark_text || 'ParaGestion',
+          watermarkText: data.watermark_text || 'OptiGestion',
           activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
         });
       }
@@ -366,8 +366,8 @@ export function BonsCommandeList() {
   };
 
   const totalBons = bons.length;
-  const bonsConfirmes = bons.filter(b => ['confirmé', 'livré'].includes(b.statut)).length;
-  const bonsEnAttente = bons.filter(b => ['brouillon', 'envoyé'].includes(b.statut)).length;
+  const bonsConfirmes = bons.filter(b => ['confirm�', 'livr�'].includes(b.statut)).length;
+  const bonsEnAttente = bons.filter(b => ['brouillon', 'envoy�'].includes(b.statut)).length;
   const totalMontant = filteredBons.reduce((sum, b) => sum + (b.montantTtc || b.montant_ttc || 0), 0);
 
   const now = new Date();
@@ -378,9 +378,9 @@ export function BonsCommandeList() {
   });
   const monthCount = monthBons.length;
   const monthValue = monthBons.reduce((sum, b) => sum + (b.montantTtc || 0), 0);
-  const pendingOrders = monthBons.filter(b => ['brouillon', 'envoyé'].includes(b.statut)).length;
-  const deliveredOrders = monthBons.filter(b => b.statut === 'livré').length;
-  const cancelledOrders = monthBons.filter(b => b.statut === 'annulé').length;
+  const pendingOrders = monthBons.filter(b => ['brouillon', 'envoy�'].includes(b.statut)).length;
+  const deliveredOrders = monthBons.filter(b => b.statut === 'livr�').length;
+  const cancelledOrders = monthBons.filter(b => b.statut === 'annul�').length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -428,7 +428,7 @@ export function BonsCommandeList() {
           {/* Header */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
+              <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-blue-50 border border-blue-200/50 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
                 <ShoppingCart className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
               </div>
               <div>
@@ -441,7 +441,7 @@ export function BonsCommandeList() {
 
             <Button
               onClick={openNewForm}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none dark:rounded-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none dark:rounded-sm"
             >
               <Plus className="me-2 h-4 w-4" />
               {t('bons_commande.new_button')}
@@ -621,9 +621,9 @@ export function BonsCommandeList() {
                                     <span className={cn(
                                       "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium",
                                       status.bgColor,
-                                      bon.statut === 'livré' && "dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20"
+                                      bon.statut === 'livr�' && "dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20"
                                     )}>
-                                      <StatusIcon className={cn("h-3 w-3", status.color, bon.statut === 'livré' && "dark:text-violet-300")} />
+                                      <StatusIcon className={cn("h-3 w-3", status.color, bon.statut === 'livr�' && "dark:text-violet-300")} />
                                       {status.label}
                                     </span>
                                   </SelectValue>
@@ -676,12 +676,12 @@ export function BonsCommandeList() {
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
-                                ) : bon.statut !== 'annulé' ? (
+                                ) : bon.statut !== 'annul�' ? (
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
-                                    onClick={() => handleStatusChange(bon.id, 'annulé')}
+                                    onClick={() => handleStatusChange(bon.id, 'annul�')}
                                     title={t('shared.status.cancelled')}
                                   >
                                     <Ban className="h-4 w-4" />
@@ -750,9 +750,9 @@ export function BonsCommandeList() {
                 </CardHeader>
                 <CardContent className="px-4 py-4 space-y-5">
 
-                  {/* ── Montant engagé ce mois ───────────────────────────── */}
+                  {/* -- Montant engag� ce mois ----------------------------- */}
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-blue-50 border border-blue-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
                       <ShoppingCart className="h-4 w-4 text-emerald-600 dark:text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -765,9 +765,9 @@ export function BonsCommandeList() {
                     </div>
                   </div>
 
-                  {/* ── Commandes passées ────────────────────────────────── */}
+                  {/* -- Commandes pass�es ---------------------------------- */}
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-blue-50 border border-blue-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
                       <Package className="h-4 w-4 text-emerald-600 dark:text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -785,7 +785,7 @@ export function BonsCommandeList() {
                     </div>
                   </div>
 
-                  {/* ── Status breakdown ─────────────────────────────────── */}
+                  {/* -- Status breakdown ----------------------------------- */}
                   <div className="border-t border-slate-100 pt-4 space-y-3 dark:border-white/5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500 dark:text-muted-foreground">
@@ -807,7 +807,7 @@ export function BonsCommandeList() {
                     </div>
                   </div>
 
-                  {/* ── Link to suppliers ────────────────────────────────── */}
+                  {/* -- Link to suppliers ---------------------------------- */}
                   <div className="border-t border-slate-100 pt-4 dark:border-white/5">
                     <Link
                       to="/fournisseurs"

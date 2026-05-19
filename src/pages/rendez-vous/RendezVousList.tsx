@@ -40,7 +40,7 @@ const STATUTS_RDV = ['planifie', 'confirme', 'effectue', 'annule', 'reporte'] as
 
 const statutConfig: Record<string, { color: string; bg: string }> = {
   planifie: { color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200/50 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20' },
-  confirme: { color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
+  confirme: { color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200/50 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20' },
   effectue: { color: 'text-slate-600', bg: 'bg-slate-50 border-slate-200/50 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20' },
   annule:   { color: 'text-rose-600', bg: 'bg-rose-50 border-rose-200/50 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20' },
   reporte:  { color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200/50 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },

@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "ParaGestion",
-    "tagline": "Solution de Gestion"
+    "name": "OptiGestion",
+    "tagline": "Gestion Optique"
   },
   "auth": {
     "login_title":        "Connexion",
@@ -14,10 +14,10 @@
     "sign_in":            "Se connecter",
     "signing_in":         "Connexion en cours...",
     "badge_secure":       "Sécurisé",
-    "badge_pharmacy":     "Pharmacy Ready",
-    "footer_copyright":   "© {{year}} SmartGestion. Tous droits réservés.",
+    "badge_pharmacy":     "Prêt pour l'Optique",
+    "footer_copyright":   "© {{year}} OptiGestion. Tous droits réservés.",
     "toast_invalid":      "Email ou mot de passe incorrect",
-    "toast_success":      "Connexion réussie. Bienvenue sur ParaGestion!",
+    "toast_success":      "Connexion réussie. Bienvenue sur OptiGestion!",
     "toast_error":        "Une erreur est survenue lors de la connexion",
 
     "forgot_title":          "Mot de passe oublié",
@@ -52,7 +52,7 @@
   "dashboard": {
     "header": {
       "title": "Tableau de Bord",
-      "subtitle": "Bienvenue sur ParaGestion",
+      "subtitle": "Bienvenue sur OptiGestion",
       "system_active": "Analyse Financière & Reporting — Système actif",
       "stock_value_label": "Valeur du Stock (HT)"
     },
@@ -124,7 +124,7 @@
   },
   "workspace": {
     "header": {
-      "welcome": "Bienvenue sur ParaGestion - Le système est actif",
+      "welcome": "Bienvenue sur OptiGestion - Le système est actif",
       "role_manager": "Responsable",
       "role_admin": "Admin"
     },
@@ -274,7 +274,7 @@
     "settings": "Paramètres",
     "logout": "Déconnexion",
     "subtitles": {
-      "workspace": "Bienvenue sur ParaGestion",
+      "workspace": "Bienvenue sur OptiGestion",
       "dashboard": "Analyse et rapports financiers",
       "invoices": "Gestion des factures clients",
       "quotes": "Gestion des devis",
@@ -1246,11 +1246,11 @@
       "payment_conditions":  "Conditions de paiement par défaut",
       "payment_terms_ph":    "ex: Paiement à la réception sous 30 jours",
       "footer":              "Pied de page par défaut",
-      "footer_ph":           "ex: Merci de votre confiance. ParaGestion - Votre système de gestion parapharmaceutique.",
+      "footer_ph":           "ex: Merci de votre confiance. OptiGestion - Votre système de gestion optique.",
       "watermark":           "Filigrane",
       "watermark_desc":      "Activer le filigrane sur les documents PDF",
       "watermark_text":      "Texte du filigrane",
-      "watermark_text_ph":   "ParaGestion",
+      "watermark_text_ph":   "OptiGestion",
       "watermark_hint":      "Ce texte apparaîtra en arrière-plan de tous vos documents PDF."
     },
     "validation": {

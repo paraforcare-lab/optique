@@ -134,7 +134,7 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
             overflow: 'hidden',
           }}>
             {entreprise?.activerFiligrane !== false && (
-              <div className="fw-watermark">{entreprise?.watermarkText || 'ParaGestion'}</div>
+              <div className="fw-watermark">{entreprise?.watermarkText || 'OptiGestion'}</div>
             )}
 
             {/* ===== HEADER: Logo + Company Info (left) | Title + Date (right) ===== */}
@@ -144,7 +144,7 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
                   <img src={entreprise.logoUrl} alt="Logo" style={{ width: 120, height: 60, objectFit: 'contain', flexShrink: 0 }} />
                 ) : (
                   <div style={{ fontSize: '18pt', fontWeight: 700, color: '#000', letterSpacing: 1, flexShrink: 0 }}>
-                    {(entreprise?.nomEntreprise || entreprise?.nom || 'PARAGESTION').substring(0, 4).toUpperCase()}
+                    {(entreprise?.nomEntreprise || entreprise?.nom || 'OPTIGESTION').substring(0, 4).toUpperCase()}
                   </div>
                 )}
                 <div style={{ fontSize: '8pt', lineHeight: 1.5, color: '#475569' }}>

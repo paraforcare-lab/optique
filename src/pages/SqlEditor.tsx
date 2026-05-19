@@ -78,7 +78,7 @@ export function SqlEditor() {
             <Button 
               onClick={executeSql} 
               disabled={isLoading || !sql.trim()}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-[4px] shadow-none"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[4px] shadow-none"
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">

@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "ParaGestion",
-    "tagline": "Solution de Gestion"
+    "name": "OptiGestion",
+    "tagline": "Optical Management"
   },
   "auth": {
     "login_title":        "Sign in",
@@ -14,10 +14,10 @@
     "sign_in":            "Sign in",
     "signing_in":         "Signing in...",
     "badge_secure":       "Secure",
-    "badge_pharmacy":     "Pharmacy Ready",
-    "footer_copyright":   "© {{year}} SmartGestion. All rights reserved.",
+    "badge_pharmacy":     "Optician Ready",
+    "footer_copyright":   "© {{year}} OptiGestion. All rights reserved.",
     "toast_invalid":      "Invalid email or password",
-    "toast_success":      "Signed in. Welcome to ParaGestion!",
+    "toast_success":      "Signed in. Welcome to OptiGestion!",
     "toast_error":        "An error occurred while signing in",
 
     "forgot_title":          "Forgot password",
@@ -52,7 +52,7 @@
   "dashboard": {
     "header": {
       "title": "Dashboard",
-      "subtitle": "Welcome to ParaGestion",
+      "subtitle": "Welcome to OptiGestion",
       "system_active": "Financial Analysis & Reporting - System Active",
       "stock_value_label": "Stock Value (excl. tax)"
     },
@@ -124,7 +124,7 @@
   },
   "workspace": {
     "header": {
-      "welcome": "Welcome to ParaGestion - System is active",
+      "welcome": "Welcome to OptiGestion - System is active",
       "role_manager": "Manager",
       "role_admin": "Admin"
     },
@@ -270,7 +270,7 @@
     "settings": "Settings",
     "logout": "Log out",
     "subtitles": {
-      "workspace": "Welcome to ParaGestion",
+      "workspace": "Welcome to OptiGestion",
       "dashboard": "Financial analysis & reports",
       "invoices": "Customer invoice management",
       "quotes": "Quote management",
@@ -1113,11 +1113,11 @@
       "payment_conditions":  "Default payment terms",
       "payment_terms_ph":    "e.g. Payment on receipt within 30 days",
       "footer":              "Default footer",
-      "footer_ph":           "e.g. Thank you for your trust. ParaGestion - Your parapharmacy management system.",
+      "footer_ph":           "e.g. Thank you for your trust. OptiGestion - Your optical management system.",
       "watermark":           "Watermark",
       "watermark_desc":      "Enable watermark on PDF documents",
       "watermark_text":      "Watermark text",
-      "watermark_text_ph":   "ParaGestion",
+      "watermark_text_ph":   "OptiGestion",
       "watermark_hint":      "This text will appear as background on all PDF documents."
     },
     "validation": {

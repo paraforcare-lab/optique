@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "ParaGestion",
-    "tagline": "Solution de Gestion"
+    "name": "OptiGestion",
+    "tagline": "إدارة البصريات"
   },
   "auth": {
     "login_title":        "تسجيل الدخول",
@@ -14,10 +14,10 @@
     "sign_in":            "تسجيل الدخول",
     "signing_in":         "جارٍ تسجيل الدخول...",
     "badge_secure":       "آمن",
-    "badge_pharmacy":     "جاهز للصيدلية",
-    "footer_copyright":   "© {{year}} SmartGestion. جميع الحقوق محفوظة.",
+    "badge_pharmacy":     "جاهز للبصريات",
+    "footer_copyright":   "© {{year}} OptiGestion. جميع الحقوق محفوظة.",
     "toast_invalid":      "البريد الإلكتروني أو كلمة المرور غير صحيحة",
-    "toast_success":      "تم تسجيل الدخول. مرحباً بك في ParaGestion!",
+    "toast_success":      "تم تسجيل الدخول. مرحباً بك في OptiGestion!",
     "toast_error":        "حدث خطأ أثناء تسجيل الدخول",
 
     "forgot_title":          "نسيت كلمة المرور",
@@ -52,7 +52,7 @@
   "dashboard": {
     "header": {
       "title": "لوحة التحكم",
-      "subtitle": "مرحباً بك في ParaGestion",
+      "subtitle": "مرحباً بك في OptiGestion",
       "system_active": "التحليل المالي والتقارير — النظام نشط",
       "stock_value_label": "قيمة المخزون (خ.ض)"
     },
@@ -124,7 +124,7 @@
   },
   "workspace": {
     "header": {
-      "welcome": "مرحباً بك في ParaGestion - النظام نشط",
+      "welcome": "مرحباً بك في OptiGestion - النظام نشط",
       "role_manager": "مسؤول",
       "role_admin": "مدير"
     },
@@ -274,7 +274,7 @@
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
     "subtitles": {
-      "workspace": "مرحباً بك في ParaGestion",
+      "workspace": "مرحباً بك في OptiGestion",
       "dashboard": "التحليل المالي والتقارير",
       "invoices": "إدارة فواتير العملاء",
       "quotes": "إدارة عروض الأسعار",
@@ -1246,11 +1246,11 @@
       "payment_conditions":  "شروط الدفع الافتراضية",
       "payment_terms_ph":    "مثال: الدفع عند الاستلام خلال 30 يوماً",
       "footer":              "التذييل الافتراضي",
-      "footer_ph":           "مثال: شكراً لثقتك. ParaGestion - نظامك لإدارة الصيدلية شبه الطبية.",
+      "footer_ph":           "مثال: شكراً لثقتك. OptiGestion - نظامك لإدارة البصريات.",
       "watermark":           "العلامة المائية",
       "watermark_desc":      "تفعيل العلامة المائية على مستندات PDF",
       "watermark_text":      "نص العلامة المائية",
-      "watermark_text_ph":   "ParaGestion",
+      "watermark_text_ph":   "OptiGestion",
       "watermark_hint":      "سيظهر هذا النص في خلفية جميع مستندات PDF."
     },
     "validation": {

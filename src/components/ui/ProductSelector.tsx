@@ -224,7 +224,7 @@ export function ProductSelector({
         {trigger || (
           <Button
             disabled={disabled}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-[4px] shadow-none"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[4px] shadow-none"
           >
             <ShoppingCart className="me-2 h-4 w-4" />
             {t('shared.product_selector.trigger')}
@@ -368,7 +368,7 @@ export function ProductSelector({
               <Button
                 type="button"
                 onClick={handleConfirm}
-                className="h-10 px-5 rounded-[4px] bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm shadow-none"
+                className="h-10 px-5 rounded-[4px] bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-none"
               >
                 <Plus className="me-2 h-4 w-4" />
                 {t('shared.product_selector.add_to_cart')}

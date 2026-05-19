@@ -292,7 +292,7 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
         {/* Submit */}
         <div className="flex justify-end pt-6 border-t border-border/50 dark:border-white/10">
           <Button type="submit" disabled={form.formState.isSubmitting}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 h-10 rounded-[4px] shadow-none">
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 h-10 rounded-[4px] shadow-none">
             {form.formState.isSubmitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('shared.actions.saving')}</>
             ) : (

@@ -458,7 +458,7 @@ export default function VentesPassagers() {
                     toast.success(t('ventes.toast_item_added', { name: produit.designation || t('shared.table.product') }));
                   }}
                   trigger={
-                    <Button className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm shadow-none text-base">
+                    <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-sm shadow-none text-base">
                       <ShoppingCart className="mr-2 h-5 w-5" />
                       {t('ventes.select_product')}
                     </Button>
@@ -568,7 +568,7 @@ export default function VentesPassagers() {
                 {t('ventes.btn_cancel')}
               </Button>
               <Button onClick={handleSubmit} disabled={panier.length === 0}
-                className="h-10 px-5 rounded-sm bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm shadow-none">
+                className="h-10 px-5 rounded-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-none">
                 <CreditCard className="mr-2 h-4 w-4" />
                 {t('ventes.btn_validate')}
               </Button>
@@ -580,7 +580,7 @@ export default function VentesPassagers() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20 bg-emerald-50 border border-emerald-200/50">
+          <div className="flex items-center justify-center h-10 w-10 rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20 bg-blue-50 border border-blue-200/50">
             <ShoppingBag className="h-5 w-5 text-emerald-500" />
           </div>
           <div>
@@ -590,7 +590,7 @@ export default function VentesPassagers() {
         </div>
 
             <Button onClick={() => setShowForm(true)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-sm h-10 px-5 shadow-none">
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-sm h-10 px-5 shadow-none">
               <Plus className="mr-2 h-4 w-4" />
               {t('ventes.new_button')}
             </Button>
@@ -713,7 +713,7 @@ export default function VentesPassagers() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-5 text-center">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                           {t('ventes.status_completed')}
                         </span>
@@ -844,7 +844,7 @@ export default function VentesPassagers() {
 
               {/* Sales count */}
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-sm dark:bg-primary/10 dark:border-primary/20 bg-emerald-50 border border-emerald-200/50 shrink-0">
+                <div className="flex items-center justify-center h-9 w-9 rounded-sm dark:bg-primary/10 dark:border-primary/20 bg-blue-50 border border-blue-200/50 shrink-0">
                   <ShoppingBag className="h-4 w-4 dark:text-primary text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -864,7 +864,7 @@ export default function VentesPassagers() {
 
               {/* Revenue */}
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-sm dark:bg-primary/10 dark:border-primary/20 bg-emerald-50 border border-emerald-200/50 shrink-0">
+                <div className="flex items-center justify-center h-9 w-9 rounded-sm dark:bg-primary/10 dark:border-primary/20 bg-blue-50 border border-blue-200/50 shrink-0">
                   <DollarSign className="h-4 w-4 dark:text-primary text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -951,7 +951,7 @@ export default function VentesPassagers() {
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20 bg-emerald-50 border border-emerald-200/50">
+          <div className="flex items-center justify-center h-10 w-10 rounded-sm dark:bg-emerald-500/10 dark:border-emerald-500/20 bg-blue-50 border border-blue-200/50">
                 <Receipt className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
@@ -1020,7 +1020,7 @@ export default function VentesPassagers() {
             </Button>
             {detailVente && (
               <Button
-                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-sm h-10 shadow-none"
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-sm h-10 shadow-none"
                 onClick={() => { handlePrint(detailVente); setIsDetailOpen(false); }}
               >
                 <Printer className="mr-2 h-4 w-4" />

@@ -3127,7 +3127,7 @@ router.get('/parametres', async (req, res) => {
         formeJuridique: '',
         logoUrl: '',
         couleurPrincipale: '#267E54',
-        watermarkText: 'ParaGestion'
+        watermarkText: 'OptiGestion'
       });
     }
     
@@ -3151,7 +3151,7 @@ router.get('/parametres', async (req, res) => {
         formeJuridique: '',
         logoUrl: '',
         couleurPrincipale: '#267E54',
-        watermarkText: 'ParaGestion'
+        watermarkText: 'OptiGestion'
       });
     }
     
@@ -3188,7 +3188,7 @@ router.get('/parametres', async (req, res) => {
       conditionsPaiementDefaut: params.conditions_paiement_defaut || '',
       piedPageDefaut: params.pied_page_defaut || '',
       activerDroitTimbre: params.activer_droit_timbre !== undefined ? params.activer_droit_timbre : true,
-      watermarkText: params.watermark_text || 'ParaGestion',
+      watermarkText: params.watermark_text || 'OptiGestion',
     };
     
     res.json(mapped);
@@ -3205,7 +3205,7 @@ router.get('/parametres', async (req, res) => {
       formeJuridique: '',
       logoUrl: '',
       couleurPrincipale: '#267E54',
-      watermarkText: 'ParaGestion'
+      watermarkText: 'OptiGestion'
     });
   }
 });
@@ -3321,7 +3321,7 @@ router.put('/parametres', async (req, res) => {
       conditionsPaiementDefaut: result.conditions_paiement_defaut || '',
       piedPageDefaut: result.pied_page_defaut || '',
       activerDroitTimbre: result.activer_droit_timbre !== undefined ? result.activer_droit_timbre : true,
-      watermarkText: result.watermark_text || 'ParaGestion',
+      watermarkText: result.watermark_text || 'OptiGestion',
     };
     
     res.json(mapped);

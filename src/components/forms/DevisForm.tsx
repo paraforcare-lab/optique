@@ -437,7 +437,7 @@ export function DevisForm({ initialData, onSuccess }: DevisFormProps) {
         <Button type="button" variant="ghost" onClick={() => onSuccess()} className="dark:text-muted-foreground dark:hover:text-card-foreground text-slate-500 hover:text-slate-700">
           {t('shared.actions.cancel')}
         </Button>
-        <Button type="submit" disabled={isLoading} className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 h-10 rounded-sm shadow-none">
+        <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 h-10 rounded-sm shadow-none">
           {isLoading ? t('shared.actions.saving') : t('shared.actions.save')}
         </Button>
       </div>

@@ -819,7 +819,7 @@ export function BonCommandeForm({ initialData, onSuccess }: BCFormProps) {
         <Button type="button" variant="ghost" onClick={() => onSuccess()} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
           {t('shared.actions.cancel')}
         </Button>
-        <Button type="submit" disabled={isLoading} className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 h-10 rounded-[4px] shadow-none dark:rounded-sm">
+        <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 h-10 rounded-[4px] shadow-none dark:rounded-sm">
           {isLoading ? t('shared.actions.saving') : t('shared.actions.save')}
         </Button>
       </div>

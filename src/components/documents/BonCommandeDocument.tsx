@@ -133,7 +133,7 @@ export const BonCommandeDocument = forwardRef<HTMLDivElement, BonCommandeDocumen
             overflow: 'hidden',
           }}>
             {entreprise?.activerFiligrane !== false && (
-              <div className="bc-watermark">{entreprise?.watermarkText || 'ParaGestion'}</div>
+              <div className="bc-watermark">{entreprise?.watermarkText || 'OptiGestion'}</div>
             )}
 
             {/* ===== HEADER: Logo + Company Info (left) | Title (right) ===== */}
@@ -143,7 +143,7 @@ export const BonCommandeDocument = forwardRef<HTMLDivElement, BonCommandeDocumen
                   <img src={entreprise.logoUrl} alt="Logo" style={{ width: 120, height: 60, objectFit: 'contain', flexShrink: 0 }} />
                 ) : (
                   <div style={{ fontSize: '18pt', fontWeight: 700, color: '#000', letterSpacing: 1, flexShrink: 0 }}>
-                    {(entreprise?.nomEntreprise || entreprise?.nom || 'PARAGESTION').substring(0, 4).toUpperCase()}
+                    {(entreprise?.nomEntreprise || entreprise?.nom || 'OPTIGESTION').substring(0, 4).toUpperCase()}
                   </div>
                 )}
                 <div style={{ fontSize: '8pt', lineHeight: 1.5, color: '#374151' }}>

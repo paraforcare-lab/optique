@@ -195,7 +195,7 @@ export function ClientsList() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-emerald-50 border border-emerald-200/50 dark:bg-emerald-500/10 dark:border-emerald-500/20">
+          <div className="flex items-center justify-center h-10 w-10 rounded-[6px] bg-blue-50 border border-blue-200/50 dark:bg-emerald-500/10 dark:border-emerald-500/20">
             <Users className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
           </div>
           <div>
@@ -208,7 +208,7 @@ export function ClientsList() {
 
             <Button
               onClick={openNewForm}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[4px] h-10 px-5 shadow-none"
             >
               <Plus className="mr-2 h-4 w-4" />
               {t('clients.new_button')}
@@ -314,7 +314,7 @@ export function ClientsList() {
                             "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium",
                             client.type === 'entreprise'
                               ? "bg-sky-50 text-sky-700 border border-sky-200/50 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20"
                           )}>
                             {client.type === 'entreprise' ? (
                               <Building2 className="h-3 w-3 mr-1" />
@@ -434,7 +434,7 @@ export function ClientsList() {
             </CardHeader>
             <CardContent className="px-4 py-4 space-y-5">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0 dark:bg-emerald-500/10 dark:border-emerald-500/20">
+                <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-blue-50 border border-blue-200/50 shrink-0 dark:bg-emerald-500/10 dark:border-emerald-500/20">
                   <Users className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
                 </div>
                 <div className="flex-1 min-w-0">

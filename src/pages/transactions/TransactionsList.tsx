@@ -452,7 +452,7 @@ export function TransactionsList() {
 
               <div className="border-t border-slate-100 pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-emerald-50 border border-emerald-200/50 shrink-0">
+                  <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-blue-50 border border-blue-200/50 shrink-0">
                     <DollarSign className="h-4 w-4 text-emerald-500" />
                   </div>
                   <div className="flex-1 min-w-0">

@@ -21,7 +21,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div
       className="min-h-screen flex flex-col mx-4"
-      style={{ background: 'radial-gradient(ellipse at center, #f0fdfa 0%, #ffffff 70%)' }}
+      style={{ background: 'radial-gradient(ellipse at center, #eff6ff 0%, #ffffff 70%)' }}
     >
       {/* Language selector — pinned to the PHYSICAL top-right in every
           language. `dir="ltr"` on the wrapper keeps the internal dropdown
@@ -46,7 +46,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 }
 
 /**
- * Reusable circular emerald icon shown at the top of every auth card.
+ * Reusable circular blue icon shown at the top of every auth card.
  * Accepts any lucide-react icon as a child via a `render` prop so each
  * page can convey its own intent (mail icon for "check email", key icon
  * for "reset password", etc.) while inheriting the same visual weight.
@@ -62,7 +62,7 @@ export function AuthHero({
 }) {
   return (
     <div className="flex flex-col items-center text-center mb-8">
-      <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-[0_4px_12px_rgba(16,185,129,0.3)] mb-4">
+      <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-[0_4px_12px_rgba(59,130,246,0.3)] mb-4">
         {icon}
       </div>
       <h1 className="text-xl font-bold text-slate-900">{title}</h1>

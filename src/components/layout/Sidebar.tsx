@@ -126,7 +126,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
           size="icon"
           onClick={onToggle}
           className={cn(
-            "hidden lg:flex absolute -right-3 top-20 h-8 w-8 rounded-sm bg-[#0F172A] dark:bg-[#0b1222] border border-white/10 text-slate-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white transition-all duration-200 z-50"
+            "hidden lg:flex absolute -right-3 top-20 h-8 w-8 rounded-sm bg-[#0F172A] dark:bg-[#0b1222] border border-white/10 text-slate-300 hover:bg-blue-600 hover:border-blue-500 hover:text-white transition-all duration-200 z-50"
           )}
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -147,16 +147,16 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
         )}>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-2.5 rounded-xl">
-                <Stethoscope className="h-6 w-6 text-white" />
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-xl">
+                <Eye className="h-6 w-6 text-white" />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-[4px] border-2 border-[#0F172A] dark:border-[#0B1222]">
-                <div className="absolute inset-0.5 bg-emerald-400 rounded-[4px]" />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-[4px] border-2 border-[#0F172A] dark:border-[#0B1222]">
+                <div className="absolute inset-0.5 bg-blue-400 rounded-[4px]" />
               </div>
             </div>
             {!isCollapsed && (
               <div className="flex flex-col leading-none animate-in fade-in slide-in-from-left-2 duration-300">
-                <span className="text-xl font-black text-white">Para<span className="text-emerald-400">Gestion</span></span>
+                <span className="text-xl font-black text-white">Opti<span className="text-blue-400">Gestion</span></span>
                 <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-widest mt-1">{t('app.tagline')}</span>
               </div>
             )}
@@ -201,7 +201,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
                           )}
                         >
                           {isActive && !isCollapsed && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-emerald-500" />
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-blue-500" />
                           )}
                           <item.icon
                             className={cn(
