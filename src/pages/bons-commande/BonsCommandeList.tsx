@@ -39,8 +39,11 @@ import { Link } from 'react-router-dom'
 interface BonCommande {
   id: number;
   numero: string;
+  type: string;
   fournisseurId: number;
   fournisseur: { nom: string; nomSociete?: string; email?: string };
+  clientId: number;
+  client: { nom: string; cine?: string };
   dateCommande: string;
   dateLivraisonPrevue?: string;
   montantHt: number;
@@ -94,8 +97,11 @@ export function BonsCommandeList() {
     ...b,
     id: b.id,
     numero: b.numero || '',
+    type: b.type || 'simple',
     fournisseurId: b.fournisseur_id,
     fournisseur: b.fournisseur,
+    clientId: b.client_id,
+    client: b.client,
     dateCommande: b.date_commande,
     dateLivraisonPrevue: b.date_livraison_prevue,
     montantHt: Number(b.montant_ht || 0),
@@ -110,7 +116,7 @@ export function BonsCommandeList() {
     try {
       const { data, error } = await supabase
         .from('bons_commande')
-        .select('*, fournisseur:fournisseurs(*)')
+        .select('*, fournisseur:fournisseurs(*), client:clients(*)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -206,11 +212,15 @@ export function BonsCommandeList() {
 
       const mappedData = {
         ...bonData,
+        type: bonData.type || 'simple',
         fournisseurId: bonData.fournisseur_id?.toString() || '',
+        clientId: bonData.client_id?.toString() || '',
         dateCommande: bonData.date_commande?.split('T')[0] || '',
         dateLivraisonPrevue: bonData.date_livraison_prevue?.split('T')[0] || '',
         lignes: (lignesData || []).map((l: any) => ({
           produitId: l.produit_id?.toString() || '',
+          prescriptionId: l.prescription_id?.toString() || '',
+          reference: l.reference || '',
           designation: l.designation || '',
           quantite: Number(l.quantite || 1),
           prixUnitaireHt: Number(l.prix_unitaire_ht || 0),
@@ -234,7 +244,7 @@ export function BonsCommandeList() {
 
       const { data: bonData, error } = await supabase
         .from('bons_commande')
-        .select('*, fournisseur:fournisseurs(*)')
+        .select('*, fournisseur:fournisseurs(*), client:clients(*)')
         .eq('id', bon.id)
         .single();
 
@@ -246,17 +256,32 @@ export function BonsCommandeList() {
         .eq('bon_commande_id', bon.id)
         .order('ordre');
 
+      let prescriptionData = null;
+      const isVerre = bonData.type === 'verre';
+      if (isVerre && lignesData && lignesData.length > 0 && lignesData[0].prescription_id) {
+        const { data: pData } = await supabase
+          .from('prescriptions')
+          .select('*')
+          .eq('id', lignesData[0].prescription_id)
+          .single();
+        prescriptionData = pData;
+      }
+
       const mappedBon = {
         ...bonData,
         numero: bonData.numero,
+        type: bonData.type || 'simple',
         fournisseurId: bonData.fournisseur_id,
         fournisseur: bonData.fournisseur,
+        clientId: bonData.client_id,
+        client: bonData.client,
         dateCommande: bonData.date_commande,
         dateLivraisonPrevue: bonData.date_livraison_prevue,
         montantHt: bonData.montant_ht,
         montantTva: bonData.montant_tva,
         montantTtc: bonData.montant_ttc,
         statut: bonData.statut,
+        prescription: prescriptionData,
         lignes: (lignesData || []).map((l: any) => ({
           designation: l.designation || '',
           reference: l.reference || '',
@@ -268,6 +293,7 @@ export function BonsCommandeList() {
           montant_ht: l.montant_ht,
           montantTtc: l.montant_ttc,
           montant_ttc: l.montant_ttc,
+          prescriptionId: l.prescription_id?.toString() || '',
         })),
       };
       setSelectedBon(mappedBon);
@@ -457,6 +483,7 @@ export function BonsCommandeList() {
                   <TableHeader>
                     <TableRow className="border-b border-slate-100 dark:border-white/5">
                       <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.supplier')}</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
                       <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.bon_number')}</TableHead>
                       <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.date')}</TableHead>
                       <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.delivery')}</TableHead>
@@ -468,7 +495,7 @@ export function BonsCommandeList() {
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-48 text-center">
+                        <TableCell colSpan={8} className="h-48 text-center">
                           <div className="flex flex-col items-center justify-center gap-3">
                             <div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
                             <p className="text-sm text-muted-foreground font-medium">{t('shared.empty.loading')}</p>
@@ -477,7 +504,7 @@ export function BonsCommandeList() {
                       </TableRow>
                     ) : paginatedBons.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-48 text-center">
+                        <TableCell colSpan={8} className="h-48 text-center">
                           <div className="flex flex-col items-center justify-center gap-3">
                             <div className="bg-slate-50 rounded-[6px] p-4 border border-slate-100 dark:bg-slate-900/40 dark:border-white/5 dark:rounded-sm">
                               <Package className="h-8 w-8 text-slate-300" />
@@ -512,22 +539,48 @@ export function BonsCommandeList() {
                             className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors dark:border-white/5 dark:hover:bg-white/[0.03]"
                           >
                             <TableCell className="px-4 py-5">
-                              <div className="flex items-center gap-3">
-                                <Avatar size="sm" className="h-8 w-8 border border-slate-200">
-                                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bon.fournisseur?.nom}`} />
-                                  <AvatarFallback className="text-xs font-semibold bg-slate-100 text-slate-600">
-                                    {fournisseurInitial}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                                    {bon.fournisseur?.nom || bon.fournisseur?.nomSociete || '-'}
-                                  </p>
-                                  <p className="text-xs text-slate-400">
-                                    {bon.fournisseur?.email || bon.numero}
-                                  </p>
+                              {bon.type === 'verre' ? (
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-[6px] bg-sky-50 border border-sky-200/50 flex items-center justify-center dark:bg-sky-500/10 dark:border-sky-500/20">
+                                    <span className="text-xs font-bold text-sky-600 dark:text-sky-400">{bon.client?.nom?.charAt(0) || '?'}</span>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                      {bon.client?.nom || '-'}
+                                    </p>
+                                    {bon.client?.cine && (
+                                      <p className="text-xs text-slate-400">{bon.client.cine}</p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
+                              ) : (
+                                <div className="flex items-center gap-3">
+                                  <Avatar size="sm" className="h-8 w-8 border border-slate-200">
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bon.fournisseur?.nom}`} />
+                                    <AvatarFallback className="text-xs font-semibold bg-slate-100 text-slate-600">
+                                      {fournisseurInitial}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                      {bon.fournisseur?.nom || bon.fournisseur?.nomSociete || '-'}
+                                    </p>
+                                    <p className="text-xs text-slate-400">
+                                      {bon.fournisseur?.email || bon.numero}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-4 py-5">
+                              <span className={cn(
+                                "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium",
+                                bon.type === 'verre'
+                                  ? "bg-sky-50 text-sky-700 border border-sky-200/50 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20"
+                                  : "bg-slate-50 text-slate-600 border border-slate-200/50 dark:bg-slate-500/10 dark:text-slate-400"
+                              )}>
+                                {bon.type === 'verre' ? 'Verre' : 'Simple'}
+                              </span>
                             </TableCell>
                             <TableCell className="px-4 py-5">
                               <span dir="ltr" className="text-sm font-mono font-medium text-slate-700 dark:text-white">{bon.numero}</span>

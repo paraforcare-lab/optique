@@ -74,7 +74,7 @@ export function ProduitsList() {
     designation: p.designation || p.nom || '',
     marque: p.marque || '',
     barcode: p.barcode || '',
-    typeProduit: p.type_produit || 'accessoire',
+    typeProduit: p.type_produit || 'monture',
     prixVenteHt: Number(p.prix_vente_ht || 0),
     prixAchatHt: Number(p.prix_achat_ht || 0),
     prixVenteTtc: Number(p.prix_vente_ttc || 0),
@@ -291,9 +291,7 @@ export function ProduitsList() {
                 <SelectItem value="">{t('produits.filter_all_types')}</SelectItem>
                 <SelectItem value="monture">{t('produits.form.type_monture')}</SelectItem>
                 <SelectItem value="verre">{t('produits.form.type_verre')}</SelectItem>
-                <SelectItem value="lentille">{t('produits.form.type_lentille')}</SelectItem>
-                <SelectItem value="solution">{t('produits.form.type_solution')}</SelectItem>
-                <SelectItem value="accessoire">{t('produits.form.type_accessoire')}</SelectItem>
+                <SelectItem value="autre">{t('produits.form.type_autre')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -388,9 +386,7 @@ export function ProduitsList() {
                                 "text-[10px] px-1.5 py-0 h-4 font-medium rounded-[2px] border",
                                 produit.typeProduit === 'monture' && "border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:bg-amber-500/10",
                                 produit.typeProduit === 'verre' && "border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-500/30 dark:text-blue-400 dark:bg-blue-500/10",
-                                produit.typeProduit === 'lentille' && "border-purple-300 text-purple-700 bg-purple-50 dark:border-purple-500/30 dark:text-purple-400 dark:bg-purple-500/10",
-                                produit.typeProduit === 'solution' && "border-cyan-300 text-cyan-700 bg-cyan-50 dark:border-cyan-500/30 dark:text-cyan-400 dark:bg-cyan-500/10",
-                                produit.typeProduit === 'accessoire' && "border-slate-300 text-slate-600 bg-slate-50 dark:border-slate-500/30 dark:text-slate-400 dark:bg-slate-500/10"
+                                produit.typeProduit === 'autre' && "border-slate-300 text-slate-600 bg-slate-50 dark:border-slate-500/30 dark:text-slate-400 dark:bg-slate-500/10"
                               )}>
                                 {t(`produits.form.type_${produit.typeProduit}`)}
                               </Badge>

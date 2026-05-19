@@ -80,7 +80,8 @@ export const BonCommandeDocument = forwardRef<HTMLDivElement, BonCommandeDocumen
     const totalTtc = pickNum(bon, 'montantTtc', 'montant_ttc')
     const dateEmission = fmtDate(pickVal(bon, 'dateEmission', 'dateCommande', 'date', 'date_emission'))
     const numero = bon.numero || '-'
-    const entity = pickVal(bon, 'fournisseur', 'client') || {}
+    const isVerre = bon.type === 'verre'
+    const entity = isVerre ? (bon.client || {}) : (bon.fournisseur || {})
     const entityName = entity?.nomSociete || entity?.nom || '-'
 
     const tvaBuckets = useMemo(() => computeTvaBuckets(lignes), [lignes])
@@ -157,7 +158,7 @@ export const BonCommandeDocument = forwardRef<HTMLDivElement, BonCommandeDocumen
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontWeight: 900, fontSize: '20pt', color: '#000', lineHeight: 1.1 }}>
-                  BON DE COMMANDE
+                  {isVerre ? "BON DE COMMANDE DE VERRE" : "BON DE COMMANDE"}
                 </div>
                 <div style={{ fontSize: '9pt', fontWeight: 600, color: '#374151', marginTop: 4 }}>
                   N° {numero}
@@ -165,70 +166,178 @@ export const BonCommandeDocument = forwardRef<HTMLDivElement, BonCommandeDocumen
               </div>
             </div>
 
-            {/* ===== ENTITY INFO BOX (right-aligned) ===== */}
-            <div style={{
-              marginLeft: 'auto',
-              width: '50%',
-              border: '1px solid #000',
-              padding: '8px 10px',
-              marginBottom: 12,
-              fontSize: '9pt',
-              lineHeight: 1.6,
-            }}>
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>{entityName}</div>
-              {entity?.adresse && <div>{entity.adresse}</div>}
-              {entity?.telephone && <div>Tél: {entity.telephone}</div>}
-              {entity?.email && <div>Email: {entity.email}</div>}
-            </div>
+            {/* ===== ENTITY INFO BOX + PRESCRIPTION SECTION ===== */}
+            {isVerre && bon.prescription ? (
+              <>
+                {/* Prescription card — full details for the lab */}
+                <div style={{
+                  border: '2px solid #000',
+                  padding: '12px 14px',
+                  marginBottom: 12,
+                  fontSize: '9pt',
+                  lineHeight: 1.6,
+                }}>
+                  {/* Header: Client + Prescription reference */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '11pt', marginBottom: 2 }}>{entityName}</div>
+                      {entity?.cine && <div>CINE: {entity.cine}</div>}
+                      {entity?.couverture_sociale && <div>Couverture: {entity.couverture_sociale?.toUpperCase()} {entity.couverture_sociale_detail ? `(${entity.couverture_sociale_detail})` : ''}</div>}
+                      {entity?.adresse && <div>{entity.adresse}</div>}
+                      {entity?.telephone && <div>Tél: {entity.telephone}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 700 }}>Ordonnance du {fmtDate(bon.prescription.date_ordonnance)}</div>
+                      <div>Type: {bon.prescription.verre_type || 'Standard'}</div>
+                      {bon.prescription.indice && <div>Indice: {bon.prescription.indice}</div>}
+                    </div>
+                  </div>
 
-            {/* ===== ITEMS TABLE ===== */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <colgroup>
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '45%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '14%' }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'left', borderBottom: '1.5pt solid #000', color: '#000' }}>Référence</th>
-                    <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'left', borderBottom: '1.5pt solid #000', color: '#000' }}>Désignation</th>
-                    <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'right', borderBottom: '1.5pt solid #000', color: '#000' }}>Qté</th>
-                    <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'right', borderBottom: '1.5pt solid #000', color: '#000' }}>PU HT</th>
-                    <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'right', borderBottom: '1.5pt solid #000', color: '#000' }}>Montant HT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lignes.map((ligne: any, i: number) => (
-                    <tr key={i}>
-                      <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'left', borderBottom: '0.5pt solid #E5E7EB' }}>
-                        {ligne.reference || '—'}
-                      </td>
-                      <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'left', borderBottom: '0.5pt solid #E5E7EB' }}>
-                        {ligne.designation || '-'}
-                      </td>
-                      <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'right', borderBottom: '0.5pt solid #E5E7EB' }}>
-                        {getQt(ligne)}
-                      </td>
-                      <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'right', borderBottom: '0.5pt solid #E5E7EB' }}>
-                        {fmt2(getPu(ligne))}
-                      </td>
-                      <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'right', borderBottom: '0.5pt solid #E5E7EB' }}>
-                        {fmt2(getMt(ligne))}
-                      </td>
-                    </tr>
-                  ))}
-                  {lignes.length === 0 && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'center', fontStyle: 'italic', color: '#374151' }}>
-                        Aucun article
-                      </td>
-                    </tr>
+                  {/* Médecin traitant */}
+                  {(bon.prescription.medecin_traitant_nom || bon.prescription.medecin_traitant_adresse) && (
+                    <div style={{ marginBottom: 8, padding: '4px 0', borderTop: '1px dashed #000', borderBottom: '1px dashed #000' }}>
+                      <div style={{ fontWeight: 700, fontSize: '8pt', textTransform: 'uppercase', letterSpacing: 1 }}>Médecin traitant</div>
+                      {bon.prescription.medecin_traitant_nom && <div>Dr. {bon.prescription.medecin_traitant_nom}</div>}
+                      {bon.prescription.medecin_traitant_adresse && <div>{bon.prescription.medecin_traitant_adresse}</div>}
+                      {bon.prescription.medecin_traitant_telephone && <div>Tél: {bon.prescription.medecin_traitant_telephone}</div>}
+                    </div>
                   )}
-                </tbody>
-              </table>
+
+                  {/* OD / OG prescription grid */}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ padding: '4px 6px', textAlign: 'left', borderBottom: '1.5pt solid #000' }}></th>
+                        <th style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1.5pt solid #000', fontWeight: 700 }} colSpan={4}>VL (Vision de Loin)</th>
+                        <th style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1.5pt solid #000', fontWeight: 700 }} colSpan={4}>VP (Vision de Près)</th>
+                      </tr>
+                      <tr>
+                        <th style={{ padding: '3px 6px', textAlign: 'left', borderBottom: '0.5pt solid #666' }}></th>
+                        <th style={{ padding: '3px 6px', textAlign: 'center', borderBottom: '0.5pt solid #666', fontWeight: 700 }}>Sph</th>
+                        <th style={{ padding: '3px 6px', textAlign: 'center', borderBottom: '0.5pt solid #666', fontWeight: 700 }}>Cyl</th>
+                        <th style={{ padding: '3px 6px', textAlign: 'center', borderBottom: '0.5pt solid #666', fontWeight: 700 }}>Axe</th>
+                        <th style={{ padding: '3px 6px', textAlign: 'center', borderBottom: '0.5pt solid #666', fontWeight: 700 }}>Add</th>
+                        <th style={{ padding: '3px 6px', textAlign: 'center', borderBottom: '0.5pt solid #666', fontWeight: 700 }}>Sph</th>
+                        <th style={{ padding: '3px 6px', textAlign: 'center', borderBottom: '0.5pt solid #666', fontWeight: 700 }}>Cyl</th>
+                        <th style={{ padding: '3px 6px', textAlign: 'center', borderBottom: '0.5pt solid #666', fontWeight: 700 }}>Axe</th>
+                        <th style={{ padding: '3px 6px', textAlign: 'center', borderBottom: '0.5pt solid #666', fontWeight: 700 }}>Add</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style={{ fontWeight: 700, padding: '5px 6px', borderBottom: '0.5pt solid #ccc', background: '#f9f9f9' }}>OD</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.od_sph_vl ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.od_cyl_vl ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.od_axe_vl ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.od_add_vl ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.od_sph_vp ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.od_cyl_vp ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.od_axe_vp ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.od_add_vp ?? '-'}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: 700, padding: '5px 6px', borderBottom: '0.5pt solid #ccc', background: '#f9f9f9' }}>OG</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.og_sph_vl ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.og_cyl_vl ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.og_axe_vl ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.og_add_vl ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.og_sph_vp ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.og_cyl_vp ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.og_axe_vp ?? '-'}</td>
+                        <td style={{ textAlign: 'center', padding: '5px 6px', borderBottom: '0.5pt solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{bon.prescription.og_add_vp ?? '-'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* DP & Hauteurs */}
+                  {(bon.prescription.dp_binoculaire || bon.prescription.dp_od || bon.prescription.dp_og || bon.prescription.hauteur_od || bon.prescription.hauteur_og) && (
+                    <div style={{ display: 'flex', gap: 24, marginTop: 8, padding: '4px 6px', borderTop: '0.5pt solid #ccc' }}>
+                      {bon.prescription.dp_binoculaire && <div><strong>DP:</strong> {bon.prescription.dp_binoculaire}</div>}
+                      {bon.prescription.dp_od && <div><strong>DP OD:</strong> {bon.prescription.dp_od}</div>}
+                      {bon.prescription.dp_og && <div><strong>DP OG:</strong> {bon.prescription.dp_og}</div>}
+                      {bon.prescription.hauteur_od && <div><strong>Haut. OD:</strong> {bon.prescription.hauteur_od}</div>}
+                      {bon.prescription.hauteur_og && <div><strong>Haut. OG:</strong> {bon.prescription.hauteur_og}</div>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pricing line for Verre */}
+                <div style={{ marginBottom: 8, textAlign: 'right', fontSize: '9pt' }}>
+                  {lignes.map((ligne: any, i: number) => (
+                    <div key={i} style={{ display: 'inline-block', marginLeft: 16 }}>
+                      <strong>{ligne.designation}</strong> — PU HT: {fmt2(getPu(ligne))} DHS × {getQt(ligne)}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{
+                marginLeft: 'auto',
+                width: '50%',
+                border: '1px solid #000',
+                padding: '8px 10px',
+                marginBottom: 12,
+                fontSize: '9pt',
+                lineHeight: 1.6,
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>{entityName}</div>
+                {entity?.adresse && <div>{entity.adresse}</div>}
+                {entity?.telephone && <div>Tél: {entity.telephone}</div>}
+                {entity?.email && <div>Email: {entity.email}</div>}
+              </div>
+            )}
+
+            {/* ===== ITEMS TABLE (only for Simple) ===== */}
+            {!isVerre && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <colgroup>
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '45%' }} />
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '14%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'left', borderBottom: '1.5pt solid #000', color: '#000' }}>Référence</th>
+                      <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'left', borderBottom: '1.5pt solid #000', color: '#000' }}>Désignation</th>
+                      <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'right', borderBottom: '1.5pt solid #000', color: '#000' }}>Qté</th>
+                      <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'right', borderBottom: '1.5pt solid #000', color: '#000' }}>PU HT</th>
+                      <th style={{ padding: '6px 8px', fontSize: '12pt', fontWeight: 700, textAlign: 'right', borderBottom: '1.5pt solid #000', color: '#000' }}>Montant HT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lignes.map((ligne: any, i: number) => (
+                      <tr key={i}>
+                        <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'left', borderBottom: '0.5pt solid #E5E7EB' }}>
+                          {ligne.reference || '—'}
+                        </td>
+                        <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'left', borderBottom: '0.5pt solid #E5E7EB' }}>
+                          {ligne.designation || '-'}
+                        </td>
+                        <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'right', borderBottom: '0.5pt solid #E5E7EB' }}>
+                          {getQt(ligne)}
+                        </td>
+                        <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'right', borderBottom: '0.5pt solid #E5E7EB' }}>
+                          {fmt2(getPu(ligne))}
+                        </td>
+                        <td style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'right', borderBottom: '0.5pt solid #E5E7EB' }}>
+                          {fmt2(getMt(ligne))}
+                        </td>
+                      </tr>
+                    ))}
+                    {lignes.length === 0 && (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '5px 8px', fontSize: '9pt', textAlign: 'center', fontStyle: 'italic', color: '#374151' }}>
+                          Aucun article
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                </div>
+              )}
 
               <div style={{ flex: 1 }} />
 
@@ -301,7 +410,7 @@ export const BonCommandeDocument = forwardRef<HTMLDivElement, BonCommandeDocumen
                 }}>
                   <div style={{ textAlign: 'center', flex: 1 }}>
                     <div style={{ width: 160, height: 50, borderBottom: '2px dashed #000', margin: '0 auto 4px' }} />
-                    <div style={{ fontSize: '9pt' }}>Cachet et Signature du Fournisseur</div>
+                    <div style={{ fontSize: '9pt' }}>{isVerre ? 'Cachet et Signature du Client' : 'Cachet et Signature du Fournisseur'}</div>
                   </div>
                   <div style={{ textAlign: 'center', flex: 1 }}>
                     <div style={{ width: 160, height: 50, borderBottom: '2px dashed #000', margin: '0 auto 4px' }} />
@@ -329,7 +438,6 @@ export const BonCommandeDocument = forwardRef<HTMLDivElement, BonCommandeDocumen
               </div>
             </div>
           </div>
-        </div>
       </>
     )
   }

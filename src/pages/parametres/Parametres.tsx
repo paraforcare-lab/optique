@@ -74,6 +74,7 @@ interface ParametresFormValues {
   activerDroitTimbre: boolean;
   watermarkText: string;
   activerFiligrane: boolean;
+  codeInpe: string;
 }
 
 export function Parametres() {
@@ -122,6 +123,7 @@ export function Parametres() {
     activerDroitTimbre: z.boolean(),
     watermarkText: z.string(),
     activerFiligrane: z.boolean(),
+    codeInpe: z.string(),
   });
   
   const form = useForm<ParametresFormValues>({
@@ -151,6 +153,7 @@ export function Parametres() {
       activerDroitTimbre: true,
       watermarkText: 'ParaGestion',
       activerFiligrane: true,
+      codeInpe: '',
     },
   });
 
@@ -194,7 +197,7 @@ export function Parametres() {
         
         const { data, error } = await supabase
           .from('parametres')
-          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,created_at,updated_at')
+          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,code_inpe,created_at,updated_at')
           .eq('user_id', user.id)
           .maybeSingle();
         
@@ -229,6 +232,7 @@ export function Parametres() {
             activerDroitTimbre: data.activer_droit_timbre !== undefined ? data.activer_droit_timbre : true,
             watermarkText: data.watermark_text || data.texte_filigrane || 'ParaGestion',
             activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
+            codeInpe: data.code_inpe || '',
           };
           form.reset(mapped);
           localStorage.setItem(CACHED_PARAMS_KEY, JSON.stringify(mapped));
@@ -333,6 +337,7 @@ export function Parametres() {
         activer_filigrane: data.activerFiligrane,
         texte_filigrane: data.watermarkText,
         watermark_text: data.watermarkText,
+        code_inpe: data.codeInpe,
       };
 
       localStorage.setItem('pg_watermark', JSON.stringify(data.activerFiligrane));
@@ -346,7 +351,7 @@ export function Parametres() {
           .from('parametres')
           .update(fields)
           .eq('id', parametresId)
-          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,created_at,updated_at')
+          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,code_inpe,created_at,updated_at')
           .maybeSingle();
         result = response.data;
         error = response.error;
@@ -354,7 +359,7 @@ export function Parametres() {
         const response = await supabase
           .from('parametres')
           .insert([{ ...fields, user_id: user.id }])
-          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,created_at,updated_at')
+          .select('id,user_id,nom_societe,nom,adresse,ville,code_postale,telephone,email,site_web,ice,rc,if_number,tp_patente,cnss,capital_social,forme_juridique,logo_url,couleur_principale,banque,rib,swift,devise,conditions_paiement_defaut,pied_page_defaut,activer_droit_timbre,activer_filigrane,texte_filigrane,watermark_text,code_inpe,created_at,updated_at')
           .maybeSingle();
         result = response.data;
         error = response.error;
@@ -747,6 +752,21 @@ export function Parametres() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-foreground font-semibold dark:text-slate-300">{t('parametres.fiscal.cnss')}</FormLabel>
+                          <FormControl>
+                            <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 font-mono" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <FormField
+                      control={form.control}
+                      name="codeInpe"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground font-semibold dark:text-slate-300">Code INPE</FormLabel>
                           <FormControl>
                             <Input className="h-11 bg-white border-border/50 focus:border-primary dark:bg-[#020617]/50 dark:border-white/10 dark:text-white dark:placeholder:text-slate-500 font-mono" {...field} />
                           </FormControl>

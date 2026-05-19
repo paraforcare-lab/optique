@@ -232,6 +232,11 @@ CREATE INDEX IF NOT EXISTS idx_ayants_droit_client ON ayants_droit (client_id);
 ALTER TABLE produits ADD COLUMN IF NOT EXISTS type_produit TEXT DEFAULT 'monture'
   CHECK (type_produit IN ('monture', 'verre', 'lentille', 'solution', 'accessoire'));
 
+-- Update type_produit constraint: remove lentille, solution, accessoire; add autre
+ALTER TABLE produits DROP CONSTRAINT IF EXISTS produits_type_produit_check;
+ALTER TABLE produits ADD CONSTRAINT produits_type_produit_check
+  CHECK (type_produit IN ('monture', 'verre', 'autre'));
+
 ALTER TABLE produits ADD COLUMN IF NOT EXISTS monture_taille TEXT;
 ALTER TABLE produits ADD COLUMN IF NOT EXISTS monture_couleur TEXT;
 ALTER TABLE produits ADD COLUMN IF NOT EXISTS monture_matiere TEXT;
@@ -308,6 +313,34 @@ CREATE INDEX IF NOT EXISTS idx_factures_prise_en_charge ON factures (type_prise_
 CREATE INDEX IF NOT EXISTS idx_factures_prescription ON factures (prescription_id);
 
 -- ================================================================
--- 14. RELOAD SCHEMA
+-- 14. PRESCRIPTIONS — Add médecin traitant columns
+-- ================================================================
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS medecin_traitant_nom TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS medecin_traitant_specialite TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS medecin_traitant_telephone TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS medecin_traitant_email TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS medecin_traitant_adresse TEXT;
+
+-- ================================================================
+-- 15. BONS COMMANDE — Add type, client_id, prescription_id for Verre Commande
+-- ================================================================
+ALTER TABLE bons_commande ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'simple'
+  CHECK (type IN ('simple', 'verre'));
+ALTER TABLE bons_commande ADD COLUMN IF NOT EXISTS client_id BIGINT REFERENCES clients(id);
+CREATE INDEX IF NOT EXISTS idx_bons_commande_type ON bons_commande (type);
+CREATE INDEX IF NOT EXISTS idx_bons_commande_client ON bons_commande (client_id);
+
+ALTER TABLE bon_commande_lignes ADD COLUMN IF NOT EXISTS prescription_id BIGINT REFERENCES prescriptions(id);
+CREATE INDEX IF NOT EXISTS idx_bon_commande_lignes_prescription ON bon_commande_lignes (prescription_id);
+
+-- ================================================================
+-- 16. FACTURE LIGNES — Add prescription_id and OD/OG pricing for verre
+-- ================================================================
+ALTER TABLE facture_lignes ADD COLUMN IF NOT EXISTS prescription_id BIGINT REFERENCES prescriptions(id);
+ALTER TABLE facture_lignes ADD COLUMN IF NOT EXISTS prix_od_ht DECIMAL(15,2);
+ALTER TABLE facture_lignes ADD COLUMN IF NOT EXISTS prix_og_ht DECIMAL(15,2);
+
+-- ================================================================
+-- 17. RELOAD SCHEMA
 -- ================================================================
 NOTIFY pgrst, 'reload schema';

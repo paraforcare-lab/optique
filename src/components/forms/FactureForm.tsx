@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,6 +33,7 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
   const [produits, setProduits] = useState<any[]>([]);
   const [parametres, setParametres] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
 
   const ligneSchema = z.object({
     produitId: z.string().optional(),
@@ -41,6 +42,9 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
     quantite: z.number().min(0.01, t('shared.validation.qty_min')),
     prixUnitaireHt: z.number().min(0, t('shared.validation.price_positive')),
     tva: z.number().min(0, t('shared.validation.vat_positive')),
+    prescriptionId: z.string().optional(),
+    prixOdHt: z.coerce.number().optional(),
+    prixOgHt: z.coerce.number().optional(),
   });
 
   const factureSchema = z.object({
@@ -108,6 +112,9 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
             lignes: initialData.lignes?.map((l: any) => ({
               ...l,
               produitId: l.produitId?.toString() || '',
+              prescriptionId: l.prescriptionId?.toString() || '',
+              prixOdHt: l.prixOdHt ?? l.prix_od_ht ?? '',
+              prixOgHt: l.prixOgHt ?? l.prix_og_ht ?? '',
             })) || [],
           });
         } else if (parametresData?.[0]) {
@@ -125,6 +132,22 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
   const watchStatut = form.watch('statut');
   const watchResteAPayer = form.watch('resteAPayer');
   const watchModePaiement = form.watch('modePaiement');
+  const watchClientId = form.watch('clientId');
+
+  // Fetch prescriptions when client changes
+  useEffect(() => {
+    if (watchClientId) {
+      supabase
+        .from('prescriptions')
+        .select('*')
+        .eq('client_id', parseInt(watchClientId))
+        .eq('statut', 'active')
+        .order('date_ordonnance', { ascending: false })
+        .then(({ data }) => setPrescriptions(data || []));
+    } else {
+      setPrescriptions([]);
+    }
+  }, [watchClientId]);
 
   // Calculate totals
   const baseTotals = watchLignes.reduce(
@@ -193,6 +216,9 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
       const lignesPayload = (data.lignes || []).map((ligne: any, index: number) => ({
         facture_id: Number(factureId),
         produit_id: ligne.produitId ? Number(ligne.produitId) : null,
+        prescription_id: ligne.prescriptionId ? Number(ligne.prescriptionId) : null,
+        prix_od_ht: ligne.prixOdHt || null,
+        prix_og_ht: ligne.prixOgHt || null,
         designation: ligne.designation || 'Article sans désignation',
         quantite: Number(ligne.quantite) || 1,
         prix_unitaire_ht: Number(ligne.prixUnitaireHt) || 0,
@@ -232,11 +258,22 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
   const handleProduitSelect = (index: number, produitId: string) => {
     const produit = produits.find((p) => p.id.toString() === produitId);
     if (produit) {
+      const isVerre = produit.type_produit === 'verre';
       form.setValue(`lignes.${index}.produitId`, produit.id.toString());
       form.setValue(`lignes.${index}.reference`, produit.reference || '');
       form.setValue(`lignes.${index}.designation`, produit.designation || produit.nom || '');
-      form.setValue(`lignes.${index}.prixUnitaireHt`, Number(produit.prixVenteHt || produit.prix_vente_ht || 0));
       form.setValue(`lignes.${index}.tva`, Number(produit.tauxTva || produit.tva || 20));
+      if (isVerre) {
+        const halfPrice = (Number(produit.prixVenteHt || produit.prix_vente_ht || 0) / 2);
+        form.setValue(`lignes.${index}.prixOdHt`, halfPrice);
+        form.setValue(`lignes.${index}.prixOgHt`, halfPrice);
+        form.setValue(`lignes.${index}.prixUnitaireHt`, halfPrice * 2);
+        form.setValue(`lignes.${index}.quantite`, 1);
+      } else {
+        form.setValue(`lignes.${index}.prixUnitaireHt`, Number(produit.prixVenteHt || produit.prix_vente_ht || 0));
+        form.setValue(`lignes.${index}.prixOdHt`, '');
+        form.setValue(`lignes.${index}.prixOgHt`, '');
+      }
     }
   };
 
@@ -357,77 +394,146 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
                 const selectedProduct = selectedProductId ? produits.find(p => p.id.toString() === selectedProductId) : null;
                 const displayText = selectedProduct ? (selectedProduct.nom || selectedProduct.reference || '-') : (ligne?.designation || '');
 
+                const isVerreProduct = selectedProduct?.type_produit === 'verre';
+
                 return (
-                  <tr key={field.id}>
-                    <td className="p-2">
-                      <Select
-                        value={selectedProductId || ""}
-                        onValueChange={(val) => handleProduitSelect(index, val)}
-                      >
-                        <SelectTrigger className="h-9 dark:bg-slate-950/50 dark:border-white/10 bg-white border-slate-200">
-                          {selectedProductId ? (
-                            <span className={!selectedProduct ? 'text-orange-500' : ''}>
-                              {displayText}
-                            </span>
-                          ) : (
-                            <SelectValue placeholder={t('shared.form.choose_product')} />
-                          )}
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[400px] overflow-y-auto">
-                          {produits.map((p) => (
-                            <SelectItem key={p.id} value={p.id.toString()}>
-                              {p.nom || p.reference || '-'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="p-2">
-                      <Input
-                        className="h-9 dark:bg-slate-950/50 dark:border-white/10 dark:focus:border-[#267E54] bg-white border-slate-200"
-                        {...form.register(`lignes.${index}.designation`)}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        className="h-9 text-right dark:bg-slate-950/50 dark:border-white/10 dark:focus:border-[#267E54] bg-white border-slate-200"
-                        {...form.register(`lignes.${index}.quantite`, { valueAsNumber: true })}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        className="h-9 text-right dark:bg-slate-950/50 dark:border-white/10 dark:focus:border-[#267E54] bg-white border-slate-200"
-                        {...form.register(`lignes.${index}.prixUnitaireHt`, { valueAsNumber: true })}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        className="h-9 text-right dark:bg-slate-950/50 dark:border-white/10 dark:focus:border-[#267E54] bg-white border-slate-200"
-                        {...form.register(`lignes.${index}.tva`, { valueAsNumber: true })}
-                      />
-                    </td>
-                    <td className="p-2 text-right font-semibold dark:text-card-foreground text-slate-700 align-middle">
-                      {formatCurrency(totalHt)}
-                    </td>
-                    <td className="p-2 text-center align-middle">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 dark:text-muted-foreground dark:hover:text-red-400 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => remove(index)}
-                        disabled={fields.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={field.id}>
+                    <tr>
+                      <td className="p-2">
+                        <Select
+                          value={selectedProductId || ""}
+                          onValueChange={(val) => handleProduitSelect(index, val)}
+                        >
+                          <SelectTrigger className="h-9 dark:bg-slate-950/50 dark:border-white/10 bg-white border-slate-200">
+                            {selectedProductId ? (
+                              <span className={!selectedProduct ? 'text-orange-500' : ''}>
+                                {displayText}
+                              </span>
+                            ) : (
+                              <SelectValue placeholder={t('shared.form.choose_product')} />
+                            )}
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[400px] overflow-y-auto">
+                            {produits.map((p) => (
+                              <SelectItem key={p.id} value={p.id.toString()}>
+                                {p.nom || p.reference || '-'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          className="h-9 dark:bg-slate-950/50 dark:border-white/10 dark:focus:border-[#267E54] bg-white border-slate-200"
+                          {...form.register(`lignes.${index}.designation`)}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-9 text-right dark:bg-slate-950/50 dark:border-white/10 dark:focus:border-[#267E54] bg-white border-slate-200"
+                          {...form.register(`lignes.${index}.quantite`, { valueAsNumber: true })}
+                        />
+                      </td>
+                      <td className="p-2">
+                        {isVerreProduct ? (
+                          <div className="space-y-1">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Prix OD"
+                              className="h-9 text-right dark:bg-amber-500/5 dark:border-amber-500/30 bg-amber-50 border-amber-200 text-xs"
+                              {...form.register(`lignes.${index}.prixOdHt`, { valueAsNumber: true })}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value) || 0;
+                                const og = parseFloat(String(form.watch(`lignes.${index}.prixOgHt`))) || 0;
+                                form.setValue(`lignes.${index}.prixOdHt`, v);
+                                form.setValue(`lignes.${index}.prixUnitaireHt`, v + og);
+                              }}
+                            />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Prix OG"
+                              className="h-9 text-right dark:bg-sky-500/5 dark:border-sky-500/30 bg-sky-50 border-sky-200 text-xs"
+                              {...form.register(`lignes.${index}.prixOgHt`, { valueAsNumber: true })}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value) || 0;
+                                const od = parseFloat(String(form.watch(`lignes.${index}.prixOdHt`))) || 0;
+                                form.setValue(`lignes.${index}.prixOgHt`, v);
+                                form.setValue(`lignes.${index}.prixUnitaireHt`, od + v);
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="h-9 text-right dark:bg-slate-950/50 dark:border-white/10 dark:focus:border-[#267E54] bg-white border-slate-200"
+                            {...form.register(`lignes.${index}.prixUnitaireHt`, { valueAsNumber: true })}
+                          />
+                        )}
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-9 text-right dark:bg-slate-950/50 dark:border-white/10 dark:focus:border-[#267E54] bg-white border-slate-200"
+                          {...form.register(`lignes.${index}.tva`, { valueAsNumber: true })}
+                        />
+                      </td>
+                      <td className="p-2 text-right font-semibold dark:text-card-foreground text-slate-700 align-middle">
+                        {formatCurrency(totalHt)}
+                      </td>
+                      <td className="p-2 text-center align-middle">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 dark:text-muted-foreground dark:hover:text-red-400 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => remove(index)}
+                          disabled={fields.length === 1}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                    {isVerreProduct && (
+                      <tr className="bg-sky-50/30 dark:bg-sky-500/5">
+                        <td colSpan={7} className="px-3 py-2">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-3.5 w-3.5 text-sky-500" />
+                              <span className="text-xs font-medium text-slate-500">Ordonnance:</span>
+                            </div>
+                            <Select
+                              value={form.watch(`lignes.${index}.prescriptionId`) || ''}
+                              onValueChange={(val) => form.setValue(`lignes.${index}.prescriptionId`, val)}
+                            >
+                              <SelectTrigger className="h-8 w-72 text-xs dark:bg-slate-950/50 dark:border-white/10 bg-white border-slate-200">
+                                <SelectValue placeholder="Sélectionner une ordonnance..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {prescriptions.length === 0 && (
+                                  <SelectItem value="__none" disabled>Aucune ordonnance active</SelectItem>
+                                )}
+                                {prescriptions.map((p) => {
+                                  const odStr = `OD: ${p.od_sph_vl ?? '-'}${p.od_cyl_vl ? ` (${p.od_cyl_vl})` : ''}`;
+                                  const ogStr = `OG: ${p.og_sph_vl ?? '-'}${p.og_cyl_vl ? ` (${p.og_cyl_vl})` : ''}`;
+                                  return (
+                                    <SelectItem key={p.id} value={p.id.toString()}>
+                                      {p.date_ordonnance} — {odStr} / {ogStr}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
