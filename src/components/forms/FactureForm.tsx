@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { generateDocumentNumber } from '@/lib/numbering'
 import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
 
 interface FactureFormProps {
@@ -34,6 +35,7 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
   const [parametres, setParametres] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [selectedPrescription, setSelectedPrescription] = useState<any>(null);
 
   const ligneSchema = z.object({
     produitId: z.string().optional(),
@@ -53,6 +55,8 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
     dateEcheance: z.string().optional(),
     statut: z.string().min(1, t('shared.validation.status_required')),
     modePaiement: z.string().optional(),
+    type: z.string().optional(),
+    prescriptionId: z.string().optional(),
     notes: z.string().optional(),
     conditionsPaiement: z.string().optional(),
     resteAPayer: z.number().min(0, t('shared.validation.balance_positive')).optional(),
@@ -69,6 +73,8 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
       dateEcheance: '',
       statut: 'brouillon',
       modePaiement: 'Virement',
+      type: 'simple',
+      prescriptionId: '',
       notes: '',
       conditionsPaiement: '',
       resteAPayer: 0,
@@ -107,6 +113,7 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
           form.reset({
             ...initialData,
             clientId: initialData.clientId?.toString() || '',
+            prescriptionId: initialData.prescriptionId || initialData.prescription_id?.toString() || '',
             dateEmission: initialData.dateEmission ? new Date(initialData.dateEmission).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             dateEcheance: initialData.dateEcheance ? new Date(initialData.dateEcheance).toISOString().split('T')[0] : '',
             lignes: initialData.lignes?.map((l: any) => ({
@@ -133,6 +140,8 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
   const watchResteAPayer = form.watch('resteAPayer');
   const watchModePaiement = form.watch('modePaiement');
   const watchClientId = form.watch('clientId');
+  const watchType = form.watch('type');
+  const watchPrescriptionId = form.watch('prescriptionId');
 
   // Fetch prescriptions when client changes
   useEffect(() => {
@@ -148,6 +157,32 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
       setPrescriptions([]);
     }
   }, [watchClientId]);
+
+  // Update selected prescription when prescriptionId changes
+  useEffect(() => {
+    if (watchPrescriptionId) {
+      const p = prescriptions.find(p => p.id.toString() === watchPrescriptionId);
+      setSelectedPrescription(p || null);
+    } else {
+      setSelectedPrescription(null);
+    }
+  }, [watchPrescriptionId, prescriptions]);
+
+  // When type changes to optique, set 2 lines (monture, verre)
+  useEffect(() => {
+    if (!initialData) {
+      if (watchType === 'optique') {
+        form.setValue('lignes', [
+          { designation: '', quantite: 1, prixUnitaireHt: 0, tva: 20 },
+          { designation: '', quantite: 1, prixUnitaireHt: 0, tva: 20 },
+        ]);
+      } else if (watchType === 'simple') {
+        form.setValue('lignes', [
+          { designation: '', quantite: 1, prixUnitaireHt: 0, tva: 20 },
+        ]);
+      }
+    }
+  }, [watchType]);
 
   // Calculate totals
   const baseTotals = watchLignes.reduce(
@@ -182,9 +217,7 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
   const onSubmit = async (data: FactureFormValues) => {
     setIsLoading(true);
     try {
-      const year = new Date().getFullYear();
-      const randomNum = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
-      const invoiceNum = `FAC-${year}-${randomNum}`;
+      const invoiceNum = await generateDocumentNumber('facture', user!.id);
 
       const payload = {
         client_id: data.clientId === 'none' ? null : Number(data.clientId),
@@ -193,6 +226,8 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
         numero: invoiceNum,
         statut: data.statut || 'brouillon',
         mode_paiement: data.modePaiement || 'Virement',
+        type: data.type || 'simple',
+        prescription_id: data.prescriptionId ? Number(data.prescriptionId) : null,
         notes: data.notes || '',
         conditions_paiement: data.conditionsPaiement || '',
         montant_ht: Number(totals.ht) || 0,
@@ -216,7 +251,7 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
       const lignesPayload = (data.lignes || []).map((ligne: any, index: number) => ({
         facture_id: Number(factureId),
         produit_id: ligne.produitId ? Number(ligne.produitId) : null,
-        prescription_id: ligne.prescriptionId ? Number(ligne.prescriptionId) : null,
+        prescription_id: (ligne.prescriptionId || (data.type === 'optique' && data.prescriptionId)) ? Number(ligne.prescriptionId || data.prescriptionId) : null,
         prix_od_ht: ligne.prixOdHt || null,
         prix_og_ht: ligne.prixOgHt || null,
         designation: ligne.designation || 'Article sans désignation',
@@ -353,24 +388,82 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label className="dark:text-slate-400 text-slate-700 font-semibold">{t('factures.type_label')}</Label>
+            <Select
+              value={form.watch('type') || 'simple'}
+              onValueChange={(val) => form.setValue('type', val)}
+            >
+              <SelectTrigger className="dark:bg-slate-950/50 dark:border-white/10 bg-white border-slate-300">
+                <SelectValue placeholder={t('factures.type_label')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="simple">{t('factures.type_simple')}</SelectItem>
+                <SelectItem value="optique">{t('factures.type_optique')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
+
+      {watchType === 'optique' && (
+        <div className="dark:bg-sky-900/20 dark:border-sky-500/30 bg-sky-50 p-4 rounded-sm border border-sky-200">
+          <div className="space-y-2">
+            <Label className="dark:text-sky-300 text-sky-700 font-semibold flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              {t('factures.prescription_required')}
+            </Label>
+            <Select
+              value={form.watch('prescriptionId') || ''}
+              onValueChange={(val) => form.setValue('prescriptionId', val)}
+            >
+              <SelectTrigger className="dark:bg-slate-950/50 dark:border-white/10 bg-white border-sky-300">
+                <SelectValue placeholder="Sélectionner une ordonnance..." />
+              </SelectTrigger>
+              <SelectContent>
+                {prescriptions.length === 0 && (
+                  <SelectItem value="__none" disabled>Aucune ordonnance active pour ce client</SelectItem>
+                )}
+                {prescriptions.map((p) => {
+                  const odStr = `OD: ${p.od_sph_vl ?? '-'}${p.od_cyl_vl ? ` (${p.od_cyl_vl})` : ''}`;
+                  const ogStr = `OG: ${p.og_sph_vl ?? '-'}${p.og_cyl_vl ? ` (${p.og_cyl_vl})` : ''}`;
+                  return (
+                    <SelectItem key={p.id} value={p.id.toString()}>
+                      {p.date_ordonnance} — {odStr} / {ogStr}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {selectedPrescription && (
+              <div className="text-xs text-sky-600 dark:text-sky-400 mt-1 space-y-0.5">
+                <span className="font-medium">Verre prescrit:</span> {selectedPrescription.verre_type || 'Non spécifié'}
+                {selectedPrescription.verre_indice && <span> — Indice: {selectedPrescription.verre_indice}</span>}
+                {selectedPrescription.verre_traitement && <span> — Traitement: {selectedPrescription.verre_traitement}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b dark:border-white/10 pb-2">
           <h3 className="text-lg font-bold dark:text-card-foreground text-slate-800">{t('shared.form.lines_section')}</h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="dark:border-white/10 dark:text-muted-foreground dark:hover:bg-white/5 border-purple-200 text-purple-700 hover:bg-purple-50"
-            onClick={() =>
-              append({ designation: '', quantite: 1, prixUnitaireHt: 0, tva: 20 })
-            }
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t('shared.form.add_line')}
-          </Button>
+          {watchType !== 'optique' && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="dark:border-white/10 dark:text-muted-foreground dark:hover:bg-white/5 border-purple-200 text-purple-700 hover:bg-purple-50"
+              onClick={() =>
+                append({ designation: '', quantite: 1, prixUnitaireHt: 0, tva: 20 })
+              }
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('shared.form.add_line')}
+            </Button>
+          )}
         </div>
 
         <div className="border dark:border-white/10 border-slate-200 rounded-sm overflow-hidden">
@@ -394,11 +487,23 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
                 const selectedProduct = selectedProductId ? produits.find(p => p.id.toString() === selectedProductId) : null;
                 const displayText = selectedProduct ? (selectedProduct.nom || selectedProduct.reference || '-') : (ligne?.designation || '');
 
+                const isOptiqueMode = watchType === 'optique';
+                const isOptiqueVerreLine = isOptiqueMode && index === 1;
+                const isOptiqueMontureLine = isOptiqueMode && index === 0;
                 const isVerreProduct = selectedProduct?.type_produit === 'verre';
+                const showOdOgPrices = isOptiqueVerreLine || (isVerreProduct && !isOptiqueMode);
+
+                // Filter products by type for optique mode
+                let filteredProduits = produits;
+                if (isOptiqueMontureLine) {
+                  filteredProduits = produits.filter(p => p.type_produit === 'monture');
+                } else if (isOptiqueVerreLine) {
+                  filteredProduits = produits.filter(p => p.type_produit === 'verre');
+                }
 
                 return (
                   <React.Fragment key={field.id}>
-                    <tr>
+                    <tr className={isOptiqueMode ? (isOptiqueMontureLine ? 'dark:bg-amber-500/5 bg-amber-50/30' : 'dark:bg-sky-500/5 bg-sky-50/30') : ''}>
                       <td className="p-2">
                         <Select
                           value={selectedProductId || ""}
@@ -410,11 +515,14 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
                                 {displayText}
                               </span>
                             ) : (
-                              <SelectValue placeholder={t('shared.form.choose_product')} />
+                              <SelectValue placeholder={isOptiqueMontureLine ? 'Choisir une monture...' : isOptiqueVerreLine ? 'Choisir un verre...' : t('shared.form.choose_product')} />
                             )}
                           </SelectTrigger>
                           <SelectContent className="max-h-[400px] overflow-y-auto">
-                            {produits.map((p) => (
+                            {filteredProduits.length === 0 && (
+                              <SelectItem value="__none" disabled>Aucun produit disponible</SelectItem>
+                            )}
+                            {filteredProduits.map((p) => (
                               <SelectItem key={p.id} value={p.id.toString()}>
                                 {p.nom || p.reference || '-'}
                               </SelectItem>
@@ -437,7 +545,7 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
                         />
                       </td>
                       <td className="p-2">
-                        {isVerreProduct ? (
+                        {showOdOgPrices ? (
                           <div className="space-y-1">
                             <Input
                               type="number"
@@ -487,19 +595,21 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
                         {formatCurrency(totalHt)}
                       </td>
                       <td className="p-2 text-center align-middle">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 dark:text-muted-foreground dark:hover:text-red-400 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => remove(index)}
-                          disabled={fields.length === 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!isOptiqueMode && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 dark:text-muted-foreground dark:hover:text-red-400 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => remove(index)}
+                            disabled={fields.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </td>
                     </tr>
-                    {isVerreProduct && (
+                    {isVerreProduct && !isOptiqueMode && (
                       <tr className="bg-sky-50/30 dark:bg-sky-500/5">
                         <td colSpan={7} className="px-3 py-2">
                           <div className="flex items-center gap-4">

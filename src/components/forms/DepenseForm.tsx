@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { generateDocumentNumber } from '@/lib/numbering'
 
 interface DepenseFormProps {
   initialData?: any;
@@ -118,10 +119,7 @@ export function DepenseForm({ initialData, onSuccess }: DepenseFormProps) {
 
       let reference = data.reference?.trim();
       if (!reference && !initialData?.id) {
-        const year = new Date().getFullYear();
-        const { count } = await supabase.from('depenses').select('*', { count: 'exact', head: true });
-        const num = String((count || 0) + 1).padStart(4, '0');
-        reference = `DEP-${year}-${num}`;
+        reference = await generateDocumentNumber('depense', user!.id);
       }
 
       const payload: any = {

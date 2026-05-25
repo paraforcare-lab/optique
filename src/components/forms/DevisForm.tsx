@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { generateDocumentNumber } from '@/lib/numbering'
 
 interface DevisFormProps {
   initialData?: any;
@@ -140,9 +141,7 @@ export function DevisForm({ initialData, onSuccess }: DevisFormProps) {
     setIsLoading(true);
     try {
       if (!initialData?.numero) {
-        const year = new Date().getFullYear();
-        const randomNum = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
-        var devisNum = `DEV-${year}-${randomNum}`;
+        var devisNum = await generateDocumentNumber('devis', user!.id);
       }
 
       const payload = {

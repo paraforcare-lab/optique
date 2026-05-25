@@ -37,6 +37,7 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
   const { user } = useAuth();
 
   const clientSchema = z.object({
+    civilite: z.string().optional(),
     nom: z.string().min(2, { message: t('shared.validation.name_min') }),
     telephone: z.string().optional().or(z.literal('')),
     email: z.string().optional().or(z.literal('')),
@@ -44,7 +45,7 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
     dateNaissance: z.string().optional().or(z.literal('')),
     cine: z.string().optional().or(z.literal('')),
     couvertureSociale: z.string().optional().or(z.literal('')),
-    couvertureSocialeDetail: z.string().optional().or(z.literal('')),
+    lunetteExpirationDate: z.string().optional().or(z.literal('')),
   });
 
   type ClientFormValues = z.infer<typeof clientSchema>;
@@ -52,6 +53,7 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
+      civilite: 'Mr',
       nom: '',
       telephone: '',
       email: '',
@@ -59,16 +61,15 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
       dateNaissance: '',
       cine: '',
       couvertureSociale: '',
-      couvertureSocialeDetail: '',
+      lunetteExpirationDate: '',
     },
   });
 
   const formRef = useRef<HTMLFormElement>(null);
   const isInitialized = useRef(false);
 
-  const couvertureSociale = form.watch('couvertureSociale');
-
   const resetForm = (data?: any) => ({
+    civilite: data?.civilite || (data?.genre === 'femme' ? 'Mme' : 'Mr'),
     nom: data?.nom || '',
     telephone: data?.telephone || '',
     email: data?.email || '',
@@ -76,7 +77,7 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
     dateNaissance: data?.dateNaissance || data?.date_naissance || '',
     cine: data?.cine || data?.CINE || '',
     couvertureSociale: data?.couvertureSociale || data?.couverture_sociale || '',
-    couvertureSocialeDetail: data?.couvertureSocialeDetail || data?.couverture_sociale_detail || '',
+    lunetteExpirationDate: data?.lunetteExpirationDate || data?.lunette_expiration_date || '',
   });
 
   useEffect(() => {
@@ -99,13 +100,14 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
       
       const payload = {
         nom: data.nom,
+        genre: data.civilite === 'Mme' ? 'femme' : 'homme',
         telephone: data.telephone || null,
         email: data.email || null,
         adresse: data.adresse || null,
         date_naissance: data.dateNaissance || null,
         cine: data.cine || null,
         couverture_sociale: data.couvertureSociale || null,
-        couverture_sociale_detail: data.couvertureSocialeDetail || null,
+        lunette_expiration_date: data.lunetteExpirationDate || null,
       };
       
       if (isEditing) {
@@ -128,20 +130,47 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
   return (
     <Form {...form}>
       <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* Nom complet */}
-        <FormField
-          control={form.control}
-          name="nom"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-sm font-semibold">Nom complet *</FormLabel>
-              <FormControl>
-                <Input placeholder="Ahmed Benali" className="h-12 rounded-xl border-border/50 dark:bg-slate-950/50 dark:border-white/10 dark:text-white" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Civilité + Nom complet */}
+        <div className="flex gap-3 items-start">
+          <div className="w-28 shrink-0">
+            <FormField
+              control={form.control}
+              name="civilite"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold">Civilité</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || 'Mr'}>
+                    <FormControl>
+                      <SelectTrigger className="h-12 rounded-xl border-border/50 dark:bg-slate-950/50 dark:border-white/10 dark:text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="dark:bg-slate-900 dark:border-white/10">
+                      <SelectItem value="Mr">Mr</SelectItem>
+                      <SelectItem value="Mme">Mme</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="flex-1">
+            <FormField
+              control={form.control}
+              name="nom"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold">Nom complet *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ahmed Benali" className="h-12 rounded-xl border-border/50 dark:bg-slate-950/50 dark:border-white/10 dark:text-white" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Date de naissance */}
@@ -266,26 +295,29 @@ export function ClientForm({ initialData, onSuccess }: ClientFormProps) {
                 </FormItem>
               )}
             />
-            {couvertureSociale && (
-              <FormField
-                control={form.control}
-                name="couvertureSocialeDetail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-muted-foreground">
-                      {couvertureSociale === 'cnss' ? 'N° CNSS' :
-                       couvertureSociale === 'cnops' ? 'N° CNOPS' :
-                       couvertureSociale === 'far' ? 'N° FAR' :
-                       couvertureSociale === 'assurance' ? 'N° d\'assurance' : 'Détail'}
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Numéro / Détail" className="h-12 rounded-xl border-border/50 dark:bg-slate-950/50 dark:border-white/10 dark:text-white font-mono" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+          </div>
+        </div>
+
+        {/* Expiration Lunette */}
+        <div className="space-y-4 p-4 rounded-[6px] border border-amber-200/50 bg-amber-50/30 dark:border-amber-500/20 dark:bg-amber-500/5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground dark:text-white">
+            <span className="h-4 w-4 text-amber-500">◈</span>
+            Expiration Lunette
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="lunetteExpirationDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Date d'expiration</FormLabel>
+                  <FormControl>
+                    <Input type="date" className="h-12 rounded-xl border-border/50 dark:bg-slate-950/50 dark:border-white/10 dark:text-white" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 

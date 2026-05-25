@@ -36,8 +36,7 @@ export function PrescriptionForm({ initialData, onSuccess }: PrescriptionFormPro
     dateOrdonnance: z.string().min(1, 'La date est requise'),
     dateExpiration: z.string().optional(),
     typePrescription: z.string().optional(),
-    opticienNom: z.string().optional(),
-    opticienAdresse: z.string().optional(),
+    visionType: z.string().optional(),
     notes: z.string().optional(),
 
     medecinTraitantNom: z.string().optional(),
@@ -94,8 +93,7 @@ export function PrescriptionForm({ initialData, onSuccess }: PrescriptionFormPro
       dateOrdonnance: initialData?.date_ordonnance || new Date().toISOString().split('T')[0],
       dateExpiration: initialData?.date_expiration || '',
       typePrescription: initialData?.type_prescription || '',
-      opticienNom: initialData?.opticien_nom || '',
-      opticienAdresse: initialData?.opticien_adresse || '',
+      visionType: initialData?.type_vision || '',
       notes: initialData?.notes || '',
 
       medecinTraitantNom: initialData?.medecin_traitant_nom || '',
@@ -155,8 +153,7 @@ export function PrescriptionForm({ initialData, onSuccess }: PrescriptionFormPro
         dateOrdonnance: initialData.date_ordonnance || '',
         dateExpiration: initialData.date_expiration || '',
         typePrescription: initialData.type_prescription || '',
-        opticienNom: initialData.opticien_nom || '',
-        opticienAdresse: initialData.opticien_adresse || '',
+        visionType: initialData.type_vision || '',
         notes: initialData.notes || '',
 
         medecinTraitantNom: initialData.medecin_traitant_nom || '',
@@ -208,8 +205,7 @@ export function PrescriptionForm({ initialData, onSuccess }: PrescriptionFormPro
         date_ordonnance: data.dateOrdonnance,
         date_expiration: data.dateExpiration || null,
         type_prescription: data.typePrescription || null,
-        opticien_nom: data.opticienNom || null,
-        opticien_adresse: data.opticienAdresse || null,
+        type_vision: data.visionType || null,
         notes: data.notes || null,
 
         medecin_traitant_nom: data.medecinTraitantNom || null,
@@ -394,19 +390,20 @@ export function PrescriptionForm({ initialData, onSuccess }: PrescriptionFormPro
           </div>
         </div>
 
-        {/* Opticien info */}
+        {/* Type de vision */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField control={form.control} name="opticienNom" render={({ field }) => (
+          <FormField control={form.control} name="visionType" render={({ field }) => (
             <FormItem>
-              <FormLabel>Nom de l'opticien</FormLabel>
-              <FormControl><Input placeholder="Dr. ..." className="h-12 rounded-xl border-border/50 dark:bg-slate-950/50 dark:border-white/10" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="opticienAdresse" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Adresse de l'opticien</FormLabel>
-              <FormControl><Input className="h-12 rounded-xl border-border/50 dark:bg-slate-950/50 dark:border-white/10" {...field} /></FormControl>
+              <FormLabel>Type de vision</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormControl>
+                  <SelectTrigger className="h-12 rounded-xl border-border/50 dark:bg-slate-950/50 dark:border-white/10"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="vl">Vision de loin</SelectItem>
+                  <SelectItem value="vp">Vision de près</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )} />

@@ -48,8 +48,8 @@ import { Link } from 'react-router-dom'
 interface BonLivraison {
   id: number;
   numero: string;
-  fournisseurId: number;
-  fournisseur: { nom: string; nomSociete?: string; email?: string };
+  clientId: number;
+  client: { nom: string; nomSociete?: string; email?: string };
   date: string;
   dateLivraison?: string;
   montantHt: number;
@@ -109,8 +109,8 @@ export function BonsLivraisonList() {
     ...b,
     id: b.id,
     numero: b.numero || '',
-    fournisseurId: b.fournisseur_id,
-    fournisseur: b.fournisseur,
+    clientId: b.client_id,
+    client: b.client,
     date: b.date_livraison || b.date,
     dateLivraison: b.date_livraison,
     montantHt: Number(b.montant_ht || 0),
@@ -125,7 +125,7 @@ export function BonsLivraisonList() {
     try {
       const { data, error } = await supabase
         .from('bons_livraison')
-        .select('*, fournisseur:fournisseurs(*)')
+        .select('*, client:clients(*)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -207,7 +207,7 @@ export function BonsLivraisonList() {
     try {
       const { data: bonData, error } = await supabase
         .from('bons_livraison')
-        .select('*, fournisseur:fournisseurs(*)')
+        .select('*, client:clients(*)')
         .eq('id', bon.id)
         .single();
 
@@ -221,7 +221,7 @@ export function BonsLivraisonList() {
 
       const mappedData = {
         ...bonData,
-        fournisseurId: bonData.fournisseur_id?.toString() || '',
+        clientId: bonData.client_id?.toString() || '',
         dateCommande: bonData.date?.split('T')[0] || '',
         dateLivraisonPrevue: bonData.date_livraison?.split('T')[0] || '',
         lignes: (lignesData || []).map((l: any) => ({
@@ -249,7 +249,7 @@ export function BonsLivraisonList() {
 
       const { data: bonData, error } = await supabase
         .from('bons_livraison')
-        .select('*, fournisseur:fournisseurs(*)')
+        .select('*, client:clients(*)')
         .eq('id', bon.id)
         .single();
 
@@ -264,8 +264,8 @@ export function BonsLivraisonList() {
       const mappedBon = {
         ...bonData,
         numero: bonData.numero,
-        fournisseurId: bonData.fournisseur_id,
-        fournisseur: bonData.fournisseur,
+        clientId: bonData.client_id,
+        client: bonData.client,
         date: bonData.date_livraison || bonData.date,
         dateLivraison: bonData.date_livraison,
         montantHt: bonData.montant_ht,
@@ -372,8 +372,8 @@ export function BonsLivraisonList() {
       const search = searchQuery.toLowerCase();
       return (
         bon.numero?.toLowerCase().includes(search) ||
-        bon.fournisseur?.nomSociete?.toLowerCase().includes(search) ||
-        bon.fournisseur?.nom?.toLowerCase().includes(search)
+        bon.client?.nomSociete?.toLowerCase().includes(search) ||
+        bon.client?.nom?.toLowerCase().includes(search)
       );
     });
 
@@ -525,7 +525,7 @@ export function BonsLivraisonList() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-slate-100 dark:border-white/5">
-                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.supplier')}</TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.client')}</TableHead>
                       <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.bon_number')}</TableHead>
                       <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{t('shared.table.date')}</TableHead>
                       <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 text-start">{t('shared.table.amount')}</TableHead>
@@ -572,7 +572,7 @@ export function BonsLivraisonList() {
                       paginatedBons.map((bon) => {
                         const status = getStatusConfig(bon.statut);
                         const StatusIcon = status.icon;
-                        const fournisseurInitial = (bon.fournisseur?.nom || '?').charAt(0).toUpperCase();
+                        const clientInitial = (bon.client?.nom || '?').charAt(0).toUpperCase();
 
                         return (
                           <TableRow
@@ -582,17 +582,17 @@ export function BonsLivraisonList() {
                             <TableCell className="px-4 py-5">
                               <div className="flex items-center gap-3">
                                 <Avatar size="sm" className="h-8 w-8 border border-slate-200">
-                                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bon.fournisseur?.nom}`} />
+                                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bon.client?.nom}`} />
                                   <AvatarFallback className="text-xs font-semibold bg-slate-100 text-slate-600">
-                                    {fournisseurInitial}
+                                    {clientInitial}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                                    {bon.fournisseur?.nom || bon.fournisseur?.nomSociete || '-'}
+                                    {bon.client?.nom || bon.client?.nomSociete || '-'}
                                   </p>
                                   <p className="text-xs text-slate-400">
-                                    {bon.fournisseur?.email || bon.numero}
+                                    {bon.client?.email || bon.numero}
                                   </p>
                                 </div>
                               </div>
@@ -881,7 +881,7 @@ export function BonsLivraisonList() {
                     </span>
                     <span className="mx-2 text-slate-300 dark:text-slate-600">�</span>
                     <span className="font-medium text-slate-700 dark:text-white">
-                      {detailBon.fournisseur?.nom || detailBon.fournisseur?.nomSociete || '-'}
+                      {detailBon.client?.nom || detailBon.client?.nomSociete || '-'}
                     </span>
                   </div>
 

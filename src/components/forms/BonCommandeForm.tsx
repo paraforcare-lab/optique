@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
+import { generateDocumentNumber } from '@/lib/numbering'
 
 interface BCFormProps {
   initialData?: any;
@@ -257,11 +258,7 @@ export function BonCommandeForm({ initialData, onSuccess }: BCFormProps) {
       let numero;
 
       if (!bonId) {
-        const year = new Date().getFullYear();
-        const { count } = await supabase.from('bons_commande').select('*', { count: 'exact', head: true });
-        const randomNum = String((count || 0) + 1).padStart(4, '0');
-        const prefix = data.type === 'verre' ? 'BCV' : 'BC';
-        numero = `${prefix}-${year}-${randomNum}`;
+        numero = await generateDocumentNumber('bon_commande', user!.id);
       }
 
       const fournisseurId = data.fournisseurId && data.fournisseurId !== 'none' && data.fournisseurId !== ''

@@ -6,9 +6,11 @@ import { numberToFrenchWords } from '@/lib/numberToWords'
 interface FactureDocumentProps {
   facture: any
   entreprise: any
-  /** BCP-47 language tag from i18n.language */
   lang?: string
 }
+
+const fmt2 = (n: number): string =>
+  new Intl.NumberFormat('fr-FR', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 const fmt3 = (n: number): string =>
   new Intl.NumberFormat('fr-FR', { style: 'decimal', minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(n)
@@ -44,9 +46,7 @@ const makeFmtDate = (lang?: string) => (d: any): string => {
 }
 
 interface TvaBucket {
-  rate: number
-  baseHt: number
-  montantTva: number
+  rate: number; baseHt: number; montantTva: number
 }
 
 function computeTvaBuckets(lignes: any[]): TvaBucket[] {
@@ -68,9 +68,180 @@ function computeTvaBuckets(lignes: any[]): TvaBucket[] {
   return Array.from(map.values()).sort((a, b) => b.rate - a.rate)
 }
 
+function fmtSph(v: any): string {
+  if (v === null || v === undefined || v === '') return '/'
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'))
+  return isNaN(n) ? '/' : n.toFixed(2)
+}
+
+function fmtCyl(v: any): string {
+  if (v === null || v === undefined || v === '') return ''
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'))
+  return isNaN(n) ? '' : ` ${n.toFixed(2)}`
+}
+
+function fmtAxe(v: any): string {
+  if (v === null || v === undefined || v === '') return ''
+  return ` ${v}°`
+}
+
+
+
+function formatOeilVp(oeil: string, prefix: string, p: any): string {
+  const sph = fmtSph(pickVal(p, `${prefix}_sph_vp`))
+  const cyl = fmtCyl(pickVal(p, `${prefix}_cyl_vp`))
+  const axe = fmtAxe(pickVal(p, `${prefix}_axe_vp`))
+  return `${oeil} : (${sph}${cyl}${axe})`
+}
+
+const civilite = (client: any) => {
+  if (client?.genre === 'femme') return 'Mme'
+  if (client?.genre === 'homme') return 'Mr'
+  return 'Mr / Mme'
+}
+
+function OptiqueDocument({ facture, entreprise, lang }: { facture: any; entreprise: any; lang?: string }) {
+  const fmtDate = makeFmtDate(lang)
+  const p = facture.prescription || {}
+  const lignes = facture.lignes || []
+  const montureLigne = lignes[0] || {}
+  const verreLigne = lignes[1] || {}
+  const totalTtc = pickNum(facture, 'montantTtc', 'montant_ttc')
+  const amountWords = numberToFrenchWords(Math.abs(Number(totalTtc)))
+  const client = facture.client || {}
+  const el = entreprise || {}
+
+  const odPrix = pickNum(verreLigne, 'prix_od_ht')
+  const ogPrix = pickNum(verreLigne, 'prix_og_ht')
+  const monturePrix = pickNum(montureLigne, 'prixUnitaireHt', 'prix_unitaire_ht')
+
+  const formatSphCyl = (sph: any, cyl: any, axe: any): string => {
+    const s = fmtSph(sph)
+    const c = cyl ? ` ${fmtSph(cyl)}` : ''
+    const a = axe ? ` \u00e0 ${axe}\u00b0` : ''
+    return `${s}${c}${a}`
+  }
+
+  const isVl = p.type_vision !== 'vp'
+  const isVp = p.type_vision === 'vp'
+  const vlOd = formatSphCyl(p.od_sph_vl, p.od_cyl_vl, p.od_axe_vl)
+  const vlOg = formatSphCyl(p.og_sph_vl, p.og_cyl_vl, p.og_axe_vl)
+  const vpOd = formatSphCyl(isVp ? p.od_sph_vl : p.od_sph_vp, isVp ? p.od_cyl_vl : p.od_cyl_vp, isVp ? p.od_axe_vl : p.od_axe_vp)
+  const vpOg = formatSphCyl(isVp ? p.og_sph_vl : p.og_sph_vl, isVp ? p.og_cyl_vl : p.og_cyl_vp, isVp ? p.og_axe_vl : p.og_axe_vp)
+
+  return (
+    <div style={{ width: '210mm', minHeight: '297mm', margin: 'auto', background: 'white', border: '1px solid #d1d5db', fontFamily: 'Arial, sans-serif', color: '#111827' }}>
+      <style>{`
+        @page { margin: 0; size: A4; }
+        @media print { html, body { margin: 0 !important; padding: 0 !important; } }
+      `}</style>
+
+      <div style={{ padding: '12mm' }}>
+
+        <div style={{ textAlign: 'center', marginBottom: 18 }}>
+          {el.logoUrl ? (
+            <img src={el.logoUrl} alt="Logo" style={{ maxWidth: 120, maxHeight: 60, objectFit: 'contain' }} />
+          ) : (
+            <div style={{ fontSize: 42, color: '#2563eb', lineHeight: 1 }}>&#x1F453;</div>
+          )}
+          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: 2, color: '#1e3a8a', marginTop: 5 }}>
+            {(el.nomEntreprise || el.nom || 'OPTIGESTION').toUpperCase()}
+          </div>
+        </div>
+
+        <div style={{ width: '100%', border: '1px solid #374151', display: 'flex', marginBottom: 18 }}>
+          <div style={{ width: '50%', padding: 12, borderRight: '1px solid #374151', minHeight: 120 }}>
+            {el.adresse && <p style={{ marginBottom: 8, fontSize: 14, lineHeight: 1.5 }}>{el.adresse}</p>}
+            {el.ville && <p style={{ marginBottom: 8, fontSize: 14, lineHeight: 1.5 }}>{el.ville}</p>}
+            {el.telephone && <p style={{ marginBottom: 8, fontSize: 14, lineHeight: 1.5 }}>GSM {el.telephone}</p>}
+          </div>
+          <div style={{ width: '50%', padding: 12, minHeight: 120 }}>
+            <p style={{ marginBottom: 8, fontSize: 14, lineHeight: 1.5 }}><strong>Facture N° :</strong> {facture.numero || '-'}</p>
+            <br />
+            <p style={{ marginBottom: 8, fontSize: 14, lineHeight: 1.5 }}><strong>Meknès Le :</strong> {fmtDate(pickVal(facture, 'dateEmission', 'date_emission'))}</p>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center', marginBottom: 18, fontSize: 18 }}>
+          <strong style={{ color: '#1e3a8a' }}>{civilite(client)} :</strong> {client.nom || '-'}
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tbody>
+            <tr>
+              <td style={{ width: '50%', border: '1px solid #374151', verticalAlign: 'top', padding: 12, fontSize: 14, lineHeight: 1.8 }}>
+                <div style={{ fontSize: 16, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 10 }}>Vision de loin</div>
+                <p><strong>OD :</strong> {isVl && vlOd !== '/' ? `(${vlOd})` : '/'}</p>
+                <p><strong>OG :</strong> {isVl && vlOg !== '/' ? `(${vlOg})` : '/'}</p>
+              </td>
+              <td style={{ width: '50%', border: '1px solid #374151', verticalAlign: 'top', padding: 12, fontSize: 14, lineHeight: 1.8 }}>
+                <div style={{ fontSize: 16, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 10 }}>Vision de Pr&egrave;s</div>
+                <p><strong>OD :</strong> {isVp && vpOd !== '/' ? `(${vpOd})` : '/'}</p>
+                <p><strong>OG :</strong> {isVp && vpOg !== '/' ? `(${vpOg})` : '/'}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style={{ width: '50%', border: '1px solid #374151', verticalAlign: 'top', padding: 12, fontSize: 14, lineHeight: 1.8 }}>
+                <div style={{ fontSize: 16, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 10 }}>Fournitures</div>
+                <p><strong>Monture :</strong> {montureLigne.monture_matiere || '-'}</p>
+                <br />
+                <p><strong>Verres :</strong></p>
+                <p>{p.verre_type || '-'}</p>
+                <p>{p.verre_indice || '-'}</p>
+                <p>{p.verre_traitement || '-'}</p>
+              </td>
+              <td style={{ width: '50%', border: '1px solid #374151', verticalAlign: 'top', padding: 12, fontSize: 14, lineHeight: 1.8 }}>
+                <div style={{ fontSize: 16, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 10 }}>Prix</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span>Monture</span>
+                  <span>{monturePrix > 0 ? `${fmt2(monturePrix)} MAD` : '-'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span>Verre OD</span>
+                  <span>{odPrix > 0 ? `${fmt2(odPrix)} MAD` : '-'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span>Verre OG</span>
+                  <span>{ogPrix > 0 ? `${fmt2(ogPrix)} MAD` : '-'}</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style={{ border: '1px solid #374151', borderTop: 'none', padding: 14, textAlign: 'right', fontSize: 24, fontWeight: 'bold', color: '#111827' }}>
+          <span style={{ color: '#1e3a8a' }}>TOTAL :</span> {fmt2(totalTtc)} MAD
+        </div>
+
+        <div style={{ border: '1px solid #374151', borderTop: 'none', padding: 16, minHeight: 90, lineHeight: 1.8, fontSize: 15 }}>
+          <strong>Arr&ecirc;t&eacute;e la pr&eacute;sente facture &agrave; la somme de :</strong>
+          <br /><br />
+          {amountWords}
+        </div>
+
+        <div style={{ marginTop: 40, textAlign: 'center', fontSize: 15, color: '#374151', lineHeight: 1.8 }}>
+          <p>
+            {el.patente && <span>Patente : {el.patente} &mdash; </span>}
+            {el.ifNumber && <span>IF : {el.ifNumber} &mdash; </span>}
+            {el.ice && <span>ICE : {el.ice}</span>}
+          </p>
+          <div style={{ marginTop: 8, fontWeight: 'bold', letterSpacing: 1, color: '#111827' }}>
+            INPE : {el.inpe || '835037688'}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
 export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
   ({ facture, entreprise, lang }, ref) => {
     if (!facture) return null
+
+    if (facture.type === 'optique') {
+      return <div ref={ref} style={{ background: '#f4f4f4', padding: 20 }}><OptiqueDocument facture={facture} entreprise={entreprise} lang={lang} /></div>
+    }
 
     const fmtDate = makeFmtDate(lang)
 
@@ -82,7 +253,6 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
     const numero = facture.numero || '-'
     const modePaiement = (pickVal(facture, 'modePaiement', 'mode_paiement') as string) || ''
     const client = pickVal(facture, 'client', 'fournisseur') || {}
-    const ville = client?.ville || 'CASABLANCA'
     const entityName = client?.nomSociete || client?.nom || '-'
 
     const tvaBuckets = useMemo(() => computeTvaBuckets(lignes), [lignes])
@@ -137,7 +307,6 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
               <div className="fw-watermark">{entreprise?.watermarkText || 'OptiGestion'}</div>
             )}
 
-            {/* ===== HEADER: Logo + Company Info (left) | Title + Date (right) ===== */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div style={{ display: 'flex', gap: 10 }}>
                 {entreprise?.logoUrl ? (
@@ -167,7 +336,6 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
               </div>
             </div>
 
-            {/* ===== CUSTOMER INFO BOX (right-aligned) ===== */}
             <div style={{
               marginLeft: 'auto',
               width: '50%',
@@ -183,7 +351,6 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
               {client?.email && <div>Email: {client.email}</div>}
             </div>
 
-            {/* ===== REFERENCE LINE ===== */}
             <div style={{
               display: 'flex',
               justifyContent: 'center',
@@ -199,7 +366,6 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
               <span><strong>Trsf</strong></span>
             </div>
 
-            {/* ===== ITEMS TABLE ===== */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <colgroup>
@@ -250,11 +416,9 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
 
               <div style={{ flex: 1 }} />
 
-              {/* ===== FOOTER SECTION ===== */}
               <div style={{ marginTop: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    {/* TVA Buckets Table */}
                     <table style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
                       <thead>
                         <tr>
@@ -280,7 +444,6 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
                       </tbody>
                     </table>
 
-                    {/* Amount in words */}
                     <div style={{ marginTop: 10, maxWidth: 280 }}>
                       <p style={{ fontWeight: 700, margin: 0, textTransform: 'uppercase', fontSize: '8pt' }}>
                         Arrêté le présent document à la somme de:
@@ -292,7 +455,6 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
                   </div>
 
                   <div>
-                    {/* Totals Stack */}
                     <div style={{ border: '1px solid #000', fontSize: '9pt', minWidth: 170 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 10px', borderBottom: '1px solid #000' }}>
                         <span>TOTAL HT</span>
@@ -308,21 +470,18 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
                       </div>
                     </div>
 
-                    {/* Page number */}
                     <div style={{ textAlign: 'right', fontSize: '8pt', marginTop: 6, color: '#64748b' }}>
                       Page 1/1
                     </div>
                   </div>
                 </div>
 
-                {/* Notes */}
                 {facture.notes && (
                   <div style={{ marginTop: 4, padding: '3px 6px', fontSize: '8pt', color: '#475569', borderTop: '1px solid #ccc' }}>
                     <strong>Notes:</strong> {facture.notes}
                   </div>
                 )}
 
-                {/* ===== SIGNATURES ===== */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -340,7 +499,6 @@ export const FactureDocument = forwardRef<HTMLDivElement, FactureDocumentProps>(
                   </div>
                 </div>
 
-                {/* Legal footer */}
                 <div style={{
                   marginTop: 4,
                   paddingTop: 4,

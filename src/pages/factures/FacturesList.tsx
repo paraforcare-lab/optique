@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
+import { generateDocumentNumber } from '@/lib/numbering'
 
 interface Facture {
   id: number;
@@ -83,8 +84,8 @@ export function FacturesList() {
     { value: 'brouillon', label: t('shared.status.draft'), icon: FileText, color: 'text-sky-700', bgColor: 'dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20 bg-sky-50 text-sky-700 border border-sky-200/50' },
     { value: 'en_attente', label: t('shared.status.pending'), icon: Clock, color: 'text-rose-700', bgColor: 'dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 bg-rose-50 text-rose-700 border border-rose-200/50' },
     { value: 'reste_a_payer', label: t('shared.status.partial'), icon: AlertCircle, color: 'text-orange-700', bgColor: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 bg-orange-50 text-orange-700 border border-orange-200/50' },
-    { value: 'payée', label: t('shared.status.paid'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
-    { value: 'annulée', label: t('shared.status.cancelled'), icon: Ban, color: 'text-red-700', bgColor: 'dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 bg-red-50 text-red-700 border border-red-200/50' },
+    { value: 'payï¿½e', label: t('shared.status.paid'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
+    { value: 'annulï¿½e', label: t('shared.status.cancelled'), icon: Ban, color: 'text-red-700', bgColor: 'dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 bg-red-50 text-red-700 border border-red-200/50' },
   ];
 
   const handlePrint = useReactToPrint({
@@ -149,7 +150,7 @@ export function FacturesList() {
     try {
       const { data, error } = await supabase
         .from('parametres')
-        .select('id,user_id,nom_societe,nom,adresse,ville,telephone,email,ice,logo_url,couleur_principale,watermark_text,activer_filigrane')
+        .select('id,user_id,nom_societe,nom,adresse,ville,telephone,email,ice,logo_url,couleur_principale,watermark_text,activer_filigrane,if_number,tp_patente,rc,capital_social,forme_juridique')
         .eq('user_id', String(user.id))
         .maybeSingle();
 
@@ -179,6 +180,11 @@ export function FacturesList() {
           couleurPrincipale: data.couleur_principale || '#267E54',
           watermarkText: data.watermark_text || 'OptiGestion',
           activerFiligrane: data.activer_filigrane !== undefined ? data.activer_filigrane : true,
+          ifNumber: data.if_number || '',
+          patente: data.tp_patente || '',
+          rc: data.rc || '',
+          capitalSocial: data.capital_social || '',
+          formeJuridique: data.forme_juridique || '',
         });
       }
     } catch (error) {
@@ -262,6 +268,7 @@ export function FacturesList() {
         ...factureData,
         client: clientData,
         clientId: String(factureData?.client_id || ''),
+        prescriptionId: factureData?.prescription_id?.toString() || '',
         dateEmission: factureData?.date_emission?.split('T')[0] || new Date().toISOString().split('T')[0],
         dateEcheance: factureData?.date_echeance?.split('T')[0] || '',
         montantHt: Number(factureData?.montant_ht || 0),
@@ -270,6 +277,7 @@ export function FacturesList() {
         statut: factureData?.statut || 'brouillon',
         resteAPayer: Number(factureData?.reste_a_payer || 0),
         modePaiement: factureData?.mode_paiement || 'Virement',
+        type: factureData?.type || 'simple',
         notes: factureData?.notes || '',
         conditionsPaiement: factureData?.conditions_paiement || '',
         lignes: mappedLignes,
@@ -287,7 +295,7 @@ export function FacturesList() {
     try {
       const { error } = await supabase
         .from('factures')
-        .update({ statut: 'payée', reste_a_payer: 0 })
+        .update({ statut: 'payï¿½e', reste_a_payer: 0 })
         .eq('id', id)
         .eq('user_id', user?.id);
       if (error) throw error;
@@ -305,7 +313,7 @@ export function FacturesList() {
       .eq('id', factureId)
       .single();
 
-    if (fetchError || !factureData) throw new Error('Facture non trouvée');
+    if (fetchError || !factureData) throw new Error('Facture non trouvï¿½e');
 
     const { data: lignesData } = await supabase
       .from('facture_lignes')
@@ -313,10 +321,7 @@ export function FacturesList() {
       .eq('facture_id', factureId)
       .order('ordre');
 
-    const year = new Date().getFullYear();
-    const { count } = await supabase.from('avoirs').select('*', { count: 'exact', head: true });
-    const randomNum = String((count || 0) + 1).padStart(4, '0');
-    const numeroAvoir = `AV-${year}-${randomNum}`;
+    const numeroAvoir = await generateDocumentNumber('avoir', user!.id);
 
     const { data: avoirData, error: avoirError } = await supabase
       .from('avoirs')
@@ -329,7 +334,7 @@ export function FacturesList() {
         montant_ht: factureData.montant_ht,
         montant_tva: factureData.montant_tva,
         montant_ttc: factureData.montant_ttc,
-        statut: 'Généré',
+        statut: 'Gï¿½nï¿½rï¿½',
         notes: `Avoir pour annulation de la facture ${factureData.numero}`,
       }])
       .select()
@@ -363,7 +368,7 @@ export function FacturesList() {
 
       const { error: updateError } = await supabase
         .from('factures')
-        .update({ statut: 'annulée' })
+        .update({ statut: 'annulï¿½e' })
         .eq('id', facture.id)
         .eq('user_id', user?.id);
 
@@ -393,6 +398,13 @@ export function FacturesList() {
 
       const { data: lignesData } = await supabase.from('facture_lignes').select('*').eq('facture_id', facture.id).order('ordre');
 
+      // Fetch prescription data for optique invoices
+      let prescriptionData = null;
+      if (factureData?.type === 'optique' && factureData?.prescription_id) {
+        const { data: pData } = await supabase.from('prescriptions').select('*').eq('id', factureData.prescription_id).single();
+        prescriptionData = pData;
+      }
+
       const produitsMap: any = {};
       (allProductsData || []).forEach((p: any) => {
         produitsMap[p.id] = p;
@@ -404,6 +416,7 @@ export function FacturesList() {
           ...l,
           designation: l.designation || l.description || produit?.nom || produit?.designation || '',
           reference: l.reference || produit?.reference || '',
+          monture_matiere: produit?.monture_matiere || '',
         };
       });
 
@@ -421,6 +434,7 @@ export function FacturesList() {
         resteAPayer: factureData.reste_a_payer,
         modePaiement: factureData.mode_paiement,
         lignes: mappedLignes,
+        prescription: prescriptionData,
       };
       setPrintingFacture(mappedFacture);
     } catch (error) {
@@ -432,7 +446,7 @@ export function FacturesList() {
     try {
       const { data: facture } = await supabase.from('factures').select('statut').eq('id', id).single();
 
-      if (facture?.statut === 'annulée' && newStatut !== 'annulée') {
+      if (facture?.statut === 'annulï¿½e' && newStatut !== 'annulï¿½e') {
         const { data: avoir } = await supabase.from('avoirs').select('id').eq('facture_id', id).single();
         if (avoir) {
           await supabase.from('avoir_lignes').delete().eq('avoir_id', avoir.id);
@@ -442,16 +456,16 @@ export function FacturesList() {
 
       const oldStatut = facture?.statut;
       const updateData: any = { statut: newStatut };
-      if (newStatut === 'payée') {
+      if (newStatut === 'payï¿½e') {
         updateData.reste_a_payer = 0;
       }
 
       // Create avoir BEFORE updating status (transaction integrity)
-      if (newStatut === 'annulée' && oldStatut && oldStatut !== 'annulée') {
+      if (newStatut === 'annulï¿½e' && oldStatut && oldStatut !== 'annulï¿½e') {
         await createAvoirForFacture(id);
       }
 
-      const activeStatuses = ['payée', 'reste_a_payer'];
+      const activeStatuses = ['payï¿½e', 'reste_a_payer'];
       const wasActive = activeStatuses.includes(oldStatut);
       const isActive = activeStatuses.includes(newStatut);
 
@@ -471,7 +485,7 @@ export function FacturesList() {
             }
           }
         }
-      } else if (!isActive && wasActive && newStatut === 'annulée') {
+      } else if (!isActive && wasActive && newStatut === 'annulï¿½e') {
         const { data: lignes } = await supabase
           .from('facture_lignes')
           .select('produit_id, quantite')
@@ -557,7 +571,7 @@ export function FacturesList() {
   );
 
   const totalFactures = factures.length;
-  const facturesPayees = factures.filter(f => f.statut === 'payée').length;
+  const facturesPayees = factures.filter(f => f.statut === 'payï¿½e').length;
   const facturesEnAttente = factures.filter(f => ['en_attente', 'reste_a_payer'].includes(f.statut)).length;
   const totalMontant = filteredFactures.reduce((sum, f) => sum + (f.montantTtc || 0), 0);
   const totalResteAPayer = filteredFactures.reduce((sum, f) => sum + (f.resteAPayer || 0), 0);
@@ -566,7 +580,7 @@ export function FacturesList() {
   const last30Factures = factures.filter(f => new Date(f.dateEmission) >= thirtyDaysAgo);
   const drafted30 = last30Factures.filter(f => f.statut === 'brouillon');
   const sent30 = last30Factures.filter(f => f.statut === 'en_attente');
-  const paid30 = last30Factures.filter(f => f.statut === 'payée');
+  const paid30 = last30Factures.filter(f => f.statut === 'payï¿½e');
   const total30Amount = last30Factures.reduce((sum, f) => sum + (f.montantTtc || 0), 0);
 
   useEffect(() => {
@@ -809,7 +823,7 @@ export function FacturesList() {
                             </TableCell>
                             <TableCell className="px-4 py-4 text-start">
                               <div className="flex justify-end gap-0.5">
-                                {!['payée', 'reste_a_payer'].includes(facture.statut) && (
+                                {!['payï¿½e', 'reste_a_payer'].includes(facture.statut) && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -851,7 +865,7 @@ export function FacturesList() {
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
-                                ) : facture.statut !== 'annulée' ? (
+                                ) : facture.statut !== 'annulï¿½e' ? (
                                   <Button
                                     variant="ghost"
                                     size="icon"

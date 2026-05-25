@@ -504,7 +504,7 @@ const handleAvoirLogic = async (factureId: any, newStatut: string, oldStatut: st
     const { data: existingAvoir } = await supabase.from('avoirs').select('id').eq('facture_id', factureId).single();
     if (!existingAvoir) {
       const { count: avoirCount } = await supabase.from('avoirs').select('*', { count: 'exact', head: true });
-      const avoirNumero = `AVO/${new Date().getFullYear()}/${String((avoirCount || 0) + 1).padStart(5, '0')}`;
+      const avoirNumero = `AVR-${new Date().getFullYear()}-${String((avoirCount || 0) + 1).padStart(4, '0')}`;
 
       const { data: facture } = await supabase.from('factures').select('*').eq('id', factureId).single();
       const { data: factureLignes } = await supabase.from('facture_lignes').select('*').eq('facture_id', factureId);
@@ -1290,7 +1290,7 @@ router.post('/factures', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate invoice number', details: countError.message });
     }
 
-    const numero = `FAC/${new Date().getFullYear()}/${String((count || 0) + 1).padStart(5, '0')}`;
+    const numero = `FAC-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`;
     
     const data = {
       numero,
@@ -1299,6 +1299,7 @@ router.post('/factures', async (req, res) => {
       date_echeance: factureData.dateEcheance,
       statut: factureData.statut || 'brouillon',
       mode_paiement: factureData.modePaiement,
+      type: factureData.type || 'simple',
       montant_ht: Number(factureData.montantHt || 0),
       montant_tva: Number(factureData.montantTva || 0),
       montant_ttc: Number(factureData.montantTtc || 0),
@@ -1421,6 +1422,8 @@ router.put('/factures/:id', async (req, res) => {
     if (factureData.dateEcheance !== undefined) updateData.date_echeance = factureData.dateEcheance;
     if (factureData.statut !== undefined) updateData.statut = factureData.statut;
     if (factureData.modePaiement !== undefined) updateData.mode_paiement = factureData.modePaiement;
+    if (factureData.type !== undefined) updateData.type = factureData.type;
+    if (factureData.prescriptionId !== undefined) updateData.prescription_id = factureData.prescriptionId;
     if (factureData.montantHt !== undefined) updateData.montant_ht = Number(factureData.montantHt || 0);
     if (factureData.montantTva !== undefined) updateData.montant_tva = Number(factureData.montantTva || 0);
     if (factureData.montantTtc !== undefined) updateData.montant_ttc = Number(factureData.montantTtc || 0);
@@ -1721,7 +1724,7 @@ router.post('/devis', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate devis number', details: countError.message });
     }
 
-    const numero = `DEV/${new Date().getFullYear()}/${String((count || 0) + 1).padStart(5, '0')}`;
+    const numero = `DEV-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`;
     
     const data = {
       numero,
@@ -1935,7 +1938,7 @@ router.post('/devis/:id/convert', async (req, res) => {
     if (!devis) return res.status(404).json({ error: 'Devis not found' });
     
     const { count } = await supabase.from('factures').select('*', { count: 'exact', head: true });
-    const numero = `FAC/${new Date().getFullYear()}/${String((count || 0) + 1).padStart(5, '0')}`;
+    const numero = `FAC-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`;
     
     const { data: facture, error: factureError } = await supabase
       .from('factures')
@@ -2027,7 +2030,7 @@ router.post('/bons-commande', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate order number', details: countError.message });
     }
 
-    const numero = `BC/${new Date().getFullYear()}/${String((count || 0) + 1).padStart(5, '0')}`;
+    const numero = `BCV-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`;
     
     const data = {
       numero,
@@ -2204,7 +2207,7 @@ router.put('/bons-commande/:id', async (req, res) => {
     if (isNowLivré && !waslivré) {
       // Create a linked Bon de Livraison
       const { count: blCount } = await supabaseAdmin.from('bons_livraison').select('*', { count: 'exact', head: true });
-      const blNumero = `BL/${new Date().getFullYear()}/${String((blCount || 0) + 1).padStart(5, '0')}`;
+      const blNumero = `BL-${new Date().getFullYear()}-${String((blCount || 0) + 1).padStart(4, '0')}`;
       
       const { data: bonDetails } = await supabaseAdmin.from('bons_commande').select('*').eq('id', id).single();
       const { data: bonLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
@@ -2212,7 +2215,7 @@ router.put('/bons-commande/:id', async (req, res) => {
       if (bonDetails) {
         const blData: any = {
           numero: blNumero,
-          fournisseur_id: bonDetails.fournisseur_id,
+          client_id: bonDetails.client_id,
           date_livraison: new Date().toISOString(),
           statut: 'livré',
           notes: `GÃ©nÃ©rÃ© automatiquement depuis Bon de Commande ${bonDetails.numero}`,
@@ -2412,7 +2415,7 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
         const { count: blCount } = await supabaseAdmin
           .from('bons_livraison')
           .select('*', { count: 'exact', head: true });
-        const blNumero = `BL/${new Date().getFullYear()}/${String((blCount || 0) + 1).padStart(5, '0')}`;
+        const blNumero = `BL-${new Date().getFullYear()}-${String((blCount || 0) + 1).padStart(4, '0')}`;
 
         const { data: bonDetails } = await supabaseAdmin
           .from('bons_commande')
@@ -2427,7 +2430,7 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
         if (bonDetails) {
           const blData: any = {
             numero: blNumero,
-            fournisseur_id: bonDetails.fournisseur_id,
+            client_id: bonDetails.client_id,
             date_livraison: new Date().toISOString(),
             statut: 'livré',
             notes: `Généré automatiquement depuis Bon de Commande ${bonDetails.numero}`,
@@ -2606,11 +2609,11 @@ router.post('/bons-livraison', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate order number', details: countError.message });
     }
 
-    const numero = `BL/${new Date().getFullYear()}/${String((count || 0) + 1).padStart(5, '0')}`;
+    const numero = `BL-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`;
     
     const data = {
       numero,
-      fournisseur_id: blData.fournisseurId,
+      client_id: blData.clientId,
       date_livraison: blData.dateLivraison,
       statut: blData.statut || 'en_attente',
       notes: blData.notes,
@@ -2938,7 +2941,9 @@ router.post('/ventes-passagers', async (req, res) => {
     const { lignes, ...vpData } = req.body;
     
     const { count } = await supabase.from('ventes_passagers').select('*', { count: 'exact', head: true });
-    const numero = `VP/${new Date().getFullYear()}/${String((count || 0) + 1).padStart(5, '0')}`;
+    const now = new Date();
+    const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const numero = `VP-${ymd}-${String((count || 0) % 999 + 1).padStart(3, '0')}`;
     
     const { data: vp, error: vpError } = await supabase
       .from('ventes_passagers')

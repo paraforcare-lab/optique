@@ -28,6 +28,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
 import { ProductSelector } from '@/components/ui/ProductSelector'
+import { generateDocumentNumber } from '@/lib/numbering'
 
 interface VentePassager {
   id: string;
@@ -167,15 +168,7 @@ export default function VentesPassagers() {
     const totalCogs = panier.reduce((sum, item) => sum + (Number(item.prixAchatHt || 0) * item.quantite), 0);
 
     try {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hour = String(now.getHours()).padStart(2, '0');
-      const minute = String(now.getMinutes()).padStart(2, '0');
-      const second = String(now.getSeconds()).padStart(2, '0');
-      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      const numero = `VP-${year}${month}${day}${hour}${minute}${second}-${random}`;
+      const numero = await generateDocumentNumber('vente_passager', user!.id);
 
       const { data: venteData, error: venteError } = await supabase
         .from('ventes_passagers')
@@ -503,7 +496,22 @@ export default function VentesPassagers() {
                           <TableCell className="px-5 py-4 text-right">
                             <span className="inline-flex items-center justify-center min-w-[32px] h-7 px-2.5 rounded-sm dark:bg-slate-800 bg-slate-100 text-sm font-bold dark:text-card-foreground text-slate-700">{item.quantite}</span>
                           </TableCell>
-                          <TableCell className="px-5 py-4 text-right text-sm dark:text-muted-foreground text-slate-500 font-medium">{formatCurrency(item.prixUnitaireHt)}</TableCell>
+                          <TableCell className="px-5 py-4 text-right">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.prixUnitaireHt}
+                              onChange={(e) => {
+                                const v = Number(e.target.value) || 0;
+                                setPanier(panier.map((it, idx) =>
+                                  idx === index
+                                    ? { ...it, prixUnitaireHt: v, montantHt: v * it.quantite, montantTva: (v * it.quantite) * (it.tva / 100), montantTtc: (v * it.quantite) * (1 + it.tva / 100) }
+                                    : it
+                                ));
+                              }}
+                              className="h-8 w-24 text-right text-sm bg-white border-slate-200 dark:bg-slate-950/50 dark:border-white/10"
+                            />
+                          </TableCell>
                           <TableCell className="px-5 py-4 text-right text-sm dark:text-muted-foreground text-slate-500">{item.tva}%</TableCell>
                           <TableCell className="px-5 py-4 text-right">
                             <span className="text-sm font-bold text-emerald-600">{formatCurrency(item.montantTtc)}</span>

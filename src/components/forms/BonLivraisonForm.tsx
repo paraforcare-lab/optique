@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
+import { generateDocumentNumber } from '@/lib/numbering'
 
 // Zod schemas are built inside the component (below) so validation messages
 // can be localized via t(...). Building them once per render is fine — Zod
@@ -33,7 +34,7 @@ interface BLFormProps {
 export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const [fournisseurs, setFournisseurs] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [produits, setProduits] = useState<any[]>([]);
   const [parametres, setParametres] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +44,7 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
   const blSchema = useMemo(
     () =>
       z.object({
-        fournisseurId: z.string().optional(),
+        clientId: z.string().optional(),
         dateEmission: z.string().min(1, t('shared.validation.emission_date_required')),
         statut: z.string().optional(),
         modePaiement: z.string().optional(),
@@ -69,7 +70,7 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
   const form = useForm<BLFormValues>({
     resolver: zodResolver(blSchema),
     defaultValues: {
-      fournisseurId: '',
+      clientId: '',
       dateEmission: new Date().toISOString().split('T')[0],
       statut: 'en_attente',
       modePaiement: 'Virement',
@@ -95,20 +96,20 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
       if (!user?.id) return;
       
       try {
-        const [{ data: fournisseursData }, { data: produitsData }, { data: parametresData }] = await Promise.all([
-          supabase.from('fournisseurs').select('*').eq('user_id', user.id).order('nom'),
+        const [{ data: clientsData }, { data: produitsData }, { data: parametresData }] = await Promise.all([
+          supabase.from('clients').select('*').eq('user_id', user.id).order('nom'),
           supabase.from('produits').select('*').eq('user_id', user.id).order('designation'),
           supabase.from('parametres').select('*').eq('user_id', user.id).limit(1)
         ]);
         
-        setFournisseurs(fournisseursData || []);
+        setClients(clientsData || []);
         setProduits(produitsData || []);
         setParametres(parametresData?.[0] || null);
 
         if (initialData?.id) {
           form.reset({
             ...initialData,
-            fournisseurId: initialData.fournisseurId?.toString() || '',
+            clientId: initialData.clientId?.toString() || initialData.client_id?.toString() || '',
             dateEmission: initialData.dateCommande || initialData.dateLivraisonPrevue || new Date().toISOString().split('T')[0],
             lignes: initialData.lignes?.map((l: any) => ({
               ...l,
@@ -122,7 +123,7 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
           });
         } else {
           form.reset({
-            fournisseurId: '',
+            clientId: '',
             dateEmission: new Date().toISOString().split('T')[0],
             statut: 'en_attente',
             modePaiement: 'Virement',
@@ -171,14 +172,11 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
       let numero;
 
       if (!bonId) {
-        const year = new Date().getFullYear();
-        const { count } = await supabase.from('bons_livraison').select('*', { count: 'exact', head: true });
-        const randomNum = String((count || 0) + 1).padStart(4, '0');
-        numero = `BL-${year}-${randomNum}`;
+        numero = await generateDocumentNumber('bon_livraison', user!.id);
       }
 
-      const fournisseurId = data.fournisseurId && data.fournisseurId !== 'none' && data.fournisseurId !== '' 
-        ? parseInt(data.fournisseurId) 
+      const parsedClientId = data.clientId && data.clientId !== 'none' && data.clientId !== '' 
+        ? parseInt(data.clientId) 
         : null;
 
       const payload: any = {
@@ -191,8 +189,8 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
         numero: numero || initialData?.numero,
       };
 
-      if (fournisseurId) {
-        payload.fournisseur_id = fournisseurId;
+      if (parsedClientId) {
+        payload.client_id = parsedClientId;
       }
 
       if (!bonId) {
@@ -283,24 +281,24 @@ export function BonLivraisonForm({ initialData, onSuccess }: BLFormProps) {
       <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 dark:bg-slate-900/60 dark:border-white/10 dark:rounded-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
-            <Label className="text-slate-700 font-semibold dark:text-slate-300">{t('shared.form.supplier_label')}</Label>
+            <Label className="text-slate-700 font-semibold dark:text-slate-300">{t('shared.form.client_label')}</Label>
             <Select
-              value={form.watch('fournisseurId') || ""}
-              onValueChange={(val) => form.setValue('fournisseurId', val)}
+              value={form.watch('clientId') || ""}
+              onValueChange={(val) => form.setValue('clientId', val)}
             >
               <SelectTrigger className="bg-white border-slate-300 dark:bg-slate-950/50 dark:border-white/10 dark:text-white [&_.lucide-chevron-down]:dark:text-slate-500">
-                <SelectValue placeholder={t('shared.form.select_supplier')} />
+                <SelectValue placeholder={t('shared.form.select_client')} />
               </SelectTrigger>
               <SelectContent>
-                {fournisseurs.map((f) => (
-                  <SelectItem key={f.id} value={f.id.toString()}>
-                    {f.nomSociete || f.nom || '-'}
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id.toString()}>
+                    {c.nom || c.nomSociete || '-'}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {form.formState.errors.fournisseurId && (
-              <p className="text-xs text-red-500 font-medium">{form.formState.errors.fournisseurId.message}</p>
+            {form.formState.errors.clientId && (
+              <p className="text-xs text-red-500 font-medium">{form.formState.errors.clientId.message}</p>
             )}
           </div>
 

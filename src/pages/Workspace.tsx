@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import {
   Plus, FileText, Users, Package, CheckCircle2, TrendingUp, ArrowRight,
   Trash2, ShoppingCart, Box, CreditCard, Sparkles, Bell,
-  DollarSign, AlertTriangle, Target, ChevronRight, TrendingDown
+  DollarSign, AlertTriangle, Target, ChevronRight, TrendingDown, Tag
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -133,6 +133,12 @@ export function Workspace() {
     return localStorage.getItem('notifications-enabled') !== 'false';
   });
 
+  const [expiredOrdonnances, setExpiredOrdonnances] = useState<any[]>([]);
+  const [expiredLunettes, setExpiredLunettes] = useState<any[]>([]);
+  const [dueExpiredOrdonnances, setDueExpiredOrdonnances] = useState<any[]>([]);
+  const [dueExpiredLunettes, setDueExpiredLunettes] = useState<any[]>([]);
+  const [priceAlerts, setPriceAlerts] = useState<any[]>([]);
+
   // ─── Month name map (i18n-aware) ───────────────────────────────────────────
   // Used to build chart data labels; re-evaluated when language changes.
   const monthNames = [
@@ -167,12 +173,18 @@ export function Workspace() {
     try {
       setIsLoading(true);
 
-      const [factRes, vpRes, depRes, prodRes, cliRes] = await Promise.all([
+      const today = new Date().toISOString().split('T')[0]
+      const oneMonthLater = new Date()
+      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1)
+      const oneMonthLaterStr = oneMonthLater.toISOString().split('T')[0]
+
+      const [factRes, vpRes, depRes, prodRes, cliRes, presRes] = await Promise.all([
         supabase.from('factures').select('*').eq('user_id', user.id),
         supabase.from('ventes_passagers').select('*').eq('user_id', user.id),
         supabase.from('depenses').select('*').eq('user_id', user.id),
         supabase.from('produits').select('*').eq('user_id', user.id),
         supabase.from('clients').select('*').eq('user_id', user.id),
+        supabase.from('prescriptions').select('*, clients!inner(nom,genre)').eq('user_id', user.id),
       ]);
 
       const factures  = (factRes.data  || []);
@@ -258,6 +270,80 @@ export function Workspace() {
         return d && new Date(d) >= thirtyDaysAgo;
       });
       setNewClients(recentClients.length);
+
+      const prescriptions = (presRes.data || [])
+      const expiredOrdo = prescriptions.filter((p: any) => p.date_expiration && p.date_expiration < today)
+      const dueOrdo = prescriptions.filter((p: any) => p.date_expiration && p.date_expiration >= today && p.date_expiration <= oneMonthLaterStr)
+      setExpiredOrdonnances(expiredOrdo)
+      setDueExpiredOrdonnances(dueOrdo)
+
+      const expiredLun = clients.filter((c: any) => c.lunette_expiration_date && c.lunette_expiration_date < today)
+      const dueLun = clients.filter((c: any) => c.lunette_expiration_date && c.lunette_expiration_date >= today && c.lunette_expiration_date <= oneMonthLaterStr)
+      setExpiredLunettes(expiredLun)
+      setDueExpiredLunettes(dueLun)
+
+      // Price difference alerts
+      const alerts: any[] = []
+      const productMap = new Map(produits.map((p: any) => [p.id, p]))
+
+      // Check facture lines vs product sell price
+      for (const f of factures) {
+        const { data: lignes } = await supabase
+          .from('facture_lignes')
+          .select('*')
+          .eq('facture_id', f.id)
+        if (lignes) {
+          for (const l of lignes) {
+            if (l.produit_id && productMap.has(l.produit_id)) {
+              const prod = productMap.get(l.produit_id)
+              const currentPrice = Number(prod.prix_vente_ht || 0)
+              const docPrice = Number(l.prix_unitaire_ht || 0)
+              if (currentPrice > 0 && docPrice > 0 && Math.abs(currentPrice - docPrice) > 0.01) {
+                alerts.push({
+                  type: 'facture',
+                  docNum: f.numero,
+                  docDate: f.date_emission,
+                  produit: prod.designation || prod.nom || 'Produit',
+                  currentPrice,
+                  docPrice,
+                  difference: docPrice - currentPrice,
+                })
+              }
+            }
+          }
+        }
+      }
+
+      // Check VP lines vs product sell price
+      for (const v of vp) {
+        const { data: lignes } = await supabase
+          .from('ventes_passagers_lignes')
+          .select('*')
+          .eq('vp_id', v.id)
+        if (lignes) {
+          for (const l of lignes) {
+            if (l.produit_id && productMap.has(l.produit_id)) {
+              const prod = productMap.get(l.produit_id)
+              const currentPrice = Number(prod.prix_vente_ht || 0)
+              const docPrice = Number(l.prix_unitaire_ht || 0)
+              if (currentPrice > 0 && docPrice > 0 && Math.abs(currentPrice - docPrice) > 0.01) {
+                alerts.push({
+                  type: 'vp',
+                  docNum: v.numero,
+                  docDate: v.date,
+                  produit: prod.designation || prod.nom || 'Produit',
+                  currentPrice,
+                  docPrice,
+                  difference: docPrice - currentPrice,
+                })
+              }
+            }
+          }
+        }
+      }
+
+      alerts.sort((a, b) => new Date(b.docDate).getTime() - new Date(a.docDate).getTime())
+      setPriceAlerts(alerts.slice(0, 20))
     } catch (error) {
       console.error('Error fetching workspace data:', error);
     } finally {
@@ -814,6 +900,126 @@ export function Workspace() {
                   <span className="text-xs font-medium text-foreground text-center">{action.label}</span>
                 </button>
               ))}
+            </CardContent>
+          </Card>
+
+          {/* Expired Section */}
+          <Card className="shadow-none hover:shadow-none rounded-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <CardTitle className="text-base font-semibold text-card-foreground">Expiré</CardTitle>
+                <Badge className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-[4px] ms-auto">
+                  {expiredOrdonnances.length + expiredLunettes.length}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 max-h-[200px] overflow-y-auto">
+              {expiredOrdonnances.length === 0 && expiredLunettes.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground/60 text-sm">Aucun élément expiré</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {expiredOrdonnances.map((p: any, i: number) => (
+                    <div key={`eo-${i}`} className="flex items-center justify-between px-5 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                        <span className="text-sm truncate">{p.clients?.nom || 'N/A'} — Ordonnance</span>
+                      </div>
+                      <span className="text-xs text-red-500 shrink-0 ms-2">{p.date_expiration}</span>
+                    </div>
+                  ))}
+                  {expiredLunettes.map((c: any, i: number) => (
+                    <div key={`el-${i}`} className="flex items-center justify-between px-5 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Package className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                        <span className="text-sm truncate">{c.nom || 'N/A'} — Lunette</span>
+                      </div>
+                      <span className="text-xs text-red-500 shrink-0 ms-2">{c.lunette_expiration_date}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Due Expired Section */}
+          <Card className="shadow-none hover:shadow-none rounded-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-base font-semibold text-card-foreground">Bientôt expiré</CardTitle>
+                <Badge className="bg-amber-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-[4px] ms-auto">
+                  {dueExpiredOrdonnances.length + dueExpiredLunettes.length}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 max-h-[200px] overflow-y-auto">
+              {dueExpiredOrdonnances.length === 0 && dueExpiredLunettes.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground/60 text-sm">Aucun élément à expirer</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {dueExpiredOrdonnances.map((p: any, i: number) => (
+                    <div key={`do-${i}`} className="flex items-center justify-between px-5 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                        <span className="text-sm truncate">{p.clients?.nom || 'N/A'} — Ordonnance</span>
+                      </div>
+                      <span className="text-xs text-amber-600 shrink-0 ms-2">{p.date_expiration}</span>
+                    </div>
+                  ))}
+                  {dueExpiredLunettes.map((c: any, i: number) => (
+                    <div key={`dl-${i}`} className="flex items-center justify-between px-5 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Package className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                        <span className="text-sm truncate">{c.nom || 'N/A'} — Lunette</span>
+                      </div>
+                      <span className="text-xs text-amber-600 shrink-0 ms-2">{c.lunette_expiration_date}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Price Alerts Section */}
+          <Card className="shadow-none hover:shadow-none rounded-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-purple-500" />
+                <CardTitle className="text-base font-semibold text-card-foreground">Alertes de prix</CardTitle>
+                <Badge className="bg-purple-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-[4px] ms-auto">
+                  {priceAlerts.length}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 max-h-[260px] overflow-y-auto">
+              {priceAlerts.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground/60 text-sm">Aucune variation de prix</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {priceAlerts.map((a: any, i: number) => (
+                    <div key={`pa-${i}`} className="px-5 py-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Tag className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                          <span className="text-sm truncate font-medium">{a.produit}</span>
+                        </div>
+                        <span className={cn(
+                          "text-xs font-semibold shrink-0 ms-2",
+                          a.difference > 0 ? "text-red-500" : "text-emerald-500"
+                        )}>
+                          {a.difference > 0 ? '+' : ''}{formatCurrency(a.difference)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[11px] text-muted-foreground">{a.type === 'facture' ? 'Facture' : 'VP'} {a.docNum}</span>
+                        <span className="text-[11px] text-muted-foreground">— Prix doc: {formatCurrency(a.docPrice)}</span>
+                        <span className="text-[11px] text-muted-foreground">Prix actuel: {formatCurrency(a.currentPrice)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

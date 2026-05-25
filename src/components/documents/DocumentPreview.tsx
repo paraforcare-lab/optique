@@ -63,7 +63,7 @@ const entityLabel: Record<DocType, string> = {
   facture: 'Client',
   devis: 'Client',
   bon_commande: 'Fournisseur',
-  bon_livraison: 'Fournisseur',
+  bon_livraison: 'Client',
 }
 
 interface TvaBucket {
@@ -107,7 +107,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
     const totalTtc = pickNum(data, 'montantTtc', 'montant_ttc')
     const modePaiement = (pickVal(data, 'modePaiement', 'mode_paiement') as string) || ''
 
-    const entity = pickVal(data, 'client', 'fournisseur') || {}
+    const entity = pickVal(data, 'client', 'fournisseur') || pickVal(data, 'client') || {}
     const entityName = entity?.nomSociete || entity?.nom || '-'
     const docDate = fmtDate(pickVal(data, 'dateEmission', 'dateCommande', 'date', 'dateLivraison'))
 
