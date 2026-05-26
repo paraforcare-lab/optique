@@ -42,7 +42,7 @@ import { formatCurrency, formatCurrencyLocale } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
+import { updateStockAndNotify, updateStockAndNotifySafe, ensureLowStockNotifications } from '@/lib/notifications'
 import { Link } from 'react-router-dom'
 
 interface BonLivraison {
@@ -316,7 +316,7 @@ export function BonsLivraisonList() {
             }
           }
         }
-      } else if (!isBecominglivré && waslivré) {
+      } else if (!isBecomingLivré && wasLivré) {
         const { data: lignes } = await supabase
           .from('bon_livraison_lignes')
           .select('produit_id, quantite')
@@ -325,7 +325,7 @@ export function BonsLivraisonList() {
         if (lignes) {
           for (const l of lignes) {
             if (l.produit_id) {
-              await updateStockAndNotify(user?.id, l.produit_id, -Number(l.quantite));
+              await updateStockAndNotifySafe(user?.id, l.produit_id, -Number(l.quantite));
             }
           }
         }

@@ -217,7 +217,7 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
   const onSubmit = async (data: FactureFormValues) => {
     setIsLoading(true);
     try {
-      const invoiceNum = await generateDocumentNumber('facture', user!.id);
+      const invoiceNum = initialData?.numero || await generateDocumentNumber('facture', user!.id);
 
       const payload = {
         client_id: data.clientId === 'none' ? null : Number(data.clientId),
@@ -237,6 +237,18 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
       };
 
       let factureId = initialData?.id;
+      const activeStatuses = ['payée', 'reste_a_payer'];
+
+      // On edit, fetch old lines for stock restoration before deleting
+      let oldLignes: any[] = [];
+      const oldStatusWasActive = initialData && activeStatuses.includes(initialData.statut);
+      if (factureId && oldStatusWasActive) {
+        const { data: old } = await supabase
+          .from('facture_lignes')
+          .select('produit_id, quantite')
+          .eq('facture_id', factureId);
+        oldLignes = old || [];
+      }
 
       if (!factureId) {
         const { data: newFacture, error } = await supabase.from('factures').insert([{ ...payload, user_id: user?.id }]).select().single();
@@ -268,15 +280,26 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
         if (lignesError) throw lignesError;
       }
 
-      const activeStatuses = ['payée', 'reste_a_payer'];
+      // Restore stock for old lines if status was active
+      const changedIds: (number | string)[] = [];
+      for (const l of oldLignes) {
+        if (l.produit_id) {
+          await updateStockAndNotify(user?.id, l.produit_id, Number(l.quantite));
+          changedIds.push(l.produit_id);
+        }
+      }
+
+      // Deduct stock for new lines if active
       if (activeStatuses.includes(data.statut)) {
-        const changedIds: (number | string)[] = [];
         for (const ligne of lignesPayload) {
           if (ligne.produit_id) {
             await updateStockAndNotify(user?.id, ligne.produit_id, -Number(ligne.quantite));
             changedIds.push(ligne.produit_id);
           }
         }
+      }
+
+      if (changedIds.length > 0) {
         await ensureLowStockNotifications(user?.id, changedIds);
       }
 

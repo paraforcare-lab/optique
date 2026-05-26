@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react'
+﻿import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus, Search, FileEdit, Trash2, FileText, Download, CheckCircle,
@@ -84,8 +84,8 @@ export function FacturesList() {
     { value: 'brouillon', label: t('shared.status.draft'), icon: FileText, color: 'text-sky-700', bgColor: 'dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20 bg-sky-50 text-sky-700 border border-sky-200/50' },
     { value: 'en_attente', label: t('shared.status.pending'), icon: Clock, color: 'text-rose-700', bgColor: 'dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 bg-rose-50 text-rose-700 border border-rose-200/50' },
     { value: 'reste_a_payer', label: t('shared.status.partial'), icon: AlertCircle, color: 'text-orange-700', bgColor: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 bg-orange-50 text-orange-700 border border-orange-200/50' },
-    { value: 'pay�e', label: t('shared.status.paid'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
-    { value: 'annul�e', label: t('shared.status.cancelled'), icon: Ban, color: 'text-red-700', bgColor: 'dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 bg-red-50 text-red-700 border border-red-200/50' },
+    { value: 'payée', label: t('shared.status.paid'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
+    { value: 'annulée', label: t('shared.status.cancelled'), icon: Ban, color: 'text-red-700', bgColor: 'dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 bg-red-50 text-red-700 border border-red-200/50' },
   ];
 
   const handlePrint = useReactToPrint({
@@ -295,7 +295,7 @@ export function FacturesList() {
     try {
       const { error } = await supabase
         .from('factures')
-        .update({ statut: 'pay�e', reste_a_payer: 0 })
+        .update({ statut: 'payée', reste_a_payer: 0 })
         .eq('id', id)
         .eq('user_id', user?.id);
       if (error) throw error;
@@ -368,7 +368,7 @@ export function FacturesList() {
 
       const { error: updateError } = await supabase
         .from('factures')
-        .update({ statut: 'annul�e' })
+        .update({ statut: 'annulée' })
         .eq('id', facture.id)
         .eq('user_id', user?.id);
 
@@ -446,7 +446,7 @@ export function FacturesList() {
     try {
       const { data: facture } = await supabase.from('factures').select('statut').eq('id', id).single();
 
-      if (facture?.statut === 'annul�e' && newStatut !== 'annul�e') {
+      if (facture?.statut === 'annulée' && newStatut !== 'annulée') {
         const { data: avoir } = await supabase.from('avoirs').select('id').eq('facture_id', id).single();
         if (avoir) {
           await supabase.from('avoir_lignes').delete().eq('avoir_id', avoir.id);
@@ -456,16 +456,16 @@ export function FacturesList() {
 
       const oldStatut = facture?.statut;
       const updateData: any = { statut: newStatut };
-      if (newStatut === 'pay�e') {
+      if (newStatut === 'payée') {
         updateData.reste_a_payer = 0;
       }
 
       // Create avoir BEFORE updating status (transaction integrity)
-      if (newStatut === 'annul�e' && oldStatut && oldStatut !== 'annul�e') {
+      if (newStatut === 'annulée' && oldStatut && oldStatut !== 'annulée') {
         await createAvoirForFacture(id);
       }
 
-      const activeStatuses = ['pay�e', 'reste_a_payer'];
+      const activeStatuses = ['payée', 'reste_a_payer'];
       const wasActive = activeStatuses.includes(oldStatut);
       const isActive = activeStatuses.includes(newStatut);
 
@@ -485,7 +485,7 @@ export function FacturesList() {
             }
           }
         }
-      } else if (!isActive && wasActive && newStatut === 'annul�e') {
+      } else if (!isActive && wasActive) {
         const { data: lignes } = await supabase
           .from('facture_lignes')
           .select('produit_id, quantite')
@@ -512,8 +512,8 @@ export function FacturesList() {
       if (error) throw error;
       toast.success(t('shared.toast.status_updated'));
       fetchFactures();
-    } catch (error) {
-      toast.error(t('shared.toast.update_error'));
+    } catch (error: any) {
+      toast.error(error?.message || t('shared.toast.update_error'));
     }
   };
 
@@ -571,7 +571,7 @@ export function FacturesList() {
   );
 
   const totalFactures = factures.length;
-  const facturesPayees = factures.filter(f => f.statut === 'pay�e').length;
+  const facturesPayees = factures.filter(f => f.statut === 'payée').length;
   const facturesEnAttente = factures.filter(f => ['en_attente', 'reste_a_payer'].includes(f.statut)).length;
   const totalMontant = filteredFactures.reduce((sum, f) => sum + (f.montantTtc || 0), 0);
   const totalResteAPayer = filteredFactures.reduce((sum, f) => sum + (f.resteAPayer || 0), 0);
@@ -580,7 +580,7 @@ export function FacturesList() {
   const last30Factures = factures.filter(f => new Date(f.dateEmission) >= thirtyDaysAgo);
   const drafted30 = last30Factures.filter(f => f.statut === 'brouillon');
   const sent30 = last30Factures.filter(f => f.statut === 'en_attente');
-  const paid30 = last30Factures.filter(f => f.statut === 'pay�e');
+  const paid30 = last30Factures.filter(f => f.statut === 'payée');
   const total30Amount = last30Factures.reduce((sum, f) => sum + (f.montantTtc || 0), 0);
 
   useEffect(() => {
@@ -823,7 +823,7 @@ export function FacturesList() {
                             </TableCell>
                             <TableCell className="px-4 py-4 text-start">
                               <div className="flex justify-end gap-0.5">
-                                {!['pay�e', 'reste_a_payer'].includes(facture.statut) && (
+                                {!['payée', 'reste_a_payer'].includes(facture.statut) && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -865,7 +865,7 @@ export function FacturesList() {
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
-                                ) : facture.statut !== 'annul�e' ? (
+                                ) : facture.statut !== 'annulée' ? (
                                   <Button
                                     variant="ghost"
                                     size="icon"

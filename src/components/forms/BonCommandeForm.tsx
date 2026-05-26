@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
+import { updateStockAndNotify, updateStockAndNotifySafe, ensureLowStockNotifications } from '@/lib/notifications'
 import { generateDocumentNumber } from '@/lib/numbering'
 
 interface BCFormProps {
@@ -283,6 +283,19 @@ export function BonCommandeForm({ initialData, onSuccess }: BCFormProps) {
       if (fournisseurId) payload.fournisseur_id = fournisseurId;
       if (parsedClientId) payload.client_id = parsedClientId;
 
+      const activeStatuses = ['livré', 'livrée'];
+
+      // On edit, fetch old lines for stock restoration before deleting
+      let oldLignes: any[] = [];
+      const oldStatusWasActive = initialData && activeStatuses.includes(initialData.statut);
+      if (bonId && oldStatusWasActive) {
+        const { data: old } = await supabase
+          .from('bon_commande_lignes')
+          .select('produit_id, quantite')
+          .eq('bon_commande_id', bonId);
+        oldLignes = old || [];
+      }
+
       if (!bonId) {
         const { data: newBon, error } = await supabase.from('bons_commande').insert([{ ...payload, user_id: user?.id }]).select().single();
         if (error) {
@@ -342,15 +355,29 @@ export function BonCommandeForm({ initialData, onSuccess }: BCFormProps) {
           console.error('Lignes insert error:', lignesError);
           throw lignesError;
         }
+      }
 
-        const activeStatuses = ['livré', 'livrée'];
-        if (activeStatuses.includes(data.statut)) {
-          for (const ligne of lignesPayload) {
-            if (ligne.produit_id) {
-              await updateStockAndNotify(user?.id, ligne.produit_id, Number(ligne.quantite));
-            }
+      // Restore stock for old lines if status was active (safe variant clamps to 0)
+      const changedIds: (number | string)[] = [];
+      for (const l of oldLignes) {
+        if (l.produit_id) {
+          await updateStockAndNotifySafe(user?.id, l.produit_id, -Number(l.quantite));
+          changedIds.push(l.produit_id);
+        }
+      }
+
+      // Increase stock for new lines if active
+      if (activeStatuses.includes(data.statut)) {
+        for (const ligne of lignesPayload) {
+          if (ligne.produit_id) {
+            await updateStockAndNotify(user?.id, ligne.produit_id, Number(ligne.quantite));
+            changedIds.push(ligne.produit_id);
           }
         }
+      }
+
+      if (changedIds.length > 0) {
+        await ensureLowStockNotifications(user?.id, changedIds);
       }
 
       toast.success(initialData ? 'Bon de commande modifié' : 'Bon de commande créé');
