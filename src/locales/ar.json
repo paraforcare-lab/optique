@@ -1271,10 +1271,11 @@
     "page_subtitle": "إدارة النسخ الاحتياطية وتصدير البيانات للمحاسبة.",
 
     "tabs": {
-      "export":    "تصدير",
-      "import":    "استيراد",
-      "comptable": "محاسبة",
-      "reset":     "إعادة ضبط"
+      "export":      "تصدير",
+      "import":      "استيراد",
+      "comptable":   "محاسبة",
+      "histourique": "سجل المخزون",
+      "reset":       "إعادة ضبط"
     },
 
     "export": {
@@ -1333,6 +1334,26 @@
       "toast_error":      "خطأ أثناء إنشاء تصدير المحاسبة",
       "toast_unsaved_title": "تغييرات غير محفوظة",
       "toast_unsaved_body":  "يرجى حفظ الإعدادات قبل التصدير."
+    },
+
+    "histourique": {
+      "card_title":       "سجل المخزون",
+      "card_subtitle":    "عرض تاريخ حركة المخزون لكل منتج.",
+      "search_placeholder": "ابحث عن منتج...",
+      "all_products":     "الكل",
+      "col_date":         "التاريخ",
+      "col_type":         "النوع",
+      "col_document":     "المستند",
+      "col_quantite":     "الكمية",
+      "col_ancien":       "المخزون القديم",
+      "col_nouveau":      "المخزون الجديد",
+      "col_notes":        "ملاحظات",
+      "empty":            "لا توجد حركات",
+      "type_achat":       "شراء",
+      "type_vente":       "بيع",
+      "type_annulation":  "إلغاء",
+      "type_ajustement":  "تعديل",
+      "type_initial":     "أولي"
     },
 
     "reset": {

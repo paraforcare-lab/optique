@@ -1138,10 +1138,11 @@
     "page_subtitle": "Manage your backups and export data for accounting.",
 
     "tabs": {
-      "export":    "Export",
-      "import":    "Import",
-      "comptable": "Accounting",
-      "reset":     "Reset"
+      "export":      "Export",
+      "import":      "Import",
+      "comptable":   "Accounting",
+      "histourique": "Stock History",
+      "reset":       "Reset"
     },
 
     "export": {
@@ -1200,6 +1201,26 @@
       "toast_error":      "Error generating the accounting export",
       "toast_unsaved_title": "Unsaved changes",
       "toast_unsaved_body":  "Please save your settings before exporting."
+    },
+
+    "histourique": {
+      "card_title":       "Stock History",
+      "card_subtitle":    "View stock movement history for each product.",
+      "search_placeholder": "Search for a product...",
+      "all_products":     "All",
+      "col_date":         "Date",
+      "col_type":         "Type",
+      "col_document":     "Document",
+      "col_quantite":     "Qty",
+      "col_ancien":       "Old stock",
+      "col_nouveau":      "New stock",
+      "col_notes":        "Notes",
+      "empty":            "No movements found",
+      "type_achat":       "Purchase",
+      "type_vente":       "Sale",
+      "type_annulation":  "Cancellation",
+      "type_ajustement":  "Adjustment",
+      "type_initial":     "Initial"
     },
 
     "reset": {

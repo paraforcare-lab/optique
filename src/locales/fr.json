@@ -1271,10 +1271,11 @@
     "page_subtitle": "Gérez vos sauvegardes et exportez vos données pour votre comptabilité.",
 
     "tabs": {
-      "export":    "Export",
-      "import":    "Import",
-      "comptable": "Comptable",
-      "reset":     "Reset"
+      "export":      "Export",
+      "import":      "Import",
+      "comptable":   "Comptable",
+      "histourique": "Histourique Stock",
+      "reset":       "Reset"
     },
 
     "export": {
@@ -1333,6 +1334,26 @@
       "toast_error":      "Erreur lors de la génération de l'export comptable",
       "toast_unsaved_title": "Modifications non enregistrées",
       "toast_unsaved_body":  "Veuillez enregistrer vos paramètres avant d'exporter."
+    },
+
+    "histourique": {
+      "card_title":       "Histourique Stock",
+      "card_subtitle":    "Consultez l'historique des mouvements de stock pour chaque produit.",
+      "search_placeholder": "Rechercher un produit...",
+      "all_products":     "Tous",
+      "col_date":         "Date",
+      "col_type":         "Type",
+      "col_document":     "Document",
+      "col_quantite":     "Qté",
+      "col_ancien":       "Ancien stock",
+      "col_nouveau":      "Nouveau stock",
+      "col_notes":        "Notes",
+      "empty":            "Aucun mouvement trouvé",
+      "type_achat":       "Achat",
+      "type_vente":       "Vente",
+      "type_annulation":  "Annulation",
+      "type_ajustement":  "Ajustement",
+      "type_initial":     "Initial"
     },
 
     "reset": {

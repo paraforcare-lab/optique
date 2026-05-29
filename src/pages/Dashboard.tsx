@@ -129,7 +129,7 @@ export function Dashboard() {
         const totalCOGS = allFactures.reduce((s, f: any) => s + Number(f.cogs || 0), 0)
           + bonsCommandeValides.reduce((s, b: any) => s + Number(b.montant_ht || 0), 0)
         const ventesHT  = validFact.reduce((s, f: any) => s + Number(f.montant_ht || 0), 0)
-        const profit    = totalRevenue - totalDepenses - totalCOGS
+        const profit    = totalRevenue - totalDepenses
 
         // Build monthly chart data with translated month names
         const monthlyData: Stats['monthlyData'] = []

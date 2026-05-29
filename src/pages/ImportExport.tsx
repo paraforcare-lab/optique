@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Download,
   Upload,
@@ -9,6 +9,8 @@ import {
   FileJson,
   Trash2,
   ShieldAlert,
+  Search,
+  History,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
@@ -17,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +49,74 @@ export function ImportExport() {
   const [isResetting, setIsResetting]               = useState(false)
   const [resetEmail, setResetEmail]                 = useState('')
   const [resetPassword, setResetPassword]           = useState('')
+
+  // ─── Stock History state ──────────────────────────────────────────────────
+  const [produits, setProduits]                     = useState<any[]>([])
+  const [stockHistory, setStockHistory]             = useState<any[]>([])
+  const [selectedProduitId, setSelectedProduitId]   = useState<number | ''>('')
+  const [produitSearch, setProduitSearch]           = useState('')
+  const [isLoadingHistory, setIsLoadingHistory]     = useState(false)
+
+  useEffect(() => {
+    if (!user?.id) return
+    supabase
+      .from('produits')
+      .select('id, designation, nom, reference')
+      .eq('user_id', user.id)
+      .order('designation', { ascending: true })
+      .then(({ data }) => setProduits(data || []))
+  }, [user?.id])
+
+  const fetchStockHistory = async (produitId: number) => {
+    setIsLoadingHistory(true)
+    try {
+      const res = await fetch(`/api/stock-history?produit_id=${produitId}&limit=200`)
+      if (res.ok) {
+        const data = await res.json()
+        setStockHistory(data || [])
+      } else {
+        setStockHistory([])
+      }
+    } catch {
+      setStockHistory([])
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedProduitId) {
+      fetchStockHistory(Number(selectedProduitId))
+    } else {
+      setStockHistory([])
+    }
+  }, [selectedProduitId])
+
+  const filteredProduits = produitSearch
+    ? produits.filter(p =>
+        `${p.designation || ''} ${p.nom || ''} ${p.reference || ''}`
+          .toLowerCase().includes(produitSearch.toLowerCase())
+      )
+    : produits
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    })
+  }
+
+  const typeBadge = (type: string) => {
+    const colors: Record<string, string> = {
+      achat: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      vente: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      annulation: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+      ajustement: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      initial: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
+    }
+    return colors[type] || 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400'
+  }
 
   // ─── Unsaved-params guard ─────────────────────────────────────────────────
   const STORAGE_KEY = 'sf_params_modified'
@@ -309,11 +380,12 @@ export function ImportExport() {
 
         <div className="bg-white dark:bg-[#0b1222] border-slate-200 dark:border-white/5 p-4 md:p-6 rounded-xl md:rounded-2xl space-y-4 md:space-y-6 shadow-none">
           <Tabs defaultValue="export" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 rounded-xl md:rounded-2xl dark:bg-slate-800/50">
-              <TabsTrigger value="export"    className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">{ie('tabs.export')}</TabsTrigger>
-              <TabsTrigger value="import"    className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">{ie('tabs.import')}</TabsTrigger>
-              <TabsTrigger value="comptable" className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">{ie('tabs.comptable')}</TabsTrigger>
-              <TabsTrigger value="reset"     className="text-red-500 dark:text-red-400 data-[state=active]:dark:bg-slate-700">{ie('tabs.reset')}</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 rounded-xl md:rounded-2xl dark:bg-slate-800/50">
+              <TabsTrigger value="export"      className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">{ie('tabs.export')}</TabsTrigger>
+              <TabsTrigger value="import"      className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">{ie('tabs.import')}</TabsTrigger>
+              <TabsTrigger value="comptable"   className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">{ie('tabs.comptable')}</TabsTrigger>
+              <TabsTrigger value="histourique" className="dark:text-slate-300 data-[state=active]:dark:text-white data-[state=active]:dark:bg-slate-700">{ie('tabs.histourique')}</TabsTrigger>
+              <TabsTrigger value="reset"       className="text-red-500 dark:text-red-400 data-[state=active]:dark:bg-slate-700">{ie('tabs.reset')}</TabsTrigger>
             </TabsList>
 
             {/* ── EXPORT TAB ─────────────────────────────────────────── */}
@@ -493,6 +565,125 @@ export function ImportExport() {
                         </>
                       )}
                     </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ── STOCK HISTORY TAB ──────────────────────────────────── */}
+            <TabsContent value="histourique" className="mt-6 md:mt-8">
+              <Card className="bg-white dark:bg-[#0b1222] border-slate-200 dark:border-white/5 shadow-none">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <History className="h-5 w-5 text-blue-500 dark:text-blue-400 shrink-0" />
+                    {ie('histourique.card_title')}
+                  </CardTitle>
+                  <CardDescription className="dark:text-slate-400">
+                    {ie('histourique.card_subtitle')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Product search / select */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={ie('histourique.search_placeholder')}
+                      value={produitSearch}
+                      onChange={(e) => setProduitSearch(e.target.value)}
+                      className="pl-9 dark:bg-slate-800/50 dark:border-slate-700 dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                    <button
+                      onClick={() => setSelectedProduitId('')}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                        selectedProduitId === ''
+                          ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                          : 'bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {ie('histourique.all_products')}
+                    </button>
+                    {filteredProduits.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setSelectedProduitId(p.id)}
+                        className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                          selectedProduitId === p.id
+                            ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                            : 'bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {p.designation || p.nom || p.reference || `#${p.id}`}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* History table */}
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50 dark:bg-slate-800/50">
+                          <TableHead className="dark:text-slate-300">{ie('histourique.col_date')}</TableHead>
+                          <TableHead className="dark:text-slate-300">{ie('histourique.col_type')}</TableHead>
+                          <TableHead className="dark:text-slate-300">{ie('histourique.col_document')}</TableHead>
+                          <TableHead className="text-right dark:text-slate-300">{ie('histourique.col_quantite')}</TableHead>
+                          <TableHead className="text-right dark:text-slate-300">{ie('histourique.col_ancien')}</TableHead>
+                          <TableHead className="text-right dark:text-slate-300">{ie('histourique.col_nouveau')}</TableHead>
+                          <TableHead className="dark:text-slate-300">{ie('histourique.col_notes')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {isLoadingHistory ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                            </TableCell>
+                          </TableRow>
+                        ) : stockHistory.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              {ie('histourique.empty')}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          stockHistory.map((h: any) => (
+                            <TableRow key={h.id} className="dark:border-slate-700">
+                              <TableCell className="text-xs whitespace-nowrap dark:text-slate-300">
+                                {formatDate(h.createdAt || h.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium ${typeBadge(h.type)}`}>
+                                  {ie(`histourique.type_${h.type}`)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {h.sourceDocumentRef || h.source_document_ref || '-'}
+                                {h.sourceDocumentId || h.source_document_id ? ` (#${h.sourceDocumentId || h.source_document_id})` : ''}
+                              </TableCell>
+                              <TableCell className={`text-right text-xs font-mono font-medium ${
+                                Number(h.quantite) > 0
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : Number(h.quantite) < 0
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : 'dark:text-slate-300'
+                              }`}>
+                                {Number(h.quantite) > 0 ? '+' : ''}{Number(h.quantite)}
+                              </TableCell>
+                              <TableCell className="text-right text-xs font-mono dark:text-slate-300">
+                                {Number(h.ancienStock || h.ancien_stock)}
+                              </TableCell>
+                              <TableCell className="text-right text-xs font-mono dark:text-slate-300">
+                                {Number(h.nouveauStock || h.nouveau_stock)}
+                              </TableCell>
+                              <TableCell className="text-xs max-w-[200px] truncate dark:text-slate-400">
+                                {h.notes || '-'}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>
