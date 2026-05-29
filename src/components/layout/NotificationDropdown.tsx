@@ -16,6 +16,24 @@ function getTypeIcon(type: Notification['type']) {
   return typeConfig[type]?.icon || Bell
 }
 
+// ─── Mojibake repair ─────────────────────────────────────────────────────────
+// Some legacy notification rows were stored with their UTF-8 bytes mis-decoded
+// as Latin-1 (e.g. "unitÃ©s" instead of "unités"). This re-interprets such
+// strings at render time only — it does NOT mutate any stored data or logic.
+function fixEncoding(text: string | null | undefined): string {
+  if (!text) return ''
+  // Quick check: only attempt repair when a tell-tale mojibake marker is present.
+  if (!/Ã|Â|â€|Ã©|Ã¨/.test(text)) return text
+  try {
+    const bytes = Uint8Array.from(Array.from(text, (c) => c.charCodeAt(0) & 0xff))
+    const decoded = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
+    // Only adopt the repair if it didn't introduce replacement chars.
+    return decoded.includes('\uFFFD') ? text : decoded
+  } catch {
+    return text
+  }
+}
+
 // ─── Locale-aware date helpers ───────────────────────────────────────────────
 
 const localeMap: Record<string, string> = {
@@ -121,16 +139,18 @@ export function NotificationDropdown({ open, onClose, enabled }: NotificationDro
 
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-[90]" onClick={onClose} />
       <div
         ref={ref}
         // RTL Note: end-0 (logical) anchors to the correct edge in LTR and RTL.
+        // z-[100] guarantees the panel overlays all dashboard cards/charts cleanly.
+        // mt-3.5 drops it below the navbar pill instead of overlapping it.
         className={cn(
-          'absolute end-0 top-full mt-2 z-50 w-[420px] max-w-[calc(100vw-2rem)] animate-scale-in',
+          'absolute end-0 top-full mt-3.5 z-[100] w-[420px] max-w-[calc(100vw-2rem)] animate-scale-in',
           isRTL ? 'origin-top-left' : 'origin-top-right',
         )}
       >
-        <div className="bg-popover rounded-[12px] shadow-xl border border-border overflow-hidden">
+        <div className="bg-popover rounded-[12px] shadow-2xl border border-border overflow-hidden">
           {/* ── Header ──────────────────────────────────────────────────── */}
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -232,7 +252,7 @@ export function NotificationDropdown({ open, onClose, enabled }: NotificationDro
                               'text-sm leading-snug',
                               !n.is_read ? 'font-bold text-popover-foreground' : 'text-muted-foreground',
                             )}>
-                              {n.title}
+                              {fixEncoding(n.title)}
                             </p>
                             {!n.is_read && (
                               <span className={cn(
@@ -242,7 +262,7 @@ export function NotificationDropdown({ open, onClose, enabled }: NotificationDro
                             )}
                           </div>
                           {n.message && (
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{fixEncoding(n.message)}</p>
                           )}
                           <div className="flex items-center gap-2 mt-1.5">
                             <Clock className="h-3 w-3 text-muted-foreground shrink-0" />

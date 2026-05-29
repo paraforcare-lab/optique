@@ -84,6 +84,28 @@
         "sep": "سبتمبر","oct": "أكتوبر","nov": "نوفمبر","dec": "ديسمبر"
       }
     },
+    "category_chart": {
+      "title": "تحليل المخزون",
+      "subtitle": "نظرة عامة على المخزون",
+      "by_category_title": "المخزون حسب الفئة",
+      "by_health_title": "حالة المخزون",
+      "center_label": "إجمالي المخزون",
+      "center_label_products": "المنتجات",
+      "uncategorized": "غير مصنف",
+      "empty": "لا توجد منتجات في المخزون",
+      "health_rupture": "نفد",
+      "health_critique": "حرج",
+      "health_faible": "منخفض",
+      "health_sain": "جيد"
+    },
+    "coming_up": {
+      "title": "القادمة",
+      "subtitle": "المواعيد القادمة",
+      "none": "لا توجد مواعيد قادمة",
+      "today": "اليوم",
+      "appointments_one": "{{count}} موعد",
+      "appointments_other": "{{count}} مواعيد"
+    },
     "recent_invoices": {
       "title": "الفواتير الأخيرة",
       "subtitle": "آخر المعاملات",
@@ -108,6 +130,8 @@
       "product_other": "منتجات",
       "ref_label": "مرجع:",
       "low_stock": "مخزون منخفض",
+      "min_label": "الحد الأدنى",
+      "items_count": "{{count}} عناصر",
       "optimal_title": "المخزون مثالي",
       "optimal_subtitle": "جميع منتجاتك مزوّدة بشكل جيد"
     },

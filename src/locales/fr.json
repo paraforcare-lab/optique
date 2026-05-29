@@ -84,6 +84,28 @@
         "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Déc"
       }
     },
+    "category_chart": {
+      "title": "Analyse du Stock",
+      "subtitle": "Vue d'ensemble de l'inventaire",
+      "by_category_title": "Stock par Catégorie",
+      "by_health_title": "État du Stock",
+      "center_label": "Stock Total",
+      "center_label_products": "Produits",
+      "uncategorized": "Non catégorisé",
+      "empty": "Aucun produit en stock",
+      "health_rupture": "Rupture",
+      "health_critique": "Critique",
+      "health_faible": "Faible",
+      "health_sain": "Sain"
+    },
+    "coming_up": {
+      "title": "À venir",
+      "subtitle": "Prochains rendez-vous",
+      "none": "Aucun rendez-vous à venir",
+      "today": "Aujourd'hui",
+      "appointments_one": "{{count}} rendez-vous",
+      "appointments_other": "{{count}} rendez-vous"
+    },
     "recent_invoices": {
       "title": "Factures Récentes",
       "subtitle": "Dernières transactions",
@@ -108,6 +130,8 @@
       "product_other": "produits",
       "ref_label": "Réf :",
       "low_stock": "Stock bas",
+      "min_label": "Min",
+      "items_count": "{{count}} articles",
       "optimal_title": "Stock optimal",
       "optimal_subtitle": "Tous vos produits sont bien approvisionnés"
     },

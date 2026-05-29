@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import {
-  Plus, FileText, Users, Package, CheckCircle2, TrendingUp, ArrowRight,
-  Trash2, ShoppingCart, Box, CreditCard, Sparkles, Bell,
+  Plus, FileText, Users, Package, CheckCircle2, TrendingUp,
+  Trash2, ShoppingCart, Box, CreditCard, Bell,
   DollarSign, AlertTriangle, Target, ChevronRight, TrendingDown, Tag
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -50,11 +50,11 @@ interface InventoryItem {
 // Labels are now resolved dynamically via t() at render time; only styling here.
 
 const stockStyleConfig: Record<StockStatus, { barColor: string; badgeClass: string }> = {
-  rupture:  { barColor: 'bg-red-500',     badgeClass: 'bg-red-500/10 text-red-400 border-red-500/20' },
-  critique: { barColor: 'bg-red-500',     badgeClass: 'bg-red-500/10 text-red-400 border-red-500/20' },
-  faible:   { barColor: 'bg-amber-500',   badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  moyen:    { barColor: 'bg-blue-500',    badgeClass: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-  stable:   { barColor: 'bg-emerald-500', badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  rupture:  { barColor: 'bg-red-500',     badgeClass: 'bg-red-50 text-red-600 border-red-200/70 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
+  critique: { barColor: 'bg-red-500',     badgeClass: 'bg-red-50 text-red-600 border-red-200/70 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
+  faible:   { barColor: 'bg-amber-500',   badgeClass: 'bg-amber-50 text-amber-600 border-amber-200/70 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },
+  moyen:    { barColor: 'bg-[#6D5BF6]',   badgeClass: 'bg-[#EEEDFB] text-[#4A3FCF] border-[#D4CCFF] dark:bg-[#6D5BF6]/10 dark:text-[#A78BFA] dark:border-[#6D5BF6]/20' },
+  stable:   { barColor: 'bg-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-200/70 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
 };
 
 function getStockInfo(actuel: number, min: number): { status: StockStatus; percentage: number } {
@@ -86,18 +86,6 @@ const quickActionDefs: Array<{
   { key: 'customer', icon: Users,        href: '/clients',        iconBg: 'bg-indigo-500/10 dark:bg-indigo-500/20', iconColor: 'text-indigo-600 dark:text-indigo-400' },
 ];
 
-type AiRecoKey = 'feature' | 'follow_up' | 'rotation';
-
-const aiRecoDefs: Array<{
-  key: AiRecoKey;
-  icon: React.ElementType;
-  href: string;
-}> = [
-  { key: 'feature',   icon: Package,   href: '/produits'  },
-  { key: 'follow_up', icon: FileText,  href: '/factures'  },
-  { key: 'rotation',  icon: TrendingUp, href: '/dashboard' },
-];
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function Workspace() {
@@ -127,7 +115,6 @@ export function Workspace() {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [selectedRange, setSelectedRange] = useState('6m');
   const [isLoading, setIsLoading] = useState(true);
-  const [activeRecoIndex, setActiveRecoIndex] = useState(0);
   const [newClients, setNewClients] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     return localStorage.getItem('notifications-enabled') !== 'false';
@@ -405,12 +392,26 @@ export function Workspace() {
   };
 
   // ─── Derived metrics (i18n labels resolved here) ──────────────────────────
+  // Sparkline datasets for the KPI cards (visual only — derived from existing data,
+  // no new business content). Falls back to a gentle synthetic curve when empty.
+  const sparkFrom = (vals: number[], fallback: number) => {
+    const cleaned = vals.filter((v) => Number.isFinite(v));
+    const base = cleaned.length >= 2 ? cleaned : [fallback * 0.55, fallback * 0.7, fallback * 0.62, fallback * 0.85, fallback * 0.9, fallback];
+    return base.map((v, idx) => ({ i: idx, v }));
+  };
+  const revenueSpark = sparkFrom(chartData.map((d) => Number(d.revenue) || 0), Math.max(stats.invoiced, 1));
+  const clientsSpark = sparkFrom([], Math.max(stats.clients, 1));
+  const productsSpark = sparkFrom([], Math.max(stats.products, 1));
+  const growthSpark = sparkFrom(chartData.map((d) => Number(d.revenue) || 0), Math.max(Math.abs(stats.monthlyGrowth), 1));
+
   const metrics = [
     {
       label: t('workspace.kpi.invoiced'),
       value: formatCurrency(stats.invoiced),
       icon: DollarSign,
-      iconBg: 'bg-blue-500/10 text-blue-400',
+      iconBg: 'bg-[#EEEDFB] text-[#6D5BF6] dark:bg-[#6D5BF6]/10 dark:text-[#A78BFA]',
+      spark: revenueSpark,
+      sparkColor: '#6D5BF6',
       change: {
         value: `${changeStats.invoicedChange >= 0 ? '+' : ''}${changeStats.invoicedChange.toFixed(1)}%`,
         positive: changeStats.invoicedPositive,
@@ -421,7 +422,9 @@ export function Workspace() {
       label: t('workspace.kpi.clients'),
       value: String(stats.clients),
       icon: Users,
-      iconBg: 'bg-emerald-500/10 text-emerald-400',
+      iconBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+      spark: clientsSpark,
+      sparkColor: '#10B981',
       change: {
         value: `+${newClients}`,
         positive: true,
@@ -432,7 +435,9 @@ export function Workspace() {
       label: t('workspace.kpi.products'),
       value: String(stats.products),
       icon: Package,
-      iconBg: 'bg-amber-500/10 text-amber-400',
+      iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+      spark: productsSpark,
+      sparkColor: '#F59E0B',
       change: {
         value: `${inventoryItems.filter(i => i.status === 'critique' || i.status === 'rupture').length} ${t('workspace.kpi.products_alert')}`,
         positive: inventoryItems.filter(i => i.status === 'critique' || i.status === 'rupture').length === 0,
@@ -443,7 +448,9 @@ export function Workspace() {
       label: t('workspace.kpi.growth'),
       value: `${stats.monthlyGrowth >= 0 ? '+' : ''}${stats.monthlyGrowth.toFixed(1)}%`,
       icon: Target,
-      iconBg: stats.monthlyGrowth >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400',
+      iconBg: stats.monthlyGrowth >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400',
+      spark: growthSpark,
+      sparkColor: stats.monthlyGrowth >= 0 ? '#10B981' : '#EF4444',
       change: {
         value: `${stats.monthlyGrowth >= 0 ? '+' : ''}${stats.monthlyGrowth.toFixed(1)}%`,
         positive: stats.monthlyGrowth >= 0,
@@ -451,15 +458,6 @@ export function Workspace() {
       },
     },
   ];
-
-  // ─── Resolved AI recommendations ──────────────────────────────────────────
-  const aiRecommendations = aiRecoDefs.map(({ key, icon, href }) => ({
-    icon,
-    href,
-    title:       t(`workspace.ai.${key}_title`),
-    description: t(`workspace.ai.${key}_description`),
-    action:      t(`workspace.ai.${key}_button`),
-  }));
 
   // ─── Resolved quick actions ───────────────────────────────────────────────
   const quickActions = quickActionDefs.map(({ key, icon, href, iconBg, iconColor }) => ({
@@ -484,21 +482,21 @@ export function Workspace() {
     if (active && payload && payload.length) {
       return (
         <div
-          className="rounded-[8px] border p-4"
+          className="rounded-[10px] border px-4 py-3 shadow-[0_8px_24px_-10px_rgba(28,25,60,0.25)]"
           style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}
           // Tooltips should always be LTR-oriented for number readability
           dir="ltr"
         >
-          <p className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>{label}</p>
+          <p className="text-[11px] font-medium mb-2" style={{ color: 'var(--muted-foreground)' }}>{label}</p>
           {payload.map((entry: any, idx: number) => (
-            <div key={idx} className="flex items-center gap-2 text-sm">
+            <div key={idx} className="flex items-center gap-2 text-sm mt-1 first:mt-0">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: entry.color }} />
-              <span style={{ color: 'var(--muted-foreground)' }}>
+              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
                 {entry.name === 'revenue'
                   ? t('workspace.chart.tooltip_revenue')
-                  : t('workspace.chart.tooltip_expenses')}:
+                  : t('workspace.chart.tooltip_expenses')}
               </span>
-              <span className="font-semibold" style={{ color: 'var(--foreground)' }}>
+              <span className="font-bold ms-auto" style={{ color: 'var(--foreground)' }}>
                 {formatCurrency(entry.value)}
               </span>
             </div>
@@ -508,6 +506,20 @@ export function Workspace() {
     }
     return null;
   };
+
+  // ─── Custom chart legend (dot + label, top-right like the reference) ──────
+  const ChartLegend = () => (
+    <div className="flex items-center justify-end gap-4 pe-1">
+      <div className="flex items-center gap-1.5">
+        <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#6D5BF6' }} />
+        <span className="text-xs text-muted-foreground">{t('workspace.chart.tooltip_revenue')}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#10B981' }} />
+        <span className="text-xs text-muted-foreground">{t('workspace.chart.tooltip_expenses')}</span>
+      </div>
+    </div>
+  );
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -528,36 +540,67 @@ export function Workspace() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
-            className="rounded-[8px] bg-card p-5 border border-border"
+            className="kpi-card relative overflow-hidden p-5 min-h-[124px]"
           >
-            <div className="flex items-start justify-between mb-3">
-              <div className={cn("h-10 w-10 rounded-[8px] flex items-center justify-center shrink-0", metric.iconBg)}>
-                <metric.icon className="h-5 w-5" />
-              </div>
+            {/* Sparkline anchored to the bottom-right (visual flourish) */}
+            <div
+              className="pointer-events-none absolute bottom-0 right-0 w-[55%] h-[58px] opacity-90"
+              dir="ltr"
+              aria-hidden="true"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={metric.spark} margin={{ top: 6, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id={`kpiSpark-${i}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={metric.sparkColor} stopOpacity={0.22} />
+                      <stop offset="100%" stopColor={metric.sparkColor} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="v"
+                    stroke={metric.sparkColor}
+                    strokeWidth={2.5}
+                    fill={`url(#kpiSpark-${i})`}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-            <p className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+
+            {/* Label */}
+            <p className="relative text-[13px] font-semibold text-card-foreground/90">
               {metric.label}
             </p>
-            {/*
-             * RTL Note: numeric values should always render LTR so digits read
-             * left-to-right regardless of page direction.
-             */}
-            <p className="text-2xl font-bold text-card-foreground mt-0.5 tracking-tight" dir="ltr">
-              {metric.value}
-            </p>
-            {metric.change && (
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+
+            {/* Value + inline change pill */}
+            <div className="relative mt-2 flex items-center gap-2 flex-wrap">
+              {/*
+               * RTL Note: numeric values should always render LTR so digits read
+               * left-to-right regardless of page direction.
+               */}
+              <span className="text-[26px] leading-none font-bold text-card-foreground tracking-tight" dir="ltr">
+                {metric.value}
+              </span>
+              {metric.change && (
                 <span className={cn(
-                  "inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-[4px]",
-                  metric.change.positive ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"
+                  "inline-flex items-center gap-0.5 text-xs font-bold",
+                  metric.change.positive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
                 )} dir="ltr">
                   {metric.change.positive
                     ? <TrendingUp className="h-3 w-3" />
                     : <TrendingDown className="h-3 w-3" />}
                   {metric.change.value}
                 </span>
-                <span className="text-xs text-muted-foreground">{metric.change.label}</span>
-              </div>
+              )}
+            </div>
+
+            {/* Subtext */}
+            {metric.change && (
+              <p className="relative mt-2 text-xs text-muted-foreground">
+                {metric.change.label}
+              </p>
             )}
           </motion.div>
         ))}
@@ -573,33 +616,38 @@ export function Workspace() {
         <div className="lg:col-span-7 space-y-6">
 
           {/* Performance Chart */}
-          <Card className="shadow-none hover:shadow-none rounded-sm">
+          <Card className="card-elevated border-transparent dark:border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               {/*
                * RTL Note: `flex-row` items auto-reverse in RTL via dir attribute.
                * ms-auto (margin-inline-start) keeps the Tabs at the logical end.
                */}
               <div>
-                <CardTitle className="text-base font-semibold text-card-foreground">
+                <CardTitle className="text-base font-bold text-card-foreground">
                   {t('workspace.chart.title')}
                 </CardTitle>
                 <CardDescription className="text-xs mt-0.5">
                   {chartSubtitle}
                 </CardDescription>
               </div>
-              <Tabs value={selectedRange} onValueChange={setSelectedRange} className="ms-auto">
-                <TabsList className="bg-muted dark:bg-white/5 rounded-[4px] p-0.5">
-                  <TabsTrigger value="1m" className="text-xs px-3 py-1.5 data-[state=active]:bg-card rounded-[4px]">
-                    {t('workspace.chart.filter_1m')}
-                  </TabsTrigger>
-                  <TabsTrigger value="6m" className="text-xs px-3 py-1.5 data-[state=active]:bg-card rounded-[4px]">
-                    {t('workspace.chart.filter_6m')}
-                  </TabsTrigger>
-                  <TabsTrigger value="1y" className="text-xs px-3 py-1.5 data-[state=active]:bg-card rounded-[4px]">
-                    {t('workspace.chart.filter_1y')}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <div className="ms-auto flex items-center gap-4">
+                <div className="hidden sm:block">
+                  <ChartLegend />
+                </div>
+                <Tabs value={selectedRange} onValueChange={setSelectedRange}>
+                  <TabsList className="bg-[#F2F2FA] dark:bg-white/5 rounded-xl p-1">
+                    <TabsTrigger value="1m" className="text-xs px-3 py-1.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#4A3FCF] data-[state=active]:shadow-sm dark:data-[state=active]:bg-card font-semibold">
+                      {t('workspace.chart.filter_1m')}
+                    </TabsTrigger>
+                    <TabsTrigger value="6m" className="text-xs px-3 py-1.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#4A3FCF] data-[state=active]:shadow-sm dark:data-[state=active]:bg-card font-semibold">
+                      {t('workspace.chart.filter_6m')}
+                    </TabsTrigger>
+                    <TabsTrigger value="1y" className="text-xs px-3 py-1.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#4A3FCF] data-[state=active]:shadow-sm dark:data-[state=active]:bg-card font-semibold">
+                      {t('workspace.chart.filter_1y')}
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </CardHeader>
             <CardContent className={cn("h-[300px] pt-4 transition-opacity duration-300", isLoading && "opacity-40")}>
               {/*
@@ -609,24 +657,25 @@ export function Workspace() {
                */}
               <div dir="ltr">
                 <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 8, left: -10, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#267E54" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#267E54" stopOpacity={0.02} />
+                      <linearGradient id="perfRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6D5BF6" stopOpacity={0.28} />
+                        <stop offset="100%" stopColor="#6D5BF6" stopOpacity={0} />
                       </linearGradient>
-                      <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ef4444" stopOpacity={0.12} />
-                        <stop offset="100%" stopColor="#ef4444" stopOpacity={0.02} />
+                      <linearGradient id="perfExpenseGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10B981" stopOpacity={0.16} />
+                        <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 6" vertical={false} stroke="var(--border)" />
                     <XAxis
                       dataKey="name"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                      dy={8}
+                      dy={10}
+                      padding={{ left: 12, right: 12 }}
                     />
                     <YAxis
                       axisLine={false}
@@ -635,16 +684,21 @@ export function Workspace() {
                       tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                       dx={-4}
                     />
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
-                    <Area
-                      type="monotone" dataKey="revenue" stroke="#267E54" strokeWidth={2.5}
-                      fillOpacity={1} fill="url(#revenueGrad)" dot={false}
-                      activeDot={{ r: 5, fill: '#267E54', stroke: 'white', strokeWidth: 2 }}
+                    <Tooltip
+                      content={<CustomTooltip />}
+                      cursor={{ stroke: '#6D5BF6', strokeWidth: 1, strokeDasharray: '4 4' }}
                     />
                     <Area
-                      type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2}
-                      fillOpacity={1} fill="url(#expenseGrad)" dot={false}
-                      activeDot={{ r: 4, fill: '#ef4444', stroke: 'white', strokeWidth: 2 }}
+                      type="monotone" dataKey="expenses" name="expenses"
+                      stroke="#10B981" strokeWidth={2.5}
+                      fillOpacity={1} fill="url(#perfExpenseGrad)" dot={false}
+                      activeDot={{ r: 5, fill: '#10B981', stroke: 'var(--card)', strokeWidth: 2.5 }}
+                    />
+                    <Area
+                      type="monotone" dataKey="revenue" name="revenue"
+                      stroke="#6D5BF6" strokeWidth={3}
+                      fillOpacity={1} fill="url(#perfRevenueGrad)" dot={false}
+                      activeDot={{ r: 6, fill: '#6D5BF6', stroke: 'var(--card)', strokeWidth: 3 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -653,11 +707,11 @@ export function Workspace() {
           </Card>
 
           {/* Priority Inventory Table */}
-          <Card className="shadow-none hover:shadow-none rounded-sm">
+          <Card className="card-elevated border-transparent dark:border-border">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base font-semibold text-card-foreground">
+                  <CardTitle className="text-base font-bold text-card-foreground">
                     {t('workspace.stock_table.title')}
                   </CardTitle>
                   <CardDescription className="text-xs mt-0.5">
@@ -672,7 +726,7 @@ export function Workspace() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs h-8 bg-transparent border border-white/20 text-white hover:bg-white/10 rounded-sm transition-all duration-200 ms-auto"
+                  className="text-xs h-8 bg-transparent border border-[#EAEAF4] dark:border-white/20 text-[#6D5BF6] dark:text-white hover:bg-[#F2F2FA] dark:hover:bg-white/10 hover:border-[#D4CCFF] rounded-lg font-semibold transition-all duration-200 ms-auto"
                   onClick={() => window.location.href = '/produits'}
                 >
                   {t('workspace.stock_table.view_all')}
@@ -683,24 +737,24 @@ export function Workspace() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-border">
-                    <TableHead className="text-xs font-medium text-card-foreground h-9 px-5">
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground h-10 px-5">
                       {t('workspace.stock_table.col_product')}
                     </TableHead>
-                    <TableHead className="text-xs font-medium text-card-foreground h-9">
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground h-10">
                       {t('workspace.stock_table.col_reference')}
                     </TableHead>
-                    <TableHead className="text-xs font-medium text-card-foreground h-9">
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground h-10">
                       {t('workspace.stock_table.col_stock')}
                     </TableHead>
-                    <TableHead className="text-xs font-medium text-card-foreground h-9 hidden md:table-cell">
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground h-10 hidden md:table-cell">
                       {t('workspace.stock_table.col_level')}
                     </TableHead>
                     {/*
                      * RTL Note: `text-end` (logical) aligns to the correct edge
                      * in both LTR and RTL, unlike `text-right` which is physical.
                      */}
-                    <TableHead className="text-xs font-medium text-card-foreground h-9 text-end pe-5">
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground h-10 text-end pe-5">
                       {t('workspace.stock_table.col_status')}
                     </TableHead>
                   </TableRow>
@@ -717,38 +771,38 @@ export function Workspace() {
                     inventoryItems.slice(0, 4).map((item) => {
                       const cfg = stockStyleConfig[item.status];
                       return (
-                        <TableRow key={item.id} className="border-border">
-                          <TableCell className="py-3.5 px-5">
-                            <p className="text-sm font-medium text-card-foreground">{item.name}</p>
+                        <TableRow key={item.id} className="border-border hover:bg-[#F8F8FD] dark:hover:bg-white/5 transition-colors">
+                          <TableCell className="py-4 px-5">
+                            <p className="text-sm font-semibold text-card-foreground">{item.name}</p>
                             <p className="text-xs text-card-foreground/70 mt-0.5" dir="ltr">
                               {item.stockActuel} / {Math.max(item.stockMin * 3, 1)} {t('workspace.stock_table.unit')}
                             </p>
                           </TableCell>
-                          <TableCell className="py-3.5">
+                          <TableCell className="py-4">
                             <span className="text-xs text-card-foreground/70 font-mono" dir="ltr">
                               {item.reference || '—'}
                             </span>
                           </TableCell>
-                          <TableCell className="py-3.5">
+                          <TableCell className="py-4">
                             <div className="flex items-center gap-2" dir="ltr">
                               <span className={cn(
-                                "text-sm font-semibold",
-                                item.status === 'rupture' || item.status === 'critique' ? 'text-red-400' :
-                                item.status === 'faible' ? 'text-amber-400' : 'text-card-foreground'
+                                "text-sm font-bold",
+                                item.status === 'rupture' || item.status === 'critique' ? 'text-red-500' :
+                                item.status === 'faible' ? 'text-amber-500' : 'text-card-foreground'
                               )}>
                                 {item.stockActuel}
                               </span>
                               <span className="text-xs text-card-foreground/70">{item.unite}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="py-3.5 hidden md:table-cell">
+                          <TableCell className="py-4 hidden md:table-cell">
                             <div className="w-28">
                               {/*
                                * RTL Note: Progress bar fill direction.
                                * We keep dir=ltr on this element so the bar always
                                * fills left-to-right visually (conventional for progress).
                                */}
-                              <div className="h-1.5 rounded-full bg-muted dark:bg-white/10 overflow-hidden" dir="ltr">
+                              <div className="h-2 rounded-full bg-[#EEEEF6] dark:bg-white/10 overflow-hidden" dir="ltr">
                                 <div
                                   className={cn("h-full rounded-full transition-all duration-500", cfg.barColor)}
                                   style={{ width: `${item.percentage}%` }}
@@ -756,9 +810,9 @@ export function Workspace() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="py-3.5 text-end pe-5">
+                          <TableCell className="py-4 text-end pe-5">
                             <span className={cn(
-                              "inline-block text-xs font-semibold px-2 py-0.5 rounded-[4px] border",
+                              "inline-block text-xs font-semibold px-2.5 py-1 rounded-full border",
                               cfg.badgeClass
                             )}>
                               {stockStatusLabel(item.status)}
@@ -775,31 +829,31 @@ export function Workspace() {
 
           {/* Summary Stats Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-[8px] bg-card p-4 border border-border flex items-center gap-3">
-              <div className="h-10 w-10 rounded-[8px] bg-violet-500/10 text-violet-400 flex items-center justify-center shrink-0">
+            <div className="card-elevated border-transparent dark:border-border p-4 flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-violet-500/10 text-violet-500 dark:text-violet-400 flex items-center justify-center shrink-0">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('workspace.summary.pending_invoices')}</p>
-                <p className="text-lg font-bold text-card-foreground" dir="ltr">{stats.pending}</p>
+                <p className="text-xl font-bold text-card-foreground" dir="ltr">{stats.pending}</p>
               </div>
             </div>
-            <div className="rounded-[8px] bg-card p-4 border border-border flex items-center gap-3">
-              <div className="h-10 w-10 rounded-[8px] bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+            <div className="card-elevated border-transparent dark:border-border p-4 flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <Users className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('workspace.summary.new_clients')}</p>
-                <p className="text-lg font-bold text-card-foreground" dir="ltr">{newClients}</p>
+                <p className="text-xl font-bold text-card-foreground" dir="ltr">{newClients}</p>
               </div>
             </div>
-            <div className="rounded-[8px] bg-card p-4 border border-border flex items-center gap-3">
-              <div className="h-10 w-10 rounded-[8px] bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+            <div className="card-elevated border-transparent dark:border-border p-4 flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-amber-500/10 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('workspace.summary.stock_alerts')}</p>
-                <p className="text-lg font-bold text-card-foreground" dir="ltr">
+                <p className="text-xl font-bold text-card-foreground" dir="ltr">
                   {inventoryItems.filter(i => i.status === 'critique' || i.status === 'rupture').length}
                 </p>
               </div>
@@ -810,79 +864,10 @@ export function Workspace() {
         {/* ── Right / End Column (5 cols) ──────────────────────────────────── */}
         <div className="lg:col-span-5 space-y-6">
 
-          {/* AI Optimization Card */}
-          <div className="rounded-[8px] bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 p-5 card-glow-active">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-9 w-9 rounded-[8px] bg-emerald-500/10 flex items-center justify-center shrink-0">
-                <Sparkles className="h-4.5 w-4.5 text-emerald-400" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-card-foreground">
-                  {t('workspace.ai.section_title')}
-                </h3>
-                <p className="text-xs text-muted-foreground">{t('workspace.ai.badge')}</p>
-              </div>
-              {/* ms-auto = logical margin-start auto → pushes badge to the end */}
-              <Badge className="ms-auto shrink-0 bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] font-semibold px-2 py-0.5">
-                {activeRecoIndex + 1}/{aiRecommendations.length}
-              </Badge>
-            </div>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeRecoIndex}
-                initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                {(() => {
-                  const reco = aiRecommendations[activeRecoIndex];
-                  const RecoIcon = reco.icon;
-                  return (
-                    <div>
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="h-8 w-8 rounded-[4px] bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <RecoIcon className="h-4 w-4 text-emerald-400" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-card-foreground">{reco.title}</h4>
-                          <p className="text-xs text-muted-foreground leading-relaxed mt-1">{reco.description}</p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 mt-1 btn-glow-primary"
-                        onClick={() => window.location.href = reco.href}
-                      >
-                        {reco.action}
-                        {/* ArrowRight flips automatically in RTL because dir is set on the root */}
-                        <ArrowRight className="h-3 w-3 ms-1.5 rtl:rotate-180" />
-                      </Button>
-                    </div>
-                  );
-                })()}
-              </motion.div>
-            </AnimatePresence>
-
-            <div className="flex gap-1.5 mt-4">
-              {aiRecommendations.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setActiveRecoIndex(idx)}
-                  className={cn(
-                    "h-1.5 rounded-full transition-all duration-300",
-                    idx === activeRecoIndex ? "w-6 bg-emerald-500" : "w-1.5 bg-emerald-800"
-                  )}
-                />
-              ))}
-            </div>
-          </div>
-
           {/* Quick Actions */}
-          <Card className="shadow-none hover:shadow-none rounded-sm">
+          <Card className="card-elevated border-transparent dark:border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold text-card-foreground">
+              <CardTitle className="text-base font-bold text-card-foreground">
                 {t('workspace.quick_actions.section_title')}
               </CardTitle>
             </CardHeader>
@@ -892,24 +877,26 @@ export function Workspace() {
                   key={i}
                   type="button"
                   onClick={() => window.location.href = action.href}
-                  className="flex flex-col items-center justify-center p-4 rounded-sm border border-border bg-card hover:bg-muted/50 transition-colors"
+                  className="quick-tile flex flex-col items-center justify-center p-4"
                 >
-                  <div className={cn("p-2.5 rounded-sm mb-3", action.iconBg)}>
-                    <action.icon className={cn("w-5 h-5", action.iconColor)} />
+                  <div className={cn("p-3 rounded-2xl mb-3", action.iconBg)}>
+                    <action.icon className={cn("w-5 h-5", action.iconColor)} strokeWidth={2} />
                   </div>
-                  <span className="text-xs font-medium text-foreground text-center">{action.label}</span>
+                  <span className="text-xs font-semibold text-foreground text-center">{action.label}</span>
                 </button>
               ))}
             </CardContent>
           </Card>
 
           {/* Expired Section */}
-          <Card className="shadow-none hover:shadow-none rounded-sm">
+          <Card className="card-elevated border-transparent dark:border-border">
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-                <CardTitle className="text-base font-semibold text-card-foreground">Expiré</CardTitle>
-                <Badge className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-[4px] ms-auto">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                </div>
+                <CardTitle className="text-base font-bold text-card-foreground">Expiré</CardTitle>
+                <Badge className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ms-auto min-w-[20px] text-center">
                   {expiredOrdonnances.length + expiredLunettes.length}
                 </Badge>
               </div>
@@ -943,12 +930,14 @@ export function Workspace() {
           </Card>
 
           {/* Due Expired Section */}
-          <Card className="shadow-none hover:shadow-none rounded-sm">
+          <Card className="card-elevated border-transparent dark:border-border">
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-amber-500" />
-                <CardTitle className="text-base font-semibold text-card-foreground">Bientôt expiré</CardTitle>
-                <Badge className="bg-amber-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-[4px] ms-auto">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <Target className="h-4 w-4 text-amber-500" />
+                </div>
+                <CardTitle className="text-base font-bold text-card-foreground">Bientôt expiré</CardTitle>
+                <Badge className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ms-auto min-w-[20px] text-center">
                   {dueExpiredOrdonnances.length + dueExpiredLunettes.length}
                 </Badge>
               </div>
@@ -982,12 +971,14 @@ export function Workspace() {
           </Card>
 
           {/* Price Alerts Section */}
-          <Card className="shadow-none hover:shadow-none rounded-sm">
+          <Card className="card-elevated border-transparent dark:border-border">
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-purple-500" />
-                <CardTitle className="text-base font-semibold text-card-foreground">Alertes de prix</CardTitle>
-                <Badge className="bg-purple-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-[4px] ms-auto">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center shrink-0">
+                  <DollarSign className="h-4 w-4 text-purple-500" />
+                </div>
+                <CardTitle className="text-base font-bold text-card-foreground">Alertes de prix</CardTitle>
+                <Badge className="bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ms-auto min-w-[20px] text-center">
                   {priceAlerts.length}
                 </Badge>
               </div>
@@ -1024,13 +1015,13 @@ export function Workspace() {
           </Card>
 
           {/* Task Manager */}
-          <Card className="shadow-none hover:shadow-none rounded-[8px] overflow-hidden">
+          <Card className="card-elevated border-transparent dark:border-border overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold text-card-foreground">
+                <CardTitle className="text-base font-bold text-card-foreground">
                   {t('workspace.tasks.section_title')}
                 </CardTitle>
-                <Badge className="bg-emerald-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-[4px]">
+                <Badge className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                   {tasks.filter(t => !t.completed).length}
                 </Badge>
               </div>
@@ -1044,12 +1035,12 @@ export function Workspace() {
                   value={newTask}
                   onChange={(e) => setNewTask(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addTask()}
-                  className="focus-visible:ring-emerald-500/30 h-9 text-sm rounded-[4px]"
+                  className="focus-visible:ring-emerald-500/30 h-10 text-sm rounded-xl bg-[#F8F8FD] dark:bg-transparent border-[#EAEAF4]"
                 />
                 <Button
                   size="icon"
                   onClick={addTask}
-                  className="bg-emerald-600 hover:bg-emerald-700 shrink-0 h-9 w-9 rounded-[4px]"
+                  className="bg-emerald-600 hover:bg-emerald-700 shrink-0 h-10 w-10 rounded-xl shadow-[0_6px_16px_-6px_rgba(16,185,129,0.5)]"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -1139,27 +1130,27 @@ export function Workspace() {
             */}
           <div
             className={cn(
-              "rounded-sm border p-4 transition-colors duration-200",
+              "rounded-2xl border p-4 transition-colors duration-200",
               // Flex row — auto-reverses under dir=rtl. justify-between guarantees
               // the icon-group and the switch always sit at OPPOSITE edges of the card.
               "flex flex-row items-center justify-between gap-4",
               notificationsEnabled
-                ? "bg-emerald-500/10 border-emerald-500/20"
-                : "bg-muted border-border",
+                ? "bg-gradient-to-br from-emerald-50 to-teal-50/60 dark:from-emerald-500/10 dark:to-emerald-500/5 border-emerald-200/60 dark:border-emerald-500/20 shadow-[0_8px_24px_-14px_rgba(16,185,129,0.3)]"
+                : "bg-card border-[#EAEAF4] dark:border-border",
             )}
           >
             {/* ── Icon + Text group (logical start edge) ───────────────── */}
             <div className="flex flex-row items-center gap-3 min-w-0 flex-1">
               <div
                 className={cn(
-                  "h-9 w-9 rounded-[8px] flex items-center justify-center shrink-0 transition-colors duration-200",
-                  notificationsEnabled ? "bg-emerald-500/10" : "bg-muted",
+                  "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors duration-200",
+                  notificationsEnabled ? "bg-emerald-500/15 dark:bg-emerald-500/10" : "bg-muted",
                 )}
               >
                 <Bell
                   className={cn(
-                    "h-4.5 w-4.5 transition-colors duration-200",
-                    notificationsEnabled ? "text-emerald-400" : "text-muted-foreground",
+                    "h-5 w-5 transition-colors duration-200",
+                    notificationsEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
                   )}
                 />
               </div>

@@ -84,6 +84,28 @@
         "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec"
       }
     },
+    "category_chart": {
+      "title": "Stock Analysis",
+      "subtitle": "Inventory overview",
+      "by_category_title": "Stock by Category",
+      "by_health_title": "Stock Health",
+      "center_label": "Total Stock",
+      "center_label_products": "Products",
+      "uncategorized": "Uncategorized",
+      "empty": "No products in stock",
+      "health_rupture": "Out of stock",
+      "health_critique": "Critical",
+      "health_faible": "Low",
+      "health_sain": "Healthy"
+    },
+    "coming_up": {
+      "title": "Coming Up",
+      "subtitle": "Upcoming appointments",
+      "none": "No upcoming appointments",
+      "today": "Today",
+      "appointments_one": "{{count}} appointment",
+      "appointments_other": "{{count}} appointments"
+    },
     "recent_invoices": {
       "title": "Recent Invoices",
       "subtitle": "Latest transactions",
@@ -108,6 +130,8 @@
       "product_other": "products",
       "ref_label": "Ref:",
       "low_stock": "Low stock",
+      "min_label": "Min",
+      "items_count": "{{count}} items",
       "optimal_title": "Stock optimal",
       "optimal_subtitle": "All your products are well-stocked"
     },

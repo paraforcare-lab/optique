@@ -3,20 +3,21 @@ import { Link } from 'react-router-dom'
 import { formatCurrencyLocale, cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  PieChart as RePieChart, Pie, Cell, Tooltip,
   ResponsiveContainer,
 } from 'recharts'
 import {
   DollarSign, CreditCard, Activity, FileText, Users, Package,
-  TrendingUp, ShieldCheck, ChevronRight, Receipt, Building2,
+  ShieldCheck, ChevronRight, ChevronLeft, Receipt, Building2,
   HeartPulse, ClipboardList, Plus, ShoppingCart, AlertTriangle,
-  Pill, PieChart,
+  PieChart, CalendarDays,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { KPICard } from '@/components/ui/kpi-card'
+import { ComingUpCalendar } from '@/components/dashboard/ComingUpCalendar'
 import { useTranslation } from 'react-i18next'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,6 +38,9 @@ interface Stats {
   totalCOGS: number
   stockValueHT: number
   monthlyData: Array<{ name: string; revenue: number; expenses: number }>
+  stockByCategory: Array<{ name: string; value: number }>
+  stockByHealth: Array<{ key: string; name: string; value: number }>
+  upcomingRdvs: Array<{ id: number; date_rdv: string; heure_rdv: string; client_nom: string; statut: string }>
   lowStockProduits: any[]
   recentFactures: any[]
   bonsCommandeCount: number
@@ -70,6 +74,9 @@ export function Dashboard() {
 
   const [stats, setStats]     = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  // Pagination for the upcoming-appointments list (UI only).
+  const [rdvPage, setRdvPage] = useState(0)
+  const RDV_PER_PAGE = 4
 
   // Locale-aware currency formatter (memoised to the current language)
   const fmt = (n: number | null | undefined) => formatCurrencyLocale(n, lang)
@@ -85,8 +92,9 @@ export function Dashboard() {
       try {
         const now          = new Date()
         const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString()
+        const todayStr     = now.toISOString().split('T')[0]
 
-        const [factRes, vpRes, depRes, prodRes, cliRes, fourRes, recentRes, bcRes] =
+        const [factRes, vpRes, depRes, prodRes, cliRes, fourRes, recentRes, bcRes, rdvRes] =
           await Promise.all([
             supabase.from('factures').select('*').eq('user_id', user.id).gte('date_emission', sixMonthsAgo),
             supabase.from('ventes_passagers').select('*').eq('user_id', user.id).gte('date', sixMonthsAgo),
@@ -96,6 +104,7 @@ export function Dashboard() {
             supabase.from('fournisseurs').select('*').eq('user_id', user.id),
             supabase.from('factures').select('*, clients(nom)').eq('user_id', user.id).order('date_emission', { ascending: false }).limit(5),
             supabase.from('bons_commande').select('*').eq('user_id', user.id),
+            supabase.from('rendez_vous').select('*, clients(nom)').eq('user_id', user.id).gte('date_rdv', todayStr).order('date_rdv', { ascending: true }),
           ])
 
         const factures         = factRes.data  ?? []
@@ -106,6 +115,7 @@ export function Dashboard() {
         const fournisseurs     = fourRes.data  ?? []
         const recentFacturesRaw = recentRes.data ?? []
         const bonsCommande     = bcRes.data    ?? []
+        const rdvsRaw          = rdvRes.data   ?? []
 
         const allFactures   = [...factures, ...ventesPassagers]
         const validFact     = [
@@ -173,6 +183,49 @@ export function Dashboard() {
           return s + (Number(p.stock_actuel || 0) * Number(p.prix_achat_ht || 0))
         }, 0)
 
+        // ── Stock value broken down by product category (for the donut chart).
+        // Purely derived from the existing `produits` dataset — no extra fetch.
+        const categoryMap = new Map<string, number>()
+        for (const p of produits as any[]) {
+          const cat = (p.categorie && String(p.categorie).trim())
+            ? String(p.categorie).trim()
+            : t('dashboard.category_chart.uncategorized')
+          const lineValue = Number(p.stock_actuel || 0) * Number(p.prix_achat_ht || 0)
+          if (lineValue <= 0) continue
+          categoryMap.set(cat, (categoryMap.get(cat) || 0) + lineValue)
+        }
+        const stockByCategory = Array.from(categoryMap.entries())
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+
+        // ── Products by stock-health bucket (important optique KPI: which items
+        // need restocking). Derived from the existing `produits` dataset.
+        const healthBuckets = { rupture: 0, critique: 0, faible: 0, sain: 0 }
+        for (const p of produits as any[]) {
+          const actuel = Number(p.stock_actuel || 0)
+          const min    = Number(p.stock_min || 0)
+          if (actuel <= 0)               healthBuckets.rupture++
+          else if (actuel <= min)        healthBuckets.critique++
+          else if (actuel <= min * 1.5)  healthBuckets.faible++
+          else                           healthBuckets.sain++
+        }
+        const stockByHealth = (['rupture', 'critique', 'faible', 'sain'] as const)
+          .map((key) => ({
+            key,
+            name: t(`dashboard.category_chart.health_${key}`),
+            value: healthBuckets[key],
+          }))
+          .filter((b) => b.value > 0)
+
+        // ── Upcoming appointments (already filtered to today+ and sorted asc).
+        const upcomingRdvs = (rdvsRaw as any[]).map((r) => ({
+          id: r.id,
+          date_rdv: r.date_rdv,
+          heure_rdv: r.heure_rdv,
+          client_nom: r.clients?.nom ?? '',
+          statut: r.statut,
+        }))
+
         setStats({
           clientsCount:      clients.length,
           facturesCount:     payeesFact.length + resteAPayerFact.length + brouillonFact.length,
@@ -189,6 +242,9 @@ export function Dashboard() {
           totalCOGS,
           stockValueHT,
           monthlyData,
+          stockByCategory,
+          stockByHealth,
+          upcomingRdvs,
           bonsCommandeCount: bonsCommande.filter((b: any) =>
             ['livré', 'livrée'].includes(b.statut),
           ).length,
@@ -244,28 +300,83 @@ export function Dashboard() {
     { label: td('quick_actions.add_client'),  icon: Users,        bg: 'bg-amber-500/10',    color: 'text-amber-400',  link: '/clients'           },
   ]
 
-  // ─── Chart custom tooltip ────────────────────────────────────────────────
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  // ─── Category donut palette (vibrant, app-tuned) ─────────────────────────
+  const CATEGORY_COLORS = [
+    '#6D5BF6', // indigo (brand)
+    '#8B7CF8',
+    '#A78BFA',
+    '#3B82F6',
+    '#06B6D4',
+    '#10B981',
+    '#34D399',
+    '#F59E0B',
+    '#F472B6',
+    '#EF4444',
+    '#F97316',
+    '#A3E635',
+  ]
+
+  const categoryData = stats?.stockByCategory ?? []
+  const categoryTotal = categoryData.reduce((s, c) => s + c.value, 0)
+
+  // ─── Stock-health palette (by severity) ──────────────────────────────────
+  const HEALTH_COLORS: Record<string, string> = {
+    rupture:  '#EF4444', // red
+    critique: '#F97316', // orange
+    faible:   '#F59E0B', // amber
+    sain:     '#6D5BF6', // indigo (brand)
+  }
+  const healthData = stats?.stockByHealth ?? []
+  const healthTotal = healthData.reduce((s, h) => s + h.value, 0)
+
+  // ─── Upcoming appointments pagination (UI only) ──────────────────────────
+  const allRdvs = stats?.upcomingRdvs ?? []
+  const rdvPageCount = Math.max(1, Math.ceil(allRdvs.length / RDV_PER_PAGE))
+  const safeRdvPage = Math.min(rdvPage, rdvPageCount - 1)
+  const pagedRdvs = allRdvs.slice(safeRdvPage * RDV_PER_PAGE, safeRdvPage * RDV_PER_PAGE + RDV_PER_PAGE)
+
+  // ─── Donut tooltip (category — currency + share) ──────────────────────────
+  const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null
+    const item = payload[0]
+    const pct = categoryTotal > 0 ? Math.round((item.value / categoryTotal) * 100) : 0
     return (
-      // Keep tooltip contents dir=ltr so numbers always read correctly
       <div
-        className="rounded-[4px] border p-3 text-xs"
+        className="rounded-[10px] border px-4 py-3 text-xs shadow-[0_8px_24px_-10px_rgba(28,25,60,0.25)]"
         style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
         dir="ltr"
       >
-        <p className="font-semibold mb-1">{label}</p>
-        {payload.map((entry: any, i: number) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: entry.color }} />
-            <span className="text-muted-foreground">
-              {entry.dataKey === 'revenue'
-                ? td('chart.tooltip_revenue')
-                : td('chart.tooltip_expenses')}:
-            </span>
-            <span className="font-semibold">{fmt(entry.value)}</span>
-          </div>
-        ))}
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: item.payload.fill }} />
+          <span className="font-semibold text-foreground">{item.name}</span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <span className="font-bold text-foreground">{fmt(item.value)}</span>
+          <span className="text-muted-foreground">({pct}%)</span>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Donut tooltip (health — product count + share) ───────────────────────
+  const HealthTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null
+    const item = payload[0]
+    const pct = healthTotal > 0 ? Math.round((item.value / healthTotal) * 100) : 0
+    return (
+      <div
+        className="rounded-[10px] border px-4 py-3 text-xs shadow-[0_8px_24px_-10px_rgba(28,25,60,0.25)]"
+        style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+        dir="ltr"
+      >
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: item.payload.fill }} />
+          <span className="font-semibold text-foreground">{item.name}</span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <span className="font-bold text-foreground">{item.value}</span>
+          <span className="text-muted-foreground">({pct}%)</span>
+        </div>
       </div>
     )
   }
@@ -313,6 +424,7 @@ export function Dashboard() {
           subtitle={td('kpi.revenue.subtitle')}
           icon={DollarSign}
           iconContainerClass="dark:bg-emerald-500/10 dark:border dark:border-emerald-500/20 dark:text-emerald-400"
+          highlighted
         />
         <KPICard
           title={td('kpi.receivables.title')}
@@ -384,107 +496,158 @@ export function Dashboard() {
        */}
       <div className="grid gap-6 lg:grid-cols-7">
 
-        {/* Cash-flow chart */}
-        <Card className="lg:col-span-4 shadow-none rounded-[6px]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 gap-4 flex-wrap">
-            <div className="space-y-1 min-w-0">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary shrink-0" />
-                {td('chart.title')}
+        {/* Stock analysis — two small side-by-side donut cards */}
+        <div className="lg:col-span-4 grid gap-6 sm:grid-cols-2">
+
+          {/* Card A: Stock value by category */}
+          <Card className="card-elevated border-transparent dark:border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold flex items-center gap-2.5">
+                <span className="h-8 w-8 rounded-xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
+                  <PieChart className="h-4 w-4 text-[#6D5BF6] dark:text-[#A78BFA]" />
+                </span>
+                {td('category_chart.by_category_title')}
               </CardTitle>
-              <CardDescription>{td('chart.subtitle')}</CardDescription>
-            </div>
+            </CardHeader>
+            <CardContent className="pt-3">
+              {categoryData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[230px] text-center">
+                  <div className="bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 rounded-2xl p-3 mb-3">
+                    <Package className="h-7 w-7 text-[#6D5BF6]/60 dark:text-[#A78BFA]/60" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{td('category_chart.empty')}</p>
+                </div>
+              ) : (
+                <>
+                  <div className="relative h-[170px] w-full" dir="ltr">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RePieChart>
+                        <Pie
+                          data={categoryData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={54}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          cornerRadius={6}
+                          stroke="var(--card)"
+                          strokeWidth={3}
+                        >
+                          {categoryData.map((_, i) => (
+                            <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </RePieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                        {td('category_chart.center_label')}
+                      </span>
+                      <span className="text-sm font-bold text-foreground mt-0.5" dir="ltr">
+                        {fmt(categoryTotal)}
+                      </span>
+                    </div>
+                  </div>
 
-            {/* Legend — ms-auto pushes it to the logical end */}
-            <div className="flex items-center gap-4 text-xs ms-auto shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-gradient-to-r from-primary to-primary/60 shrink-0" />
-                <span className="text-muted-foreground font-medium">
-                  {td('chart.legend_revenue')}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-gradient-to-r from-red-400 to-red-500 shrink-0" />
-                <span className="text-muted-foreground font-medium">
-                  {td('chart.legend_expenses')}
-                </span>
-              </div>
-            </div>
-          </CardHeader>
+                  <div className="mt-4 space-y-2">
+                    {categoryData.slice(0, 4).map((cat, i) => {
+                      const pct = categoryTotal > 0 ? Math.round((cat.value / categoryTotal) * 100) : 0
+                      return (
+                        <div key={cat.name} className="flex items-center gap-2.5 min-w-0">
+                          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
+                          <span className="text-sm text-foreground truncate flex-1 min-w-0 text-start">{cat.name}</span>
+                          <span className="text-sm font-bold text-muted-foreground shrink-0" dir="ltr">{pct}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-          <CardContent className="pt-4">
-            {/*
-             * RTL + Recharts note:
-             * Recharts renders a plain SVG and is NOT direction-aware. We wrap
-             * the chart in a `dir="ltr"` container so:
-             *   1. The X-axis reads left → right (chronological order preserved).
-             *   2. The Y-axis stays on the LEFT side of the chart.
-             *   3. SVG `x1/x2` gradient coordinates are not inverted.
-             * The surrounding UI text (title, legend) inherits RTL from the
-             * parent dir=rtl and mirrors correctly on its own.
-             */}
-            <div className="h-[320px] w-full" dir="ltr">
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart
-                  data={stats?.monthlyData ?? []}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="oklch(0.52 0.15 195)" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="oklch(0.52 0.15 195)" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="oklch(0.55 0.2 25)" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="oklch(0.55 0.2 25)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: 'oklch(0.5 0.03 250)' }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: 'oklch(0.5 0.03 250)' }}
-                    // Keep Y-axis on the left side regardless of page direction
-                    orientation="left"
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    name={td('chart.tooltip_revenue')}
-                    stroke="oklch(0.52 0.15 195)"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="expenses"
-                    name={td('chart.tooltip_expenses')}
-                    stroke="oklch(0.55 0.2 25)"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorExpenses)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Card B: Products by stock health */}
+          <Card className="card-elevated border-transparent dark:border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold flex items-center gap-2.5">
+                <span className="h-8 w-8 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <Activity className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </span>
+                {td('category_chart.by_health_title')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-3">
+              {healthData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[230px] text-center">
+                  <div className="bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 rounded-2xl p-3 mb-3">
+                    <Package className="h-7 w-7 text-[#6D5BF6]/60 dark:text-[#A78BFA]/60" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{td('category_chart.empty')}</p>
+                </div>
+              ) : (
+                <>
+                  <div className="relative h-[170px] w-full" dir="ltr">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RePieChart>
+                        <Pie
+                          data={healthData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={54}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          cornerRadius={6}
+                          stroke="var(--card)"
+                          strokeWidth={3}
+                        >
+                          {healthData.map((h, i) => (
+                            <Cell key={i} fill={HEALTH_COLORS[h.key] ?? CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<HealthTooltip />} />
+                      </RePieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                        {td('category_chart.center_label_products')}
+                      </span>
+                      <span className="text-lg font-bold text-foreground mt-0.5" dir="ltr">
+                        {healthTotal}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    {healthData.map((h) => {
+                      const pct = healthTotal > 0 ? Math.round((h.value / healthTotal) * 100) : 0
+                      return (
+                        <div key={h.key} className="flex items-center gap-2.5 min-w-0">
+                          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: HEALTH_COLORS[h.key] }} />
+                          <span className="text-sm text-foreground truncate flex-1 min-w-0 text-start">{h.name}</span>
+                          <span className="text-sm font-bold text-muted-foreground shrink-0" dir="ltr">{pct}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Recent Invoices */}
-        <Card className="lg:col-span-3 shadow-none rounded-[6px]">
+        <Card className="lg:col-span-3 card-elevated border-transparent dark:border-border">
           <CardHeader className="flex flex-row items-center justify-between gap-2">
             <div className="space-y-1 min-w-0">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-primary shrink-0" />
+              <CardTitle className="text-lg font-bold flex items-center gap-2.5">
+                <span className="h-9 w-9 rounded-2xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
+                  <Receipt className="h-[18px] w-[18px] text-[#6D5BF6] dark:text-[#A78BFA]" />
+                </span>
                 {td('recent_invoices.title')}
               </CardTitle>
               <CardDescription>{td('recent_invoices.subtitle')}</CardDescription>
@@ -496,7 +659,7 @@ export function Dashboard() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary font-semibold hover:bg-primary/5 ms-auto shrink-0"
+              className="text-[#6D5BF6] dark:text-[#A78BFA] font-semibold hover:bg-[#EEEDFB] dark:hover:bg-[#6D5BF6]/10 rounded-lg ms-auto shrink-0"
             >
               <Link to="/factures" className="flex items-center gap-1">
                 {td('recent_invoices.view_all')}
@@ -506,21 +669,21 @@ export function Dashboard() {
           </CardHeader>
 
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {stats?.recentFactures?.length ? (
                 stats.recentFactures.map((facture) => (
                   <div
                     key={facture.id}
-                    className="flex items-center gap-4 p-3 rounded-[6px] hover:bg-muted/50 transition-all duration-200 group cursor-pointer"
+                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-[#F8F8FD] dark:hover:bg-white/5 transition-all duration-200 group cursor-pointer"
                   >
                     {/* Status icon */}
                     <div className={cn(
-                      'h-11 w-11 rounded-[6px] flex items-center justify-center shrink-0',
+                      'h-11 w-11 rounded-2xl flex items-center justify-center shrink-0',
                       facture.statut === 'payée'
-                        ? 'bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 text-emerald-400'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                         : facture.statut === 'reste_a_payer'
-                          ? 'bg-gradient-to-br from-blue-500/10 to-blue-500/5 text-blue-400'
-                          : 'bg-gradient-to-br from-amber-500/10 to-amber-500/5 text-amber-400',
+                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
                     )}>
                       <FileText className="h-5 w-5" />
                     </div>
@@ -567,13 +730,13 @@ export function Dashboard() {
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-[8px] p-4 mb-3">
-                    <FileText className="h-8 w-8 text-primary/50" />
+                  <div className="bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 rounded-2xl p-4 mb-3">
+                    <FileText className="h-8 w-8 text-[#6D5BF6]/60 dark:text-[#A78BFA]/60" />
                   </div>
                   <p className="text-sm text-muted-foreground">{td('recent_invoices.empty_title')}</p>
                   <Link
                     to="/factures"
-                    className="mt-2 text-xs text-primary font-semibold hover:underline"
+                    className="mt-2 text-xs text-[#6D5BF6] dark:text-[#A78BFA] font-semibold hover:underline"
                   >
                     {td('recent_invoices.empty_cta')}
                   </Link>
@@ -584,32 +747,145 @@ export function Dashboard() {
         </Card>
       </div>
 
+      {/* ── Coming Up: appointments calendar + upcoming list ──────────────── */}
+      <div className="grid gap-6 lg:grid-cols-7">
+        {/* Calendar */}
+        <Card className="lg:col-span-3 card-elevated border-transparent dark:border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold flex items-center gap-2.5">
+              <span className="h-9 w-9 rounded-2xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
+                <CalendarDays className="h-[18px] w-[18px] text-[#6D5BF6] dark:text-[#A78BFA]" />
+              </span>
+              {td('coming_up.title')}
+            </CardTitle>
+            <CardDescription>{td('coming_up.subtitle')}</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ComingUpCalendar rdvs={stats?.upcomingRdvs ?? []} />
+          </CardContent>
+        </Card>
+
+        {/* Upcoming appointments list */}
+        <Card className="lg:col-span-4 card-elevated border-transparent dark:border-border">
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <div className="space-y-1 min-w-0">
+              <CardTitle className="text-lg font-bold flex items-center gap-2.5">
+                <span className="h-9 w-9 rounded-2xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
+                  <Receipt className="h-[18px] w-[18px] text-[#6D5BF6] dark:text-[#A78BFA]" />
+                </span>
+                {td('coming_up.subtitle')}
+              </CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[#6D5BF6] dark:text-[#A78BFA] font-semibold hover:bg-[#EEEDFB] dark:hover:bg-[#6D5BF6]/10 rounded-lg ms-auto shrink-0"
+            >
+              <Link to="/rendez-vous" className="flex items-center gap-1">
+                {td('recent_invoices.view_all')}
+                <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {allRdvs.length ? (
+                pagedRdvs.map((rdv) => (
+                  <div
+                    key={rdv.id}
+                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-[#F8F8FD] dark:hover:bg-white/5 transition-colors duration-200"
+                  >
+                    {/* Date chip */}
+                    <div className="h-11 w-11 rounded-2xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex flex-col items-center justify-center shrink-0 leading-none" dir="ltr">
+                      <span className="text-[15px] font-black text-[#4A3FCF] dark:text-[#A78BFA]">
+                        {new Date(rdv.date_rdv).getDate()}
+                      </span>
+                      <span className="text-[9px] font-bold text-[#6D5BF6]/70 dark:text-[#A78BFA]/70 uppercase">
+                        {new Date(rdv.date_rdv).toLocaleDateString(dateFmt, { month: 'short' })}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate text-foreground text-start">
+                        {rdv.client_nom || td('recent_invoices.walk_in_client')}
+                      </p>
+                      <p className="text-xs text-muted-foreground" dir="ltr">
+                        {new Date(rdv.date_rdv).toLocaleDateString(dateFmt)}
+                        {rdv.heure_rdv ? ` • ${rdv.heure_rdv}` : ''}
+                      </p>
+                    </div>
+
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] h-5 px-2 font-bold border-0 bg-[#6D5BF6]/10 text-[#4A3FCF] dark:text-[#A78BFA] shrink-0"
+                    >
+                      {t(`rendez_vous.statut_${rdv.statut}`)}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 rounded-2xl p-4 mb-3">
+                    <CalendarDays className="h-8 w-8 text-[#6D5BF6]/60 dark:text-[#A78BFA]/60" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{td('coming_up.none')}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Pagination (rows) */}
+            {allRdvs.length > RDV_PER_PAGE && (
+              <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-[#EAEAF4] dark:border-white/10">
+                <button
+                  onClick={() => setRdvPage((p) => Math.max(0, p - 1))}
+                  disabled={safeRdvPage === 0}
+                  aria-label="Previous"
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-[#F2F2FA] dark:hover:bg-white/5 hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+                </button>
+                <span className="text-xs font-medium text-muted-foreground" dir="ltr">
+                  {safeRdvPage + 1} / {rdvPageCount}
+                </span>
+                <button
+                  onClick={() => setRdvPage((p) => Math.min(rdvPageCount - 1, p + 1))}
+                  disabled={safeRdvPage >= rdvPageCount - 1}
+                  aria-label="Next"
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-[#F2F2FA] dark:hover:bg-white/5 hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+                </button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* ── Second row: Quick Actions + Stock Alerts ──────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
 
         {/* Quick Actions */}
-        <Card className="shadow-none rounded-[6px]">
+        <Card className="card-elevated border-transparent dark:border-border">
           <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg font-bold flex items-center gap-2.5">
+              <span className="h-9 w-9 rounded-2xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
+                <Plus className="h-[18px] w-[18px] text-[#6D5BF6] dark:text-[#A78BFA]" />
+              </span>
               {td('quick_actions.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {quickActions.map((action) => (
                 <Link
                   key={action.link}
                   to={action.link}
-                  className={cn(
-                    'flex flex-col items-center gap-3 p-4 rounded-[8px] border border-transparent',
-                    'hover:border-border hover:bg-muted/30 transition-all duration-200 group',
-                  )}
+                  className="quick-tile flex flex-col items-center gap-3 p-4 group"
                 >
-                  <div className={cn('p-3 rounded-[6px]', action.bg)}>
-                    <action.icon className={cn('h-6 w-6', action.color)} />
+                  <div className={cn('p-3 rounded-2xl', action.bg)}>
+                    <action.icon className={cn('h-6 w-6', action.color)} strokeWidth={2} />
                   </div>
-                  <span className="text-xs font-bold text-muted-foreground text-center group-hover:text-foreground transition-colors">
+                  <span className="text-xs font-semibold text-muted-foreground text-center group-hover:text-foreground transition-colors">
                     {action.label}
                   </span>
                 </Link>
@@ -619,60 +895,77 @@ export function Dashboard() {
         </Card>
 
         {/* Stock Alerts */}
-        <Card className="shadow-none rounded-sm">
+        <Card className="card-elevated border-transparent dark:border-border !rounded-[10px]">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-lg font-bold flex items-center gap-2.5">
+              <span className="h-9 w-9 rounded-lg bg-red-100 dark:bg-red-500/10 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-[18px] w-[18px] text-red-600 dark:text-red-400" />
+              </span>
               {td('stock_alerts.title')}
             </CardTitle>
             {!!stats?.lowStockProduits?.length && (
               <Badge
                 variant="destructive"
-                className="dark:bg-amber-500/20 dark:text-amber-500 dark:border dark:border-amber-500/30 bg-amber-500 text-white"
+                className="rounded-md border-0 font-bold bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400"
               >
-                {stats.lowStockProduits.length}{' '}
-                {stats.lowStockProduits.length > 1
-                  ? td('stock_alerts.product_other')
-                  : td('stock_alerts.product_one')}
+                {t('dashboard.stock_alerts.items_count', { count: stats.lowStockProduits.length })}
               </Badge>
             )}
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {stats?.lowStockProduits?.length ? (
-                stats.lowStockProduits.slice(0, 4).map((produit) => (
-                  <div
-                    key={produit.id}
-                    className="flex items-center justify-between p-3 rounded-sm dark:bg-white/5 dark:border-white/10 bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="dark:bg-amber-500/10 bg-card p-2 rounded-[4px] border dark:border-0 border-amber-500/20 shrink-0">
-                        <Pill className="h-4 w-4 dark:text-amber-300 text-amber-400" />
+                stats.lowStockProduits.slice(0, 4).map((produit) => {
+                  const stockMin = Number(produit.stock_min) || 0
+                  const stockActuel = Number(produit.stock_actuel) || 0
+                  // Fill ratio vs. the minimum threshold (visual only).
+                  const pct = stockMin > 0
+                    ? Math.max(6, Math.min(100, Math.round((stockActuel / stockMin) * 100)))
+                    : 6
+                  return (
+                    <div
+                      key={produit.id}
+                      className="rounded-lg bg-card dark:bg-card border border-red-200/70 dark:border-red-500/20 p-4 transition-colors duration-200 hover:border-red-400/60"
+                    >
+                      {/* Top row: name + stock count */}
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-bold text-foreground text-start truncate">
+                          {produit?.nom ?? '—'}
+                        </p>
+                        <span
+                          className="text-lg font-black shrink-0 text-red-500 dark:text-red-400"
+                          dir="ltr"
+                        >
+                          {produit.stock_actuel}
+                        </span>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{produit?.nom ?? '—'}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider" dir="ltr">
-                          {td('stock_alerts.ref_label')} {produit.reference}
+
+                      {/* Second row: category + Min */}
+                      <div className="flex items-center justify-between gap-3 mt-0.5">
+                        <p className="text-xs text-muted-foreground truncate text-start">
+                          {produit.categorie || td('stock_alerts.low_stock')}
+                        </p>
+                        <p className="text-[11px] font-medium text-red-600 dark:text-red-400 shrink-0 bg-red-100 dark:bg-red-500/10 px-2 py-0.5 rounded-md" dir="ltr">
+                          {td('stock_alerts.min_label')}: {produit.stock_min}
                         </p>
                       </div>
+
+                      {/* Gradient progress bar (always fills left→right) */}
+                      <div className="mt-3 h-2 w-full rounded-md bg-red-100/80 dark:bg-white/10 overflow-hidden" dir="ltr">
+                        <div
+                          className="h-full rounded-md bg-gradient-to-r from-red-500 to-red-400 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
                     </div>
-                    {/* Stock count — always LTR for unit + number */}
-                    <div className="text-end" dir="ltr">
-                      <p className="text-sm font-black text-amber-400">
-                        {produit.stock_actuel} {produit.unite}
-                      </p>
-                      <p className="text-[10px] text-amber-400/60 font-semibold uppercase">
-                        {td('stock_alerts.low_stock')}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 rounded-[8px] p-4 mb-3">
-                    <ShieldCheck className="h-8 w-8 text-emerald-400" />
+                  <div className="bg-emerald-500/10 rounded-lg p-4 mb-3">
+                    <ShieldCheck className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <p className="text-sm font-semibold text-emerald-400">{td('stock_alerts.optimal_title')}</p>
+                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{td('stock_alerts.optimal_title')}</p>
                   <p className="text-xs text-muted-foreground">{td('stock_alerts.optimal_subtitle')}</p>
                 </div>
               )}
@@ -682,11 +975,11 @@ export function Dashboard() {
       </div>
 
       {/* ── TVA Summary ───────────────────────────────────────────────────── */}
-      <Card className="shadow-none rounded-[6px]">
+      <Card className="card-elevated border-transparent dark:border-border p-0 overflow-hidden !rounded-[10px]">
         {/* Card header banner */}
-        <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 px-6 py-4 border-b border-primary/10 flex items-center gap-3">
-          <div className="p-2 rounded-[6px] bg-primary/10 shrink-0">
-            <PieChart className="h-5 w-5 text-primary" />
+        <div className="bg-gradient-to-r from-[#EEEDFB] via-[#F2F2FA] to-[#EEEDFB] dark:from-[#6D5BF6]/10 dark:via-[#6D5BF6]/5 dark:to-[#6D5BF6]/10 px-6 py-4 border-b border-[#EAEAF4] dark:border-white/10 flex items-center gap-3">
+          <div className="p-2.5 rounded-lg bg-[#6D5BF6]/15 dark:bg-[#6D5BF6]/10 shrink-0">
+            <PieChart className="h-5 w-5 text-[#6D5BF6] dark:text-[#A78BFA]" />
           </div>
           <div>
             <h3 className="font-bold text-foreground">{td('tva.section_title')}</h3>
@@ -694,55 +987,55 @@ export function Dashboard() {
           </div>
         </div>
 
-        <CardContent className="p-6">
-          <div className="grid gap-8 md:grid-cols-3">
+        <CardContent className="p-5">
+          <div className="grid gap-4 md:grid-cols-3">
 
             {/* TVA Collectée */}
-            <div className="space-y-3">
+            <div className="rounded-lg border border-[#EAEAF4] dark:border-white/10 bg-card p-4 space-y-3 transition-colors duration-200 hover:border-[#6D5BF6]/35">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest text-start">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-start">
                   {td('tva.collected')}
                 </p>
-                <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                <div className="h-2.5 w-2.5 rounded-full bg-[#6D5BF6] shrink-0 ring-4 ring-[#6D5BF6]/15" />
               </div>
               <p className="text-2xl font-black text-foreground" dir="ltr">
                 {Number(stats?.totalTvaCollectee ?? 0).toFixed(2)}{' '}
                 <span className="text-sm font-medium text-muted-foreground">{td('tva.currency_short')}</span>
               </p>
               {/* Progress bar always reads left→right */}
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden" dir="ltr">
-                <div className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full w-[70%]" />
+              <div className="h-2 w-full bg-[#EEEEF6] dark:bg-white/10 rounded-md overflow-hidden" dir="ltr">
+                <div className="h-full bg-gradient-to-r from-[#6D5BF6] to-[#A78BFA] rounded-md w-[70%]" />
               </div>
             </div>
 
             {/* TVA Déductible */}
-            <div className="space-y-3">
+            <div className="rounded-lg border border-[#EAEAF4] dark:border-white/10 bg-card p-4 space-y-3 transition-colors duration-200 hover:border-[#8B7CF8]/35">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest text-start">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-start">
                   {td('tva.deductible')}
                 </p>
-                <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                <div className="h-2.5 w-2.5 rounded-full bg-[#A78BFA] shrink-0 ring-4 ring-[#A78BFA]/15" />
               </div>
               <p className="text-2xl font-black text-foreground" dir="ltr">
                 {Number(stats?.totalTvaDeductible ?? 0).toFixed(2)}{' '}
                 <span className="text-sm font-medium text-muted-foreground">{td('tva.currency_short')}</span>
               </p>
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden" dir="ltr">
-                <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full w-[45%]" />
+              <div className="h-2 w-full bg-[#EEEEF6] dark:bg-white/10 rounded-md overflow-hidden" dir="ltr">
+                <div className="h-full bg-gradient-to-r from-[#A78BFA] to-[#C4B5FD] rounded-md w-[45%]" />
               </div>
             </div>
 
             {/* Solde TVA */}
-            <div className="space-y-3">
+            <div className="rounded-lg border border-[#EAEAF4] dark:border-white/10 bg-card p-4 space-y-3 transition-colors duration-200 hover:border-[#6D5BF6]/35">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest text-start">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-start">
                   {td('tva.balance')}
                 </p>
                 <Badge className={cn(
-                  'font-bold shrink-0',
+                  'font-bold shrink-0 rounded-md border-0',
                   (stats?.tvaNet ?? 0) > 0
-                    ? 'bg-red-500/10 text-red-400 hover:bg-red-500/10'
-                    : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/10',
+                    ? 'bg-red-500/10 text-red-500 hover:bg-red-500/10 dark:text-red-400'
+                    : 'bg-[#6D5BF6]/10 text-[#4A3FCF] hover:bg-[#6D5BF6]/10 dark:text-[#A78BFA]',
                 )}>
                   {(stats?.tvaNet ?? 0) > 0 ? td('tva.to_pay') : td('tva.credit')}
                 </Badge>
@@ -751,16 +1044,16 @@ export function Dashboard() {
                 {Number(stats?.tvaNet ?? 0).toFixed(2)}{' '}
                 <span className="text-sm font-medium text-muted-foreground">{td('tva.currency_short')}</span>
               </p>
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden" dir="ltr">
+              <div className="h-2 w-full bg-[#EEEEF6] dark:bg-white/10 rounded-md overflow-hidden" dir="ltr">
                 {stats && Number(stats.totalTvaCollectee) > 0 && (
                   <div
-                    className="h-full rounded-full transition-all"
+                    className="h-full rounded-md transition-all"
                     style={{
                       width: `${Math.min(
                         (Math.abs(Number(stats.tvaNet)) / Number(stats.totalTvaCollectee)) * 100,
                         100,
                       )}%`,
-                      backgroundColor: (stats?.tvaNet ?? 0) > 0 ? '#267E54' : '#0ea5e9',
+                      backgroundColor: (stats?.tvaNet ?? 0) > 0 ? '#6D5BF6' : '#3B82F6',
                     }}
                   />
                 )}

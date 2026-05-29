@@ -87,7 +87,7 @@ export function DashboardLayout() {
   }, [hasHighPriority, unreadCount]);
 
   return (
-    <div dir={currentLang === 'ar' ? 'rtl' : 'ltr'} className="flex h-screen overflow-hidden bg-white dark:bg-[#0F172A]">
+    <div dir={currentLang === 'ar' ? 'rtl' : 'ltr'} className="h-screen overflow-hidden bg-[#F4F4FB] dark:bg-[#0F172A]">
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -95,55 +95,65 @@ export function DashboardLayout() {
         onMobileClose={() => setIsMobileOpen(false)}
       />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      {/*
+       * Bulletproof hard-offset layout:
+       * The sidebar is `fixed` (out of flow). The main content wrapper is pushed
+       * right by exactly the sidebar's width on desktop (lg:ps-64 expanded /
+       * lg:ps-20 collapsed). `ps-*` (padding-inline-start) keeps it RTL-correct.
+       * Overlap is therefore physically impossible.
+       */}
+      <div className={cn(
+        "flex h-screen flex-col overflow-hidden min-w-0 transition-[padding] duration-300 ease-out",
+        isSidebarCollapsed ? "lg:ps-20" : "lg:ps-64"
+      )}>
         <div className="lg:hidden fixed top-4 left-4 z-50">
           <Button
             variant="secondary"
             size="icon"
             onClick={() => setIsMobileOpen(true)}
-            className="h-10 w-10 rounded-[6px] bg-background/90 backdrop-blur-sm border border-border"
+            className="h-10 w-10 rounded-xl bg-white/90 dark:bg-background/90 backdrop-blur-sm border border-border shadow-sm"
           >
             <Menu className="h-5 w-5" />
           </Button>
         </div>
 
-        <header className="bg-white dark:bg-[#0F172A] border-b border-slate-200 dark:border-white/10 px-6 lg:px-8 py-4 shrink-0">
+        <header className="relative z-[60] bg-[#F4F4FB]/80 dark:bg-[#0F172A]/80 backdrop-blur-xl border-b border-[#EAEAF4] dark:border-white/10 px-6 lg:px-8 py-4 shrink-0">
           <div className="flex items-center justify-between gap-6">
             <div className="min-w-0">
-              <h1 className="text-xl font-semibold text-foreground tracking-tight">
+              <h1 className="text-[22px] font-bold text-foreground tracking-tight">
                 {routeTitle}
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {subtitle && <>{subtitle} - </>}
-                <span className="text-blue-600 font-medium">{t('header.system_active')}</span>
+                <span className="text-[#6D5BF6] font-semibold">{t('header.system_active')}</span>
               </p>
             </div>
 
-            <div className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0 bg-white dark:bg-white/5 border border-[#EAEAF4] dark:border-white/10 rounded-2xl pl-3 pr-2 py-1.5 shadow-[0_4px_16px_-8px_rgba(28,25,60,0.12)]">
               <LanguageSelector />
 
               <NotificationBell />
 
-              <div className="w-px h-8 bg-border" />
+              <div className="w-px h-7 bg-[#EAEAF4] dark:bg-border" />
 
               <div className="relative" ref={profileRef}>
                 <div
-                  className="flex items-center gap-3 cursor-pointer group"
+                  className="flex items-center gap-2.5 cursor-pointer group rounded-xl pl-2.5 pr-1.5 py-1 hover:bg-[#F2F2FA] dark:hover:bg-white/5 transition-colors"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 >
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-semibold text-foreground transition-colors">
+                  <div className="text-right hidden sm:block leading-tight">
+                    <p className="text-sm font-bold text-foreground transition-colors">
                       {displayName}
                     </p>
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       {t('header.administrator')}
                     </p>
                   </div>
-                  <Avatar className="h-9 w-9 border-2 border-blue-500/30 group-hover:border-blue-400 transition-colors">
+                  <Avatar className="h-9 w-9 ring-2 ring-[#EEEDFB] group-hover:ring-[#D4CCFF] dark:ring-white/10 dark:group-hover:ring-[#6D5BF6]/40 transition-all">
                     <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
                     <AvatarFallback className={cn(
-                      "bg-blue-500/10 text-blue-600 font-bold text-sm dark:text-blue-300",
-                      "group-hover:bg-blue-500/20 dark:group-hover:bg-blue-500/30 transition-colors"
+                      "bg-[#EEEDFB] text-[#4A3FCF] font-bold text-sm dark:bg-[#6D5BF6]/20 dark:text-[#C7C0FF]",
+                      "transition-colors"
                     )}>
                       {userInitial}
                     </AvatarFallback>
@@ -155,7 +165,7 @@ export function DashboardLayout() {
                 </div>
 
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 z-50 w-52 bg-popover border border-border rounded-[4px] shadow-lg overflow-hidden">
+                  <div className="absolute right-0 top-full mt-3 z-50 w-56 bg-popover border border-[#EAEAF4] dark:border-border rounded-2xl shadow-[0_12px_40px_-12px_rgba(28,25,60,0.25)] overflow-hidden">
                     <div className="px-4 py-3 border-b border-border">
                       <p className="text-sm font-semibold text-popover-foreground truncate">{displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
@@ -184,7 +194,7 @@ export function DashboardLayout() {
           </div>
         </header>
 
-        <main className="flex-1 h-full overflow-y-auto overscroll-none p-4 lg:p-8 bg-white dark:bg-[#0F172A]">
+        <main className="flex-1 h-full overflow-y-auto overscroll-none p-4 lg:p-8 bg-[#F4F4FB] dark:bg-[#0F172A]">
           <div className="max-w-[1600px] mx-auto">
             <Outlet />
           </div>

@@ -72,51 +72,52 @@
 }
 
 :root {
-    /* LIGHT MODE — clean white background, dark text */
-    --background: #F8FAFC;
-    --foreground: #1E293B;
-    
+    /* LIGHT MODE — premium soft lavender canvas, crisp white cards, indigo accent */
+    --background: #F4F4FB;           /* very light desaturated grey/lavender */
+    --foreground: #1E1B33;           /* deep near-black indigo for primary text */
+
     --card: #FFFFFF;
-    --card-foreground: #1E293B;
-    
+    --card-foreground: #1E1B33;
+
     --popover: #FFFFFF;
-    --popover-foreground: #1E293B;
-    
-    --primary: oklch(0.60 0.14 185);
+    --popover-foreground: #1E1B33;
+
+    /* Premium indigo / violet accent */
+    --primary: #6D5BF6;
     --primary-foreground: #FFFFFF;
-    
-    --secondary: oklch(0.95 0.01 250);
-    --secondary-foreground: #1E293B;
-    
-    --muted: #F1F5F9;
-    --muted-foreground: #64748B;
-    
-    --accent: #F1F5F9;
-    --accent-foreground: #1E293B;
-    
+
+    --secondary: #EEEDFB;
+    --secondary-foreground: #2E2A45;
+
+    --muted: #F2F2FA;
+    --muted-foreground: #8A8AA3;     /* softer muted grey for labels/subtitles */
+
+    --accent: #EEEDFB;
+    --accent-foreground: #4A3FCF;
+
     --destructive: oklch(0.58 0.18 25);
-    
-    --border: #E2E8F0;
-    --input: #E2E8F0;
-    --ring: oklch(0.60 0.14 185);
-    
-    --chart-1: oklch(0.60 0.14 185);
-    --chart-2: oklch(0.67 0.12 155);
+
+    --border: #EAEAF4;               /* very subtle, no harsh borders */
+    --input: #E6E6F2;
+    --ring: #6D5BF6;
+
+    --chart-1: #6D5BF6;              /* indigo */
+    --chart-2: oklch(0.67 0.12 155); /* emerald (revenue/AI) */
     --chart-3: oklch(0.72 0.10 85);
     --chart-4: oklch(0.58 0.18 25);
-    --chart-5: oklch(0.55 0.08 270);
-    
-    --radius: 1rem;
-    
-    /* Sidebar — always Navy regardless of mode */
-    --sidebar: #0F172A;
-    --sidebar-foreground: #FFFFFF;
-    --sidebar-primary: oklch(0.60 0.14 185);
+    --chart-5: #A78BFA;
+
+    --radius: 1rem;                  /* drives 12–16px radii on cards */
+
+    /* Sidebar — light off-white in light mode */
+    --sidebar: #FBFBFE;
+    --sidebar-foreground: #1E1B33;
+    --sidebar-primary: #6D5BF6;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #0F172A;
-    --sidebar-accent-foreground: #FFFFFF;
-    --sidebar-border: #1E293B;
-    --sidebar-ring: oklch(0.60 0.14 185);
+    --sidebar-accent: #EEEDFB;
+    --sidebar-accent-foreground: #4A3FCF;
+    --sidebar-border: #EAEAF4;
+    --sidebar-ring: #6D5BF6;
 }
 
 .dark {
@@ -662,6 +663,79 @@
 
 .dark .btn-glow-primary:hover {
   box-shadow: 0 0 24px rgba(16, 185, 129, 0.4);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   PREMIUM OVERHAUL — soft elevated cards, lavender canvas, indigo accents
+   (Light mode focused; dark mode keeps the existing navy treatment)
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Elevated card: flat, crisp border (no shadow) */
+.card-elevated {
+  border-radius: 7px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.dark .card-elevated {
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+/* KPI metric card — flat, crisp border (no shadow) */
+.kpi-card {
+  border-radius: 7px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.dark .kpi-card {
+  box-shadow: none;
+}
+
+/* Sidebar nav pill (active) — sleek indigo background pill */
+.nav-pill-active {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  box-shadow: 0 4px 12px -6px rgba(109, 91, 246, 0.45);
+}
+
+.dark .nav-pill-active {
+  background: rgba(109, 91, 246, 0.18);
+  color: #C7C0FF;
+  box-shadow: none;
+}
+
+/* Primary indigo button glow on hover */
+.btn-indigo {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 6px 16px -6px rgba(109, 91, 246, 0.5);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.btn-indigo:hover {
+  background: #5B49E8;
+  box-shadow: 0 10px 24px -8px rgba(109, 91, 246, 0.6);
+}
+
+/* Subtle quick-action tile */
+.quick-tile {
+  border-radius: 7px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  transition: transform 0.18s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.quick-tile:hover {
+  transform: translateY(-3px);
+  border-color: rgba(109, 91, 246, 0.35);
+}
+
+.dark .quick-tile:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 

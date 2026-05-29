@@ -116,27 +116,33 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
       )}
 
       <div className={cn(
-        "flex flex-col h-full transition-all duration-300 ease-out relative z-50 bg-[#0F172A] dark:bg-[#0b1222] border-r border-slate-200/10 dark:border-white/5",
+        "flex flex-col h-screen transition-all duration-300 ease-out z-[65]",
+        "bg-[#FBFBFE] dark:bg-[#0b1222] border-r border-[#EAEAF4] dark:border-white/5",
         isCollapsed ? "w-20" : "w-64",
-        "fixed lg:relative inset-y-0 left-0",
+        // Always `fixed` and out of flow. The main content wrapper reserves the
+        // matching width via lg:ps-20 / lg:ps-64, so they never overlap.
+        "fixed inset-y-0 left-0",
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <Button
           variant="secondary"
           size="icon"
           onClick={onToggle}
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className={cn(
-            "hidden lg:flex absolute -right-3 top-20 h-8 w-8 rounded-sm bg-[#0F172A] dark:bg-[#0b1222] border border-white/10 text-slate-300 hover:bg-blue-600 hover:border-blue-500 hover:text-white transition-all duration-200 z-50"
+            "hidden lg:flex absolute -right-3.5 top-7 h-7 w-7 rounded-full z-[70] transition-all duration-200",
+            "bg-white dark:bg-[#0b1222] border border-[#EAEAF4] dark:border-white/10 text-slate-500 dark:text-slate-300 shadow-md",
+            "hover:bg-[#6D5BF6] hover:border-[#6D5BF6] hover:text-white"
           )}
         >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
         </Button>
 
         <Button
           variant="ghost"
           size="icon"
           onClick={onMobileClose}
-          className="lg:hidden absolute right-4 top-4 text-slate-400 hover:bg-white/10 hover:text-white z-50"
+          className="lg:hidden absolute right-4 top-4 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white z-50"
         >
           <X className="h-6 w-6" />
         </Button>
@@ -147,17 +153,17 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
         )}>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-xl">
+              <div className="bg-gradient-to-br from-[#7C6BF8] to-[#5B49E8] p-2.5 rounded-2xl shadow-[0_6px_16px_-6px_rgba(109,91,246,0.55)]">
                 <Eye className="h-6 w-6 text-white" />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-[4px] border-2 border-[#0F172A] dark:border-[#0B1222]">
-                <div className="absolute inset-0.5 bg-blue-400 rounded-[4px]" />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#6D5BF6] rounded-[5px] border-2 border-[#FBFBFE] dark:border-[#0B1222]">
+                <div className="absolute inset-0.5 bg-[#A78BFA] rounded-[4px]" />
               </div>
             </div>
             {!isCollapsed && (
               <div className="flex flex-col leading-none animate-in fade-in slide-in-from-left-2 duration-300">
-                <span className="text-xl font-black text-white">Opti<span className="text-blue-400">Gestion</span></span>
-                <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-widest mt-1">{t('app.tagline')}</span>
+                <span className="text-xl font-black text-[#1E1B33] dark:text-white tracking-tight">Opti<span className="text-[#6D5BF6]">Gestion</span></span>
+                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-widest mt-1">{t('app.tagline')}</span>
               </div>
             )}
           </div>
@@ -165,7 +171,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
 
         <div className="relative flex-1 flex flex-col min-h-0">
           <div className={cn(
-            "absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[#0F172A] dark:from-[#0B1222] to-transparent z-10 pointer-events-none transition-opacity",
+            "absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[#FBFBFE] dark:from-[#0B1222] to-transparent z-10 pointer-events-none transition-opacity",
             showTopShadow ? "opacity-100" : "opacity-0"
           )} />
 
@@ -178,7 +184,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
               {navigationGroups.map((group) => (
                 <div key={group.id} className="space-y-1">
                   {!isCollapsed && (
-                    <div className="px-3 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                    <div className="px-3 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.12em]">
                       {t(group.titleKey)}
                     </div>
                   )}
@@ -193,22 +199,25 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
                           onClick={onMobileClose}
                           title={isCollapsed ? t(item.nameKey) : undefined}
                           className={cn(
-                            isActive 
-                              ? 'bg-white/10 text-white' 
-                              : 'text-slate-400 hover:bg-white/5 hover:text-white',
-                            'relative group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                            isActive
+                              ? 'nav-pill-active'
+                              : 'text-slate-500 dark:text-slate-400 hover:bg-[#F2F2FA] dark:hover:bg-white/5 hover:text-[#1E1B33] dark:hover:text-white',
+                            'relative group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
                             isCollapsed ? "justify-center" : ""
                           )}
                         >
                           {isActive && !isCollapsed && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-blue-500" />
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#6D5BF6]" />
                           )}
                           <item.icon
                             className={cn(
-                              isActive ? 'text-white opacity-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]' : 'text-slate-400 opacity-70 group-hover:text-white group-hover:opacity-100',
-                              isCollapsed ? "h-5 w-5" : "mr-3 h-4 w-4",
+                              isActive
+                                ? 'text-[#4A3FCF] dark:text-[#C7C0FF] opacity-100'
+                                : 'text-slate-400 dark:text-slate-400 opacity-80 group-hover:text-[#6D5BF6] dark:group-hover:text-white group-hover:opacity-100',
+                              isCollapsed ? "h-5 w-5" : "mr-3 h-[18px] w-[18px]",
                               'flex-shrink-0 transition-all duration-200'
                             )}
+                            strokeWidth={isActive ? 2.25 : 1.9}
                           />
                           {!isCollapsed && <span className="truncate">{t(item.nameKey)}</span>}
                         </Link>
@@ -221,45 +230,50 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
           </div>
 
           <div className={cn(
-            "absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#0F172A] dark:from-[#0B1222] to-transparent z-10 pointer-events-none transition-opacity",
+            "absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#FBFBFE] dark:from-[#0B1222] to-transparent z-10 pointer-events-none transition-opacity",
             showBottomShadow ? "opacity-100" : "opacity-0"
           )} />
         </div>
 
-        <div className="p-4 shrink-0">
+        <div className="p-3 shrink-0 border-t border-[#EAEAF4] dark:border-white/5">
           <div className={cn(
-            "flex items-center",
-            isCollapsed ? "justify-center" : "gap-3"
+            "rounded-2xl bg-white dark:bg-white/5 border border-[#EAEAF4] dark:border-white/5 p-2.5",
+            isCollapsed ? "px-0 border-transparent bg-transparent dark:bg-transparent" : ""
           )}>
-            <Avatar className="h-10 w-10 border-2 border-slate-700">
-              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
-              <AvatarFallback className="bg-slate-800 text-slate-300 font-bold">
-                {user?.email?.charAt(0)?.toUpperCase() || 'P'}
-              </AvatarFallback>
-            </Avatar>
-            {!isCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">
-                  {user?.email?.split('@')[0]}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                  {t('header.administrator')}
-                </p>
-              </div>
-            )}
-          </div>
+            <div className={cn(
+              "flex items-center",
+              isCollapsed ? "justify-center" : "gap-3"
+            )}>
+              <Avatar className="h-10 w-10 ring-2 ring-[#EEEDFB] dark:ring-white/10">
+                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
+                <AvatarFallback className="bg-[#EEEDFB] dark:bg-slate-800 text-[#4A3FCF] dark:text-slate-300 font-bold">
+                  {user?.email?.charAt(0)?.toUpperCase() || 'P'}
+                </AvatarFallback>
+              </Avatar>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[#1E1B33] dark:text-white truncate">
+                    {user?.email?.split('@')[0]}
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-400 font-semibold uppercase tracking-wider">
+                    {t('header.administrator')}
+                  </p>
+                </div>
+              )}
+            </div>
 
-          <Button
-            variant="ghost"
-            onClick={handleSignOut}
-            className={cn(
-              "w-full mt-3 text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 font-semibold rounded-[4px]",
-              isCollapsed ? "px-0 justify-center" : "px-3"
-            )}
-          >
-            <LogOut className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-            {!isCollapsed && <span className="font-medium">{t('header.logout')}</span>}
-          </Button>
+            <Button
+              variant="ghost"
+              onClick={handleSignOut}
+              className={cn(
+                "w-full mt-2 text-slate-500 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400 transition-all duration-200 font-semibold rounded-xl",
+                isCollapsed ? "px-0 justify-center" : "px-3 justify-start"
+              )}
+            >
+              <LogOut className={cn("h-[18px] w-[18px]", !isCollapsed && "mr-3")} strokeWidth={1.9} />
+              {!isCollapsed && <span className="font-medium">{t('header.logout')}</span>}
+            </Button>
+          </div>
         </div>
       </div>
     </>

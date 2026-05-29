@@ -466,7 +466,7 @@ const updateProductStock = async (
         await createNotification(
           produit.user_id,
           'Stock Faible',
-          `${designation} - ${newStock} unitÃ©s restantes`,
+          `${designation} - ${newStock} unités restantes`,
           'warning',
           '/produits'
         );
@@ -4952,7 +4952,7 @@ router.post('/check-stock-alerts', async (req, res) => {
         await createNotification(
           userId,
           'Stock Faible',
-          `${designation} - ${p.stock_actuel} unitÃ©s restantes`,
+          `${designation} - ${p.stock_actuel} unités restantes`,
           'warning',
           '/produits'
         );
@@ -5040,7 +5040,7 @@ const scheduleStockChecks = async () => {
             await createNotification(
               userId,
               'Stock Faible',
-              `${designation} - ${p.stock_actuel} unitÃ©s restantes`,
+              `${designation} - ${p.stock_actuel} unités restantes`,
               'warning',
               '/produits'
             );
