@@ -1,5 +1,12 @@
 ﻿import { Router } from 'express'
 import { supabase, supabaseAdmin } from '../lib/supabase.server'
+import {
+  processStockMovement,
+  processPurchaseOrderStock,
+  processInvoiceStock,
+  processVentePassagerStock,
+  getStockHistory
+} from '../lib/stock.service'
 
 const router = Router();
 
@@ -251,6 +258,28 @@ CREATE TABLE IF NOT EXISTS mouvements_stock (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ALTER TABLE mouvements_stock DISABLE ROW LEVEL SECURITY;
+
+-- Create stock_history table for centralized tracking
+CREATE TABLE IF NOT EXISTS stock_history (
+  id BIGSERIAL PRIMARY KEY,
+  produit_id BIGINT NOT NULL REFERENCES produits(id) ON DELETE CASCADE,
+  quantite DECIMAL(15,2) NOT NULL DEFAULT 0,
+  type TEXT NOT NULL,
+  source_document_type TEXT NOT NULL,
+  source_document_id BIGINT,
+  source_document_ref TEXT,
+  ancien_stock DECIMAL(15,2) NOT NULL DEFAULT 0,
+  nouveau_stock DECIMAL(15,2) NOT NULL DEFAULT 0,
+  entite_nom TEXT,
+  prix_unitaire DECIMAL(12,2) DEFAULT 0,
+  notes TEXT,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE stock_history DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_stock_history_produit_id ON stock_history(produit_id);
+CREATE INDEX IF NOT EXISTS idx_stock_history_source ON stock_history(source_document_type, source_document_id);
+CREATE INDEX IF NOT EXISTS idx_stock_history_created_at ON stock_history(created_at DESC);
 
 NOTIFY pgrst, 'reload schema';
   `;
@@ -553,68 +582,75 @@ const handleAvoirLogic = async (factureId: any, newStatut: string, oldStatut: st
   }
 };
 
-// --- DASHBOARD DATA ---
+// --- DASHBOARD DATA (ERP Calculations) ---
 router.get('/dashboard-data', async (req, res) => {
   try {
-    const { data: factures } = await supabase.from('factures').select('*').in('statut', ['payÃ©e', 'reste_a_payer', 'annulÃ©e']);
+    // 1. CHIFFRE D'AFFAIRES: factures payÃ©es/reste_a_payer + ventes passagers
+    const { data: factures } = await supabase.from('factures').select('*').in('statut', ['payÃ©e', 'payér', 'reste_a_payer', 'annulÃ©e', 'annulée']);
     const { data: ventesPassagers } = await supabase.from('ventes_passagers').select('*');
-    const { data: bonsCommande } = await supabase.from('bons_commande').select('*').in('statut', ['confirmÃ©', 'livré', 'livrée']);
+    const { data: bonsCommande } = await supabase.from('bons_commande').select('*').in('statut', ['livré', 'livrée']);
     const { data: depenses } = await supabase.from('depenses').select('*');
     const { data: produits } = await supabase.from('produits').select('*');
-    
-    // TVA CollectÃ©e: Factures (annulÃ©es count as negative) + Ventes Passagers
+
+    // Helper: check if statut is a valid sale statut
+    const isSaleStatut = (s: string) => ['payÃ©e', 'payér', 'payée', 'reste_a_payer'].includes(s);
+    const isCancelled = (s: string) => s === 'annulÃ©e' || s === 'annulée';
+
+    // CHIFFRE D'AFFAIRES (CA) = total des ventes validÃ©es HT
+    const caFactures = (factures || []).reduce((sum, f) => {
+      if (isSaleStatut(f.statut)) return sum + Number(f.montant_ht || 0);
+      return sum;
+    }, 0);
+    const caVP = (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.montant_ht || 0), 0);
+    const chiffreAffaires = caFactures + caVP;
+
+    // CRÃ‰ANCES CLIENTS = montant restant Ã  payer des factures en statut reste_a_payer
+    const creancesClients = (factures || [])
+      .filter(f => f.statut === 'reste_a_payer')
+      .reduce((sum, f) => sum + Number(f.reste_a_payer || 0), 0);
+
+    // DÃ‰PENSES TOTALES = total des bons de commande livrÃ©s + total des dÃ©penses
+    const depensesBC = (bonsCommande || []).reduce((sum, bc) => sum + Number(bc.montant_ttc || 0), 0);
+    const depensesDirectes = (depenses || []).reduce((sum, d) => sum + Number(d.montant_ttc || 0), 0);
+    const depensesTotales = depensesBC + depensesDirectes;
+
+    // TVA COLLECTÃ‰E = somme des TVA des ventes validÃ©es
     const tvaFactures = (factures || []).reduce((sum, f) => {
-      const val = Number(f.montant_tva || 0);
-      return sum + (f.statut === 'annulÃ©e' ? -val : val);
+      if (isSaleStatut(f.statut)) return sum + Number(f.montant_tva || 0);
+      return sum;
     }, 0);
     const tvaVP = (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.montant_tva || 0), 0);
     const totalTvaCollectee = tvaFactures + tvaVP;
 
-    // TVA DÃ©ductible: Bons de Commande + DÃ©penses
+    // TVA DÃ‰DUCTIBLE = somme des TVA des achats livrÃ©s + dÃ©penses
     const tvaBC = (bonsCommande || []).reduce((sum, bc) => sum + Number(bc.montant_tva || 0), 0);
     const tvaDepenses = (depenses || []).reduce((sum, d) => sum + Number(d.montant_tva || 0), 0);
     const totalTvaDeductible = tvaBC + tvaDepenses;
 
+    // TVA NETTE = TVA collectÃ©e - TVA dÃ©ductible
     const tvaNet = totalTvaCollectee - totalTvaDeductible;
 
-    // Ventes Totales (HT)
-    const ventesHT = (factures || []).reduce((sum, f) => {
-      const val = Number(f.montant_ht || 0);
-      return sum + (f.statut === 'annulÃ©e' ? -val : val);
-    }, 0) + (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.montant_ht || 0), 0);
+    // BÃ‰NÃ‰FICE NET = Chiffre d'Affaires - DÃ©penses Totales - TVA
+    const beneficeNet = chiffreAffaires - depensesTotales;
 
-    // COGS (Cost of Goods Sold)
-    const cogsFactures = (factures || []).reduce((sum, f) => {
-      const val = Number(f.cogs || 0);
-      return sum + (f.statut === 'annulÃ©e' ? -val : val);
-    }, 0);
-    const cogsVP = (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.cogs || 0), 0);
-    const totalCOGS = cogsFactures + cogsVP;
-
-    // Profit: Ventes HT - COGS - DÃ©penses HT
-    const totalDepensesHT = (depenses || []).reduce((sum, d) => sum + Number(d.montant_ht || 0), 0);
-    const profit = ventesHT - totalCOGS - totalDepensesHT;
-
-    // Revenue (TTC)
+    // Revenue (TTC) for charts
     const totalRevenue = (factures || []).reduce((sum, f) => {
-      const val = Number(f.montant_ttc || 0);
-      return sum + (f.statut === 'annulÃ©e' ? -val : val);
+      if (isSaleStatut(f.statut)) return sum + Number(f.montant_ttc || 0);
+      return sum;
     }, 0) + (ventesPassagers || []).reduce((sum, vp) => sum + Number(vp.montant_ttc || 0), 0);
-
-    const unpaidRevenue = (factures || []).filter(f => f.statut === 'reste_a_payer').reduce((sum, f) => sum + Number(f.reste_a_payer || 0), 0);
 
     const range = (req.query.range as string) || '6m';
     const monthlyData = [];
     const monthNames = ['Jan', 'FÃ©v', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'AoÃ»', 'Sep', 'Oct', 'Nov', 'DÃ©c'];
     
     if (range === '1m') {
-      // Last 30 days
       for (let i = 29; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
         
         const dayFactures = (factures || []).filter(f => {
+          if (!isSaleStatut(f.statut)) return false;
           const fDate = new Date(f.date_emission).toISOString().split('T')[0];
           return fDate === dateStr;
         });
@@ -631,10 +667,7 @@ router.get('/dashboard-data', async (req, res) => {
         
         monthlyData.push({
           name: d.getDate().toString(),
-          revenue: dayFactures.reduce((sum, f) => {
-            const val = Number(f.montant_ttc || 0);
-            return sum + (f.statut === 'annulÃ©e' ? -val : val);
-          }, 0) + dayVP.reduce((sum, vp) => sum + Number(vp.montant_ttc || 0), 0),
+          revenue: dayFactures.reduce((sum, f) => sum + Number(f.montant_ttc || 0), 0) + dayVP.reduce((sum, vp) => sum + Number(vp.montant_ttc || 0), 0),
           expenses: dayDepenses.reduce((sum, d) => sum + Number(d.montant_ttc || 0), 0)
         });
       }
@@ -647,6 +680,7 @@ router.get('/dashboard-data', async (req, res) => {
         const year = d.getFullYear();
         
         const monthFactures = (factures || []).filter(f => {
+          if (!isSaleStatut(f.statut)) return false;
           const fDate = new Date(f.date_emission);
           return fDate.getMonth() === month && fDate.getFullYear() === year;
         });
@@ -663,10 +697,7 @@ router.get('/dashboard-data', async (req, res) => {
         
         monthlyData.push({
           name: monthNames[month],
-          revenue: monthFactures.reduce((sum, f) => {
-            const val = Number(f.montant_ttc || 0);
-            return sum + (f.statut === 'annulÃ©e' ? -val : val);
-          }, 0) + monthVP.reduce((sum, vp) => sum + Number(vp.montant_ttc || 0), 0),
+          revenue: monthFactures.reduce((sum, f) => sum + Number(f.montant_ttc || 0), 0) + monthVP.reduce((sum, vp) => sum + Number(vp.montant_ttc || 0), 0),
           expenses: monthDepenses.reduce((sum, d) => sum + Number(d.montant_ttc || 0), 0)
         });
       }
@@ -684,15 +715,21 @@ router.get('/dashboard-data', async (req, res) => {
 
     res.json({
       clientsCount: (await supabase.from('clients').select('*', { count: 'exact', head: true })).count || 0,
-      facturesCount: (await supabase.from('factures').select('*', { count: 'exact', head: true }).in('statut', ['payÃ©e', 'reste_a_payer'])).count || 0,
+      facturesCount: (await supabase.from('factures').select('*', { count: 'exact', head: true }).in('statut', ['payÃ©e', 'payér', 'reste_a_payer'])).count || 0,
       produitsCount: produits?.length || 0,
-      totalRevenue,
-      unpaidRevenue,
-      totalDepenses: (depenses || []).reduce((sum, d) => sum + Number(d.montant_ttc), 0),
-      profit,
+      // ERP Metrics
+      chiffreAffaires,
+      creancesClients,
+      depensesTotales,
+      beneficeNet,
       totalTvaCollectee,
       totalTvaDeductible,
       tvaNet,
+      // Legacy (backward compat)
+      totalRevenue,
+      unpaidRevenue: creancesClients,
+      totalDepenses: depensesTotales,
+      profit: beneficeNet,
       monthlyData,
       lowStockProduits: toCamel((lowStockProduits || []).map(p => ({ ...p, nom: p.designation || p.nom }))) || [],
       recentFactures: toCamel(recentFactures) || []
@@ -1352,23 +1389,12 @@ router.post('/factures', async (req, res) => {
         return res.status(400).json({ error: 'Error creating facture lines', details: lignesError.message || JSON.stringify(lignesError) });
       }
 
-      // Stock update logic for Factures
-      if (['payÃ©e', 'reste_a_payer'].includes(facture.statut)) {
-        const { data: client } = await supabase.from('clients').select('nom').eq('id', facture.client_id).single();
-        for (const l of lignesData) {
-          if (l.produit_id) {
-            await updateProductStock(
-              l.produit_id, 
-              -Number(l.quantite || 0), 
-              'vente', 
-              facture.numero, 
-              `Vente Facture ${facture.numero}`,
-              client?.nom,
-              l.prix_unitaire_ht
-            );
-          }
+      // Stock update logic for Factures via centralized service
+      if (['payÃ©e', 'payée', 'reste_a_payer', 'payér'].includes(facture.statut)) {
+        const stockResult = await processInvoiceStock(facture.id, facture.statut, null);
+        if (!stockResult.success) {
+          console.warn('Stock update warnings for facture:', stockResult.errors);
         }
-        // Update the flag
         await supabase.from('factures').update({ stock_updated: true }).eq('id', facture.id);
       }
     }
@@ -1448,44 +1474,19 @@ router.put('/factures/:id', async (req, res) => {
       return res.status(400).json({ error: 'Failed to update facture', details: formatError(updateError) });
     }
 
-    // Stock update logic
+    // Stock update logic via centralized service
     if (newStatut && newStatut !== oldStatut) {
-      const { data: currentLignes } = await supabase.from('facture_lignes').select('*').eq('facture_id', id);
-      if (currentLignes && currentLignes.length > 0) {
-        const isActive = ['payÃ©e', 'reste_a_payer'].includes(newStatut);
-        const isCancelled = newStatut === 'annulÃ©e';
-        
-        if (!oldStockUpdated && isActive) {
-          const { data: client } = await supabase.from('clients').select('nom').eq('id', oldFacture.client_id || updateData.client_id).single();
-          const { data: f } = await supabase.from('factures').select('numero').eq('id', id).single();
-          for (const l of currentLignes) {
-            if (l.produit_id) await updateProductStock(
-              l.produit_id, 
-              -Number(l.quantite || 0), 
-              'vente', 
-              f?.numero, 
-              `Vente Facture ${f?.numero}`,
-              client?.nom,
-              l.prix_unitaire_ht
-            );
-          }
-          await supabase.from('factures').update({ stock_updated: true }).eq('id', id);
-        } else if (oldStockUpdated && isCancelled) {
-          const { data: client } = await supabase.from('clients').select('nom').eq('id', oldFacture.client_id || updateData.client_id).single();
-          const { data: f } = await supabase.from('factures').select('numero').eq('id', id).single();
-          for (const l of currentLignes) {
-            if (l.produit_id) await updateProductStock(
-              l.produit_id, 
-              Number(l.quantite || 0), 
-              'ajustement', 
-              f?.numero, 
-              `Annulation Facture ${f?.numero}`,
-              client?.nom,
-              l.prix_unitaire_ht
-            );
-          }
-          await supabase.from('factures').update({ stock_updated: false }).eq('id', id);
-        }
+      const stockResult = await processInvoiceStock(Number(id), newStatut, oldStatut);
+      if (!stockResult.success) {
+        console.warn('Stock update warnings for facture:', stockResult.errors);
+      }
+
+      const isActive = ['payÃ©e', 'payée', 'reste_a_payer', 'payér'].includes(newStatut);
+      const isCancelled = newStatut === 'annulÃ©e' || newStatut === 'annulée';
+      if (isActive) {
+        await supabase.from('factures').update({ stock_updated: true }).eq('id', id);
+      } else if (isCancelled || !isActive) {
+        await supabase.from('factures').update({ stock_updated: false }).eq('id', id);
       }
     }
 
@@ -1590,42 +1591,19 @@ router.put('/factures/:id/statut', async (req, res) => {
       .single();
     if (error) throw error;
 
-    // Stock update logic
+    // Stock update logic via centralized service
     if (statut && statut !== oldStatut) {
-      const { data: currentLignes } = await supabase.from('facture_lignes').select('*').eq('facture_id', id);
-      if (currentLignes && currentLignes.length > 0) {
-        const isActive = ['payÃ©e', 'reste_a_payer'].includes(statut);
-        const isCancelled = statut === 'annulÃ©e';
-        
-        if (!oldStockUpdated && isActive) {
-          const { data: client } = await supabase.from('clients').select('nom').eq('id', oldFacture.client_id).single();
-          for (const l of currentLignes) {
-            if (l.produit_id) await updateProductStock(
-              l.produit_id, 
-              -Number(l.quantite || 0), 
-              'vente', 
-              oldFacture.numero, 
-              `Vente Facture ${oldFacture.numero}`,
-              client?.nom,
-              l.prix_unitaire_ht
-            );
-          }
-          await supabase.from('factures').update({ stock_updated: true }).eq('id', id);
-        } else if (oldStockUpdated && isCancelled) {
-          const { data: client } = await supabase.from('clients').select('nom').eq('id', oldFacture.client_id).single();
-          for (const l of currentLignes) {
-            if (l.produit_id) await updateProductStock(
-              l.produit_id, 
-              Number(l.quantite || 0), 
-              'ajustement', 
-              oldFacture.numero, 
-              `Annulation Facture ${oldFacture.numero}`,
-              client?.nom,
-              l.prix_unitaire_ht
-            );
-          }
-          await supabase.from('factures').update({ stock_updated: false }).eq('id', id);
-        }
+      const stockResult = await processInvoiceStock(Number(id), statut, oldStatut);
+      if (!stockResult.success) {
+        console.warn('Stock update warnings for facture:', stockResult.errors);
+      }
+
+      const isActive = ['payÃ©e', 'payée', 'reste_a_payer', 'payér'].includes(statut);
+      const isCancelled = statut === 'annulÃ©e' || statut === 'annulée';
+      if (isActive) {
+        await supabase.from('factures').update({ stock_updated: true }).eq('id', id);
+      } else if (isCancelled || !isActive) {
+        await supabase.from('factures').update({ stock_updated: false }).eq('id', id);
       }
     }
 
@@ -2091,25 +2069,13 @@ router.post('/bons-commande', async (req, res) => {
         });
       }
 
-      // Stock update logic: if status is 'livrée' or 'livré', add to stock
+      // Stock update logic via centralized service
       const islivré = bon.statut === 'livrée' || bon.statut === 'livré';
       if (islivré) {
-        const { data: fournisseur } = await supabaseAdmin.from('fournisseurs').select('nom').eq('id', bon.fournisseur_id).single();
-        for (const l of lignesData) {
-          if (l.produit_id) {
-            await updateProductStock(
-              l.produit_id, 
-              Number(l.quantite || 0), 
-              'achat', 
-              bon.numero, 
-              `RÃ©ception Bon de Commande ${bon.numero}`,
-              fournisseur?.nom,
-              l.prix_unitaire_ht
-            );
-          }
+        const stockResult = await processPurchaseOrderStock(bon.id, bon.statut, null);
+        if (!stockResult.success) {
+          console.warn('Stock update warnings for BC:', stockResult.errors);
         }
-        // `stock_updated` column does not exist on bons_commande — state is
-        // derived from `statut` (livré/livrée) instead.
 
         // Create a linked Bon de Livraison
         const { count: blCount } = await supabaseAdmin.from('bons_livraison').select('*', { count: 'exact', head: true });
@@ -2120,7 +2086,7 @@ router.post('/bons-commande', async (req, res) => {
           fournisseur_id: bon.fournisseur_id,
           date_livraison: new Date().toISOString(),
           statut: 'livré',
-          notes: `GÃ©nÃ©rÃ© automatiquement depuis Bon de Commande ${bon.numero}`,
+          notes: `Généré automatiquement depuis Bon de Commande ${bon.numero}`,
           montant_ht: bon.montant_ht || 0,
           montant_tva: bon.montant_tva || 0,
           montant_ttc: bon.montant_ttc || 0,
@@ -2199,7 +2165,7 @@ router.put('/bons-commande/:id', async (req, res) => {
       await logActivity('changement de statut bon de commande', `Bon de Commande ${id} : statut mis Ã  jour vers ${updateData.statut}`);
     }
 
-    // Stock update logic
+    // Stock update logic via centralized service
     const newStatut = updateData.statut || oldStatut;
     const isNowLivré = newStatut === 'livrée' || newStatut === 'livré';
     const waslivré = oldStatut === 'livrée' || oldStatut === 'livré';
@@ -2218,7 +2184,7 @@ router.put('/bons-commande/:id', async (req, res) => {
           client_id: bonDetails.client_id,
           date_livraison: new Date().toISOString(),
           statut: 'livré',
-          notes: `GÃ©nÃ©rÃ© automatiquement depuis Bon de Commande ${bonDetails.numero}`,
+          notes: `Généré automatiquement depuis Bon de Commande ${bonDetails.numero}`,
           montant_ht: bonDetails.montant_ht || 0,
           montant_tva: bonDetails.montant_tva || 0,
           montant_ttc: bonDetails.montant_ttc || 0,
@@ -2248,45 +2214,9 @@ router.put('/bons-commande/:id', async (req, res) => {
       await supabaseAdmin.from('bons_livraison').delete().eq('bon_commande_id', id);
     }
 
-    if (isNowLivré && !wasStockUpdated) {
-      const { data: currentLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-      const { data: fournisseur } = await supabaseAdmin.from('fournisseurs').select('nom').eq('id', oldBon.fournisseur_id || updateData.fournisseur_id).single();
-      const { data: b } = await supabaseAdmin.from('bons_commande').select('numero').eq('id', id).single();
-      if (currentLignes && currentLignes.length > 0) {
-        for (const l of currentLignes) {
-          if (l.produit_id) await updateProductStock(
-            l.produit_id, 
-            Number(l.quantite || 0), 
-            'achat', 
-            b?.numero, 
-            `RÃ©ception Bon de Commande ${b?.numero}`,
-            fournisseur?.nom,
-            l.prix_unitaire_ht
-          );
-        }
-        // `stock_updated` column does not exist on bons_commande — state is
-        // derived from `statut` (livré/livrée) instead.
-      }
-    } else if (!isNowLivré && wasStockUpdated) {
-      // Revert stock if it was updated but status is no longer 'livrée'
-      const { data: currentLignes } = await supabaseAdmin.from('bon_commande_lignes').select('*').eq('bon_commande_id', id);
-      const { data: fournisseur } = await supabaseAdmin.from('fournisseurs').select('nom').eq('id', oldBon.fournisseur_id || updateData.fournisseur_id).single();
-      const { data: b } = await supabaseAdmin.from('bons_commande').select('numero').eq('id', id).single();
-      if (currentLignes && currentLignes.length > 0) {
-        for (const l of currentLignes) {
-          if (l.produit_id) await updateProductStock(
-            l.produit_id, 
-            -Number(l.quantite || 0), 
-            'ajustement', 
-            b?.numero, 
-            `Annulation RÃ©ception Bon de Commande ${b?.numero}`,
-            fournisseur?.nom,
-            l.prix_unitaire_ht
-          );
-        }
-        // `stock_updated` column does not exist on bons_commande — state is
-        // derived from `statut` (livré/livrée) instead.
-      }
+    const stockResult = await processPurchaseOrderStock(Number(id), newStatut, oldStatut);
+    if (!stockResult.success) {
+      console.warn('Stock update warnings for BC:', stockResult.errors);
     }
 
     // Only update lines if provided
@@ -2486,73 +2416,10 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
       }
     }
 
-    // --- Stock movement sync --------------------------------------------------
-    if (isNowLivré && !wasStockUpdated) {
-      const { data: currentLignes } = await supabaseAdmin
-        .from('bon_commande_lignes')
-        .select('*')
-        .eq('bon_commande_id', id);
-      const { data: b } = await supabaseAdmin
-        .from('bons_commande')
-        .select('*, fournisseur:fournisseurs(nom)')
-        .eq('id', id)
-        .single();
-
-      if (currentLignes && currentLignes.length > 0) {
-        for (const l of currentLignes) {
-          if (!l.produit_id) continue;
-          try {
-            await updateProductStock(
-              l.produit_id,
-              Number(l.quantite || 0),
-              'achat',
-              b?.numero,
-              `Réception Bon de Commande ${b?.numero}`,
-              b?.fournisseur?.nom,
-              l.prix_unitaire_ht
-            );
-          } catch (stockErr) {
-            console.error(
-              `[PUT /bons-commande/:id/statut] stock increment failed for produit ${l.produit_id}:`,
-              stockErr
-            );
-          }
-        }
-      }
-    } else if (!isNowLivré && wasStockUpdated) {
-      // Revert stock — use the safe variant so a low/zero stock does not
-      // block the administrative status change.
-      const { data: currentLignes } = await supabaseAdmin
-        .from('bon_commande_lignes')
-        .select('*')
-        .eq('bon_commande_id', id);
-      const { data: b } = await supabaseAdmin
-        .from('bons_commande')
-        .select('*, fournisseur:fournisseurs(nom)')
-        .eq('id', id)
-        .single();
-
-      if (currentLignes && currentLignes.length > 0) {
-        for (const l of currentLignes) {
-          if (!l.produit_id) continue;
-          try {
-            await updateProductStockSafe(
-              l.produit_id,
-              -Number(l.quantite || 0),
-              'ajustement',
-              b?.numero,
-              `Annulation Réception Bon de Commande ${b?.numero}`,
-              b?.fournisseur?.nom,
-              l.prix_unitaire_ht
-            );
-          } catch (stockErr) {
-            console.error(
-              `[PUT /bons-commande/:id/statut] stock revert failed for produit ${l.produit_id}:`,
-              stockErr
-            );
-          }
-        }
-      }
+    // --- Stock movement sync via centralized service --------------------------
+    const stockResult = await processPurchaseOrderStock(id, statut, oldBon.statut);
+    if (!stockResult.success) {
+      console.warn('[PUT /bons-commande/:id/statut] Stock update warnings:', stockResult.errors);
     }
 
     return res.json(toCamel(bon));
@@ -2978,19 +2845,10 @@ router.post('/ventes-passagers', async (req, res) => {
       const { error: lignesError } = await supabase.from('ventes_passagers_lignes').insert(lignesData);
       if (lignesError) throw lignesError;
 
-      // Update stock
-      for (const l of lignesData) {
-        if (l.produit_id) {
-          await updateProductStock(
-            l.produit_id,
-            -l.quantite,
-            'vente',
-            numero,
-            `Vente Passager ${numero}`,
-            'Passager',
-            l.prix_unitaire_ht
-          );
-        }
+      // Update stock via centralized service
+      const stockResult = await processVentePassagerStock(vp.id, false);
+      if (!stockResult.success) {
+        console.warn('Stock update warnings for VP:', stockResult.errors);
       }
     }
 
@@ -3005,24 +2863,10 @@ router.delete('/ventes-passagers/:id', async (req, res) => {
   try {
     const id = req.params.id;
     
-    // Revert stock before deleting
-    const { data: lignes } = await supabase.from('ventes_passagers_lignes').select('*').eq('vp_id', id);
-    const { data: vp } = await supabase.from('ventes_passagers').select('numero').eq('id', id).single();
-    
-    if (lignes && vp) {
-      for (const l of lignes) {
-        if (l.produit_id) {
-          await updateProductStock(
-            l.produit_id,
-            l.quantite,
-            'ajustement',
-            vp.numero,
-            `Annulation Vente Passager ${vp.numero}`,
-            'Passager',
-            l.prix_unitaire_ht
-          );
-        }
-      }
+    // Revert stock via centralized service before deleting
+    const stockResult = await processVentePassagerStock(Number(id), true);
+    if (!stockResult.success) {
+      console.warn('Stock revert warnings for VP:', stockResult.errors);
     }
 
     const { error } = await supabase.from('ventes_passagers').delete().eq('id', id);
@@ -3475,56 +3319,76 @@ router.get('/mouvements-stock', async (req, res) => {
   }
 });
 
+// --- Stock History (Centralized) ---
+router.get('/stock-history', async (req, res) => {
+  try {
+    const produitId = req.query.produit_id ? Number(req.query.produit_id) : undefined;
+    const limit = Number(req.query.limit) || 100;
+    const offset = Number(req.query.offset) || 0;
+
+    const { data, error } = await getStockHistory(produitId, limit, offset);
+    if (error) {
+      // Fallback to legacy mouvements_stock if stock_history doesn't exist
+      const { data: legacy, error: legacyError } = await supabase
+        .from('mouvements_stock')
+        .select('*, produit:produits(*)')
+        .order('date_mouvement', { ascending: false })
+        .limit(limit);
+      if (legacyError) throw legacyError;
+      return res.json(toCamel(legacy));
+    }
+    res.json(toCamel(data));
+  } catch (error) {
+    console.error('Failed to fetch stock history:', error);
+    res.status(500).json({ error: 'Failed to fetch stock history' });
+  }
+});
+
 router.post('/mouvements-stock', async (req, res) => {
   try {
     const { produitId, type, quantite, notes, referenceDocument, impactStock } = req.body;
     
     let finalQty = parseFloat(quantite);
     if (isNaN(finalQty) || finalQty === 0) {
-      return res.status(400).json({ error: 'QuantitÃ© invalide' });
+      return res.status(400).json({ error: 'Quantité invalide' });
     }
 
-    // Adjust sign based on type
-    if (type === 'vente') {
-      finalQty = -Math.abs(finalQty);
-    } else if (type === 'achat') {
-      finalQty = Math.abs(finalQty);
-    }
-    // For 'ajustement', we keep the sign as entered (though UI might have changed)
+    if (!impactStock) {
+      // Legacy mode: just record movement without stock impact
+      const mData = {
+        produit_id: parseInt(produitId),
+        type,
+        quantite: finalQty,
+        notes: `(SANS IMPACT STOCK) ${notes || ''}`,
+        reference_document: referenceDocument,
+        date_mouvement: new Date()
+      };
 
-    // Check stock before creating movement if impactStock is true
-    if (impactStock && finalQty < 0) {
-      const { data: p } = await supabase.from('produits').select('stock_actuel').eq('id', produitId).single();
-      const currentStock = Number(p?.stock_actuel || 0);
-      if (currentStock + finalQty < 0) {
-        return res.status(400).json({ error: `Stock insuffisant. Stock actuel: ${currentStock}` });
-      }
+      const { data: m, error: mError } = await supabase
+        .from('mouvements_stock')
+        .insert([mData])
+        .select('*, produit:produits(*)')
+        .single();
+      if (mError) throw mError;
+      return res.status(201).json(toCamel(m));
     }
-    
-    // Create movement
-    const mData = {
+
+    // Use centralized service for stock-impacting movements
+    const movementType = type as any;
+    const result = await processStockMovement({
       produit_id: parseInt(produitId),
-      type,
       quantite: finalQty,
-      notes: impactStock ? notes : `(SANS IMPACT STOCK) ${notes || ''}`,
-      reference_document: referenceDocument,
-      date_mouvement: new Date()
-    };
+      type: movementType,
+      source_document_type: 'ajustement_manuel',
+      source_document_ref: referenceDocument,
+      notes: notes || ''
+    });
 
-    const { data: m, error: mError } = await supabase
-      .from('mouvements_stock')
-      .insert([mData])
-      .select('*, produit:produits(*)')
-      .single();
-    
-    if (mError) throw mError;
-
-    // Update product stock if impactStock is true
-    if (impactStock) {
-      await updateProductStock(produitId, finalQty);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
     }
 
-    res.status(201).json(toCamel(m));
+    res.status(201).json(toCamel(result));
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message || 'Failed to create stock movement' });

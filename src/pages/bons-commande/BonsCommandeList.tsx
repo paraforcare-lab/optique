@@ -80,10 +80,10 @@ export function BonsCommandeList() {
 
   const statusOptions: StatutOption[] = [
     { value: 'brouillon', label: t('shared.status.draft'), icon: FileText, color: 'text-amber-700', bgColor: 'bg-amber-50 text-amber-700 border border-amber-200/50' },
-    { value: 'envoyÈ', label: t('shared.status.sent'), icon: Send, color: 'text-amber-700', bgColor: 'bg-amber-50 text-amber-700 border border-amber-200/50' },
-    { value: 'confirmÈ', label: t('shared.status.confirmed'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
-    { value: 'livrÈ', label: t('shared.status.delivered'), icon: Truck, color: 'text-violet-700', bgColor: 'bg-violet-50 text-violet-700 border border-violet-200/50' },
-    { value: 'annulÈ', label: t('shared.status.cancelled'), icon: Ban, color: 'text-rose-700', bgColor: 'bg-rose-50 text-rose-700 border border-rose-200/50' },
+    { value: 'envoy√©', label: t('shared.status.sent'), icon: Send, color: 'text-amber-700', bgColor: 'bg-amber-50 text-amber-700 border border-amber-200/50' },
+    { value: 'confirm√©', label: t('shared.status.confirmed'), icon: CheckCircle, color: 'text-emerald-700', bgColor: 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' },
+    { value: 'livr√©', label: t('shared.status.delivered'), icon: Truck, color: 'text-violet-700', bgColor: 'bg-violet-50 text-violet-700 border border-violet-200/50' },
+    { value: 'annul√©', label: t('shared.status.cancelled'), icon: Ban, color: 'text-rose-700', bgColor: 'bg-rose-50 text-rose-700 border border-rose-200/50' },
   ];
 
   const componentRef = useRef<HTMLDivElement>(null);
@@ -366,8 +366,8 @@ export function BonsCommandeList() {
   };
 
   const totalBons = bons.length;
-  const bonsConfirmes = bons.filter(b => ['confirmÈ', 'livrÈ'].includes(b.statut)).length;
-  const bonsEnAttente = bons.filter(b => ['brouillon', 'envoyÈ'].includes(b.statut)).length;
+  const bonsConfirmes = bons.filter(b => ['confirm√©', 'livr√©'].includes(b.statut)).length;
+  const bonsEnAttente = bons.filter(b => ['brouillon', 'envoy√©'].includes(b.statut)).length;
   const totalMontant = filteredBons.reduce((sum, b) => sum + (b.montantTtc || b.montant_ttc || 0), 0);
 
   const now = new Date();
@@ -378,9 +378,9 @@ export function BonsCommandeList() {
   });
   const monthCount = monthBons.length;
   const monthValue = monthBons.reduce((sum, b) => sum + (b.montantTtc || 0), 0);
-  const pendingOrders = monthBons.filter(b => ['brouillon', 'envoyÈ'].includes(b.statut)).length;
-  const deliveredOrders = monthBons.filter(b => b.statut === 'livrÈ').length;
-  const cancelledOrders = monthBons.filter(b => b.statut === 'annulÈ').length;
+  const pendingOrders = monthBons.filter(b => ['brouillon', 'envoy√©'].includes(b.statut)).length;
+  const deliveredOrders = monthBons.filter(b => b.statut === 'livr√©').length;
+  const cancelledOrders = monthBons.filter(b => b.statut === 'annul√©').length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -621,9 +621,9 @@ export function BonsCommandeList() {
                                     <span className={cn(
                                       "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium",
                                       status.bgColor,
-                                      bon.statut === 'livrÈ' && "dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20"
+                                      bon.statut === 'livr√©' && "dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20"
                                     )}>
-                                      <StatusIcon className={cn("h-3 w-3", status.color, bon.statut === 'livrÈ' && "dark:text-violet-300")} />
+                                      <StatusIcon className={cn("h-3 w-3", status.color, bon.statut === 'livr√©' && "dark:text-violet-300")} />
                                       {status.label}
                                     </span>
                                   </SelectValue>
@@ -676,12 +676,12 @@ export function BonsCommandeList() {
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
-                                ) : bon.statut !== 'annulÈ' ? (
+                                ) : bon.statut !== 'annul√©' ? (
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-[4px] dark:hover:text-red-400 dark:hover:bg-white/5 dark:rounded-sm"
-                                    onClick={() => handleStatusChange(bon.id, 'annulÈ')}
+                                    onClick={() => handleStatusChange(bon.id, 'annul√©')}
                                     title={t('shared.status.cancelled')}
                                   >
                                     <Ban className="h-4 w-4" />
@@ -750,7 +750,7 @@ export function BonsCommandeList() {
                 </CardHeader>
                 <CardContent className="px-4 py-4 space-y-5">
 
-                  {/* -- Montant engagÈ ce mois ----------------------------- */}
+                  {/* -- Montant engag√© ce mois ----------------------------- */}
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-blue-50 border border-blue-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
                       <ShoppingCart className="h-4 w-4 text-emerald-600 dark:text-primary" />
@@ -765,7 +765,7 @@ export function BonsCommandeList() {
                     </div>
                   </div>
 
-                  {/* -- Commandes passÈes ---------------------------------- */}
+                  {/* -- Commandes pass√©es ---------------------------------- */}
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center h-9 w-9 rounded-[6px] bg-blue-50 border border-blue-200/50 shrink-0 dark:rounded-sm dark:bg-primary/10 dark:border-primary/20">
                       <Package className="h-4 w-4 text-emerald-600 dark:text-primary" />
