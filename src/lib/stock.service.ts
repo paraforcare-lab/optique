@@ -30,26 +30,7 @@ const makeMovementKey = (input: StockMovementInput): string => {
   return `${input.source_document_type}:${input.source_document_id || input.source_document_ref}:${input.produit_id}:${input.type}`
 }
 
-const checkExistingMovement = async (input: StockMovementInput): Promise<boolean> => {
-  const cacheKey = makeMovementKey(input)
-  if (doubleMovementCache.has(cacheKey)) return true
-
-  if (input.source_document_id) {
-    const { data: existing } = await supabaseAdmin
-      .from('stock_history')
-      .select('id')
-      .eq('produit_id', input.produit_id)
-      .eq('source_document_type', input.source_document_type)
-      .eq('source_document_id', input.source_document_id)
-      .eq('type', input.type)
-      .limit(1)
-
-    if (existing && existing.length > 0) {
-      doubleMovementCache.add(cacheKey)
-      return true
-    }
-  }
-
+const checkExistingMovement = async (_input: StockMovementInput): Promise<boolean> => {
   return false
 }
 
@@ -84,21 +65,12 @@ export const processStockMovement = async (
       }
     }
 
-    const ancienStock = Number(produit.stock_actuel || 0)
+    const ancienStock = Number(produit.stock_actuel) || 0
     let nouveauStock = ancienStock + input.quantite
     let clamped = false
     let mouvementId: number | undefined
 
-    if (input.type === 'vente' && input.quantite < 0 && nouveauStock < 0) {
-      return {
-        success: false,
-        ancien_stock: ancienStock,
-        nouveau_stock: ancienStock,
-        error: `Stock insuffisant pour le produit ${input.produit_id}. Stock actuel: ${ancienStock}, requis: ${Math.abs(input.quantite)}`
-      }
-    }
-
-    if (nouveauStock < 0) {
+    if (input.type !== 'vente' && nouveauStock < 0) {
       nouveauStock = Math.max(0, nouveauStock)
       clamped = true
     }
@@ -259,8 +231,8 @@ export const processPurchaseOrderStock = async (
       source_document_id: bonCommandeId,
       source_document_ref: bon.numero,
       notes: isLivré
-        ? `Réception Bon de Commande ${bon.numero}`
-        : `Annulation réception Bon de Commande ${bon.numero}`,
+        ? `Changement vers livré — ${bon.numero}`
+        : `Changement depuis livré (${ancienStatut || '?'}) — ${bon.numero}`,
       entite_nom: bon.fournisseur?.nom,
       prix_unitaire: l.prix_unitaire_ht
     })
@@ -271,6 +243,43 @@ export const processPurchaseOrderStock = async (
   }
 
   return { success: errors.length === 0, errors }
+}
+
+export const checkInvoiceStockAvailability = async (
+  factureId: number
+): Promise<{ ok: true; lignes: any[]; facture: any } | { ok: false; errors: string[] }> => {
+  const { data: facture } = await supabaseAdmin
+    .from('factures')
+    .select('*, client:clients(nom)')
+    .eq('id', factureId)
+    .single()
+
+  if (!facture) return { ok: false, errors: ['Facture introuvable'] }
+
+  const { data: lignes } = await supabaseAdmin
+    .from('facture_lignes')
+    .select('*')
+    .eq('facture_id', factureId)
+
+  if (!lignes || lignes.length === 0) return { ok: true, lignes: [], facture }
+
+  const errors: string[] = []
+  for (const l of lignes) {
+    if (!l.produit_id) continue
+    const qte = Number(l.quantite || 0)
+    const { data: prod } = await supabaseAdmin
+      .from('produits')
+      .select('stock_actuel, reference, designation, nom')
+      .eq('id', l.produit_id)
+      .single()
+    const stock = Number(prod?.stock_actuel) || 0
+    if (stock < qte) {
+      const nom = prod?.designation || prod?.nom || prod?.reference || `#${l.produit_id}`
+      errors.push(`Stock insuffisant pour "${nom}" — requis: ${qte}, disponible: ${stock}`)
+    }
+  }
+  if (errors.length > 0) return { ok: false, errors }
+  return { ok: true, lignes, facture }
 }
 
 export const processInvoiceStock = async (
@@ -299,12 +308,12 @@ export const processInvoiceStock = async (
   if (!lignes || lignes.length === 0) return { success: true, errors }
 
   if (isSale && !wasSale && !isCancelled) {
-    // Passage to sale status: decrease stock
     for (const l of lignes) {
       if (!l.produit_id) continue
+      const qte = Number(l.quantite || 0)
       const result = await processStockMovement({
         produit_id: l.produit_id,
-        quantite: -Number(l.quantite || 0),
+        quantite: -qte,
         type: 'vente',
         source_document_type: 'facture',
         source_document_id: factureId,
@@ -313,8 +322,11 @@ export const processInvoiceStock = async (
         entite_nom: facture.client?.nom,
         prix_unitaire: l.prix_unitaire_ht
       })
-      if (!result.success) errors.push(`Produit ${l.produit_id}: ${result.error}`)
+      if (!result.success) {
+        errors.push(`Produit ${l.produit_id}: ${result.error}`)
+      }
     }
+
   } else if (!isSale && !isCancelled && wasSale) {
     // Passage from sale to non-sale non-cancelled status: restore stock
     for (const l of lignes) {
@@ -352,6 +364,90 @@ export const processInvoiceStock = async (
   }
 
   return { success: errors.length === 0, errors }
+}
+
+type AutoBCProduct = { produit_id: number; quantite_manquante: number; prix_unitaire: number; reference?: string; designation?: string }
+
+export const generateAutoPurchaseOrder = async (
+  sourceDocumentRef: string,
+  clientId: number | null,
+  products: AutoBCProduct[]
+): Promise<string | null> => {
+  try {
+    const now = new Date().toISOString()
+    const { count: bcCount } = await supabaseAdmin.from('bons_commande').select('*', { count: 'exact', head: true })
+    const bcNumero = `BC-${new Date().getFullYear()}-${String((bcCount || 0) + 1).padStart(4, '0')}`
+
+    let autoFournisseurId: number | null = null
+    for (const p of products) {
+      const { data: prod } = await supabaseAdmin
+        .from('produits')
+        .select('fournisseur_id')
+        .eq('id', p.produit_id)
+        .single()
+      if (prod?.fournisseur_id) {
+        autoFournisseurId = prod.fournisseur_id
+        break
+      }
+    }
+
+    const { data: newBC, error: bcError } = await supabaseAdmin
+      .from('bons_commande')
+      .insert([{
+        numero: bcNumero,
+        fournisseur_id: autoFournisseurId,
+        client_id: clientId,
+        date_commande: now,
+        statut: 'livré',
+        notes: `Généré automatiquement depuis ${sourceDocumentRef} — stock insuffisant`,
+        montant_ht: 0,
+        montant_tva: 0,
+        montant_ttc: 0,
+      }])
+      .select()
+      .single()
+
+    if (bcError || !newBC) {
+      console.warn(`[AutoBC] Failed to create BC:`, bcError)
+      return null
+    }
+
+    let totalHt = 0
+    let totalTtc = 0
+    const bcLignes = products.map((p, idx) => {
+      const mht = p.prix_unitaire * p.quantite_manquante
+      const tva = 20
+      const mttc = mht * (1 + tva / 100)
+      totalHt += mht
+      totalTtc += mttc
+      return {
+        bon_commande_id: newBC.id,
+        produit_id: p.produit_id,
+        reference: p.reference || null,
+        designation: p.designation || '',
+        quantite: p.quantite_manquante,
+        prix_unitaire_ht: p.prix_unitaire,
+        tva,
+        montant_ht: mht,
+        montant_ttc: mttc,
+        ordre: idx,
+      }
+    })
+
+    const { error: lignesError } = await supabaseAdmin.from('bon_commande_lignes').insert(bcLignes)
+    if (!lignesError) {
+      await supabaseAdmin
+        .from('bons_commande')
+        .update({ montant_ht: totalHt, montant_ttc: totalTtc, montant_tva: totalTtc - totalHt })
+        .eq('id', newBC.id)
+      await processPurchaseOrderStock(newBC.id, 'livré', null)
+    }
+
+    return newBC.id.toString()
+  } catch (bcGenErr) {
+    console.warn(`[AutoBC] Failed to generate BC:`, bcGenErr)
+    return null
+  }
 }
 
 export const processVentePassagerStock = async (
@@ -417,5 +513,35 @@ export const getStockHistory = async (
   }
 
   const { data, error } = await query
+
+  // Enrich with source document status for display
+  if (data) {
+    await Promise.all(data.map(async (entry: any) => {
+      const docType = entry.source_document_type as string
+      const docId = entry.source_document_id as number | null
+      if (!docType || !docId) return
+
+      try {
+        if (docType === 'bon_commande') {
+          const { data: doc } = await supabaseAdmin
+            .from('bons_commande').select('statut').eq('id', docId).single()
+          if (doc) entry.document_status = doc.statut
+        } else if (docType === 'facture') {
+          const { data: doc } = await supabaseAdmin
+            .from('factures').select('statut').eq('id', docId).single()
+          if (doc) entry.document_status = doc.statut
+        } else if (docType === 'bon_livraison') {
+          const { data: doc } = await supabaseAdmin
+            .from('bons_livraison').select('statut').eq('id', docId).single()
+          if (doc) entry.document_status = doc.statut
+        } else if (docType === 'vente_passager') {
+          entry.document_status = 'vente'
+        }
+      } catch {
+        // source doc may have been deleted
+      }
+    }))
+  }
+
   return { data, error }
 }

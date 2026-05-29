@@ -1349,6 +1349,7 @@
       "col_ancien":       "Ancien stock",
       "col_nouveau":      "Nouveau stock",
       "col_notes":        "Notes",
+      "col_status":       "Statut",
       "empty":            "Aucun mouvement trouvé",
       "type_achat":       "Achat",
       "type_vente":       "Vente",

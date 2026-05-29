@@ -20,7 +20,7 @@ import { formatCurrency } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { generateDocumentNumber } from '@/lib/numbering'
-import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
+// Stock updates handled by FacturesList and Express API on status change
 
 interface FactureFormProps {
   initialData?: any;
@@ -250,12 +250,15 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
         oldLignes = old || [];
       }
 
+      // Save as brouillon first, then promote via Express API (handles stock + history)
+      const isActiveTarget = activeStatuses.includes(data.statut);
+
       if (!factureId) {
-        const { data: newFacture, error } = await supabase.from('factures').insert([{ ...payload, user_id: user?.id }]).select().single();
+        const { data: newFacture, error } = await supabase.from('factures').insert([{ ...payload, statut: 'brouillon', user_id: user?.id }]).select().single();
         if (error) throw error;
         factureId = newFacture.id;
       } else {
-        const { error } = await supabase.from('factures').update(payload).eq('id', factureId).eq('user_id', user?.id);
+        const { error } = await supabase.from('factures').update({ ...payload, statut: isActiveTarget ? 'brouillon' : data.statut }).eq('id', factureId).eq('user_id', user?.id);
         if (error) throw error;
         await supabase.from('facture_lignes').delete().eq('facture_id', factureId);
       }
@@ -280,27 +283,17 @@ export function FactureForm({ initialData, onSuccess }: FactureFormProps) {
         if (lignesError) throw lignesError;
       }
 
-      // Restore stock for old lines if status was active
-      const changedIds: (number | string)[] = [];
-      for (const l of oldLignes) {
-        if (l.produit_id) {
-          await updateStockAndNotify(user?.id, l.produit_id, Number(l.quantite));
-          changedIds.push(l.produit_id);
+      // Promote to desired active status via Express API (handles stock deduction + history + auto-BC)
+      if (isActiveTarget) {
+        const res = await fetch(`/api/factures/${factureId}/statut`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ statut: data.statut }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          console.error('Facture status promotion failed:', err);
         }
-      }
-
-      // Deduct stock for new lines if active
-      if (activeStatuses.includes(data.statut)) {
-        for (const ligne of lignesPayload) {
-          if (ligne.produit_id) {
-            await updateStockAndNotify(user?.id, ligne.produit_id, -Number(ligne.quantite));
-            changedIds.push(ligne.produit_id);
-          }
-        }
-      }
-
-      if (changedIds.length > 0) {
-        await ensureLowStockNotifications(user?.id, changedIds);
       }
 
       toast.success(initialData ? 'Facture modifiée' : 'Facture créée');

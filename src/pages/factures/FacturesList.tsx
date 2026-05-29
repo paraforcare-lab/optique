@@ -33,7 +33,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { updateStockAndNotify, ensureLowStockNotifications } from '@/lib/notifications'
+import { ensureLowStockNotifications } from '@/lib/notifications'
 import { generateDocumentNumber } from '@/lib/numbering'
 
 interface Facture {
@@ -444,7 +444,7 @@ export function FacturesList() {
 
   const handleStatusChange = async (id: number, newStatut: string) => {
     try {
-      const { data: facture } = await supabase.from('factures').select('statut').eq('id', id).single();
+      const { data: facture } = await supabase.from('factures').select('statut, numero').eq('id', id).single();
 
       if (facture?.statut === 'annulée' && newStatut !== 'annulée') {
         const { data: avoir } = await supabase.from('avoirs').select('id').eq('facture_id', id).single();
@@ -455,61 +455,25 @@ export function FacturesList() {
       }
 
       const oldStatut = facture?.statut;
-      const updateData: any = { statut: newStatut };
-      if (newStatut === 'payée') {
-        updateData.reste_a_payer = 0;
-      }
 
       // Create avoir BEFORE updating status (transaction integrity)
       if (newStatut === 'annulée' && oldStatut && oldStatut !== 'annulée') {
         await createAvoirForFacture(id);
       }
 
-      const activeStatuses = ['payée', 'reste_a_payer'];
-      const wasActive = activeStatuses.includes(oldStatut);
-      const isActive = activeStatuses.includes(newStatut);
+      // Call Express API which handles stock, history, auto-BC
+      const res = await fetch(`/api/factures/${id}/statut`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: newStatut }),
+      });
 
-      // Stock update logic
-      const changedIds: (number | string)[] = [];
-      if (isActive && !wasActive) {
-        const { data: lignes } = await supabase
-          .from('facture_lignes')
-          .select('produit_id, quantite')
-          .eq('facture_id', id);
-
-        if (lignes) {
-          for (const l of lignes) {
-            if (l.produit_id) {
-              await updateStockAndNotify(user?.id, l.produit_id, -Number(l.quantite));
-              changedIds.push(l.produit_id);
-            }
-          }
-        }
-      } else if (!isActive && wasActive) {
-        const { data: lignes } = await supabase
-          .from('facture_lignes')
-          .select('produit_id, quantite')
-          .eq('facture_id', id);
-
-        if (lignes) {
-          for (const l of lignes) {
-            if (l.produit_id) {
-              await updateStockAndNotify(user?.id, l.produit_id, Number(l.quantite));
-            }
-          }
-        }
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to update status');
       }
 
-      if (changedIds.length > 0) {
-        await ensureLowStockNotifications(user?.id, changedIds);
-      }
-
-      const { error } = await supabase
-        .from('factures')
-        .update(updateData)
-        .eq('id', id)
-        .eq('user_id', user?.id);
-      if (error) throw error;
+      await ensureLowStockNotifications(user?.id);
       toast.success(t('shared.toast.status_updated'));
       fetchFactures();
     } catch (error: any) {

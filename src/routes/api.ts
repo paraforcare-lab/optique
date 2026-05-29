@@ -5,7 +5,8 @@ import {
   processPurchaseOrderStock,
   processInvoiceStock,
   processVentePassagerStock,
-  getStockHistory
+  getStockHistory,
+  generateAutoPurchaseOrder
 } from '../lib/stock.service'
 
 const router = Router();
@@ -394,7 +395,7 @@ const updateProductStock = async (
     throw new Error(`Produit introuvable: ${produitId}`);
   }
   
-  const currentStock = Number(produit.stock_actuel || 0);
+  const currentStock = Number(produit.stock_actuel) || 0;
   const newStock = currentStock + delta;
   
   // Prevent negative stock â€” only block outbound movements (sales/deliveries).
@@ -428,6 +429,25 @@ const updateProductStock = async (
   const { error: mError } = await supabaseAdmin.from('mouvements_stock').insert([mData]);
   if (mError) {
     console.warn(`Stock movement not recorded (table may not exist): ${mError.message}`);
+  }
+
+  // Also record to stock_history with ancien/nouveau stock
+  try {
+    await supabaseAdmin.from('stock_history').insert([{
+      produit_id: parseInt(produitId),
+      quantite: delta,
+      type,
+      source_document_type: type === 'achat' ? 'bon_livraison' : 'ajustement',
+      source_document_ref: referenceDocument || null,
+      ancien_stock: currentStock,
+      nouveau_stock: newStock,
+      entite_nom: entiteNom || null,
+      prix_unitaire: prixUnitaire || 0,
+      notes: notes || '',
+      user_id: produit.user_id || null,
+    }]);
+  } catch (histErr) {
+    console.warn(`Stock history not recorded:`, histErr);
   }
 
   if (delta < 0 && newStock <= Number(produit.stock_min) && Number(produit.stock_min) > 0 && produit.user_id) {
@@ -490,7 +510,7 @@ const updateProductStockSafe = async (
     return;
   }
 
-  const currentStock = Number(produit.stock_actuel || 0);
+  const currentStock = Number(produit.stock_actuel) || 0;
   const newStock = Math.max(0, currentStock + delta);
 
   if (newStock < currentStock + delta) {
@@ -525,6 +545,24 @@ const updateProductStockSafe = async (
   const { error: mError } = await supabaseAdmin.from('mouvements_stock').insert([mData]);
   if (mError) {
     console.warn(`Stock movement not recorded: ${mError.message}`);
+  }
+
+  try {
+    await supabaseAdmin.from('stock_history').insert([{
+      produit_id: parseInt(produitId),
+      quantite: delta,
+      type,
+      source_document_type: 'ajustement',
+      source_document_ref: referenceDocument || null,
+      ancien_stock: currentStock,
+      nouveau_stock: newStock,
+      entite_nom: entiteNom || null,
+      prix_unitaire: prixUnitaire || 0,
+      notes: notes || '',
+      user_id: produit.user_id || null,
+    }]);
+  } catch (histErr) {
+    console.warn(`Stock history not recorded:`, histErr);
   }
 };
 
@@ -1126,16 +1164,31 @@ router.post('/produits', async (req, res) => {
 
     // Record initial movement if stock > 0
     if (produit && req.body.stockActuel > 0) {
+      const initialQty = Number(req.body.stockActuel);
       try {
         await supabase.from('mouvements_stock').insert([{
           produit_id: produit.id,
           type: 'initial',
-          quantite: req.body.stockActuel,
+          quantite: initialQty,
           notes: 'Stock initial Ã  la crÃ©ation du produit',
           date_mouvement: new Date()
         }]);
       } catch (mError) {
         console.error('Error recording initial stock movement:', mError);
+      }
+      try {
+        await supabaseAdmin.from('stock_history').insert([{
+          produit_id: produit.id,
+          quantite: initialQty,
+          type: 'initial',
+          source_document_type: 'ajustement',
+          ancien_stock: 0,
+          nouveau_stock: initialQty,
+          notes: 'Stock initial Ã  la crÃ©ation du produit',
+          user_id: req.user?.id || null,
+        }]);
+      } catch (histErr) {
+        console.warn(`Stock history not recorded:`, histErr);
       }
     }
 
@@ -1172,6 +1225,17 @@ router.put('/produits/:id', async (req, res) => {
   try {
     const { id: _, created_at: __, ...updateData } = req.body;
     
+    // Fetch old stock for history recording
+    let oldStock: number | undefined;
+    if (updateData.stockActuel !== undefined) {
+      const { data: oldProd } = await supabase
+        .from('produits')
+        .select('stock_actuel')
+        .eq('id', req.params.id)
+        .single();
+      oldStock = oldProd ? (Number(oldProd.stock_actuel) || 0) : undefined;
+    }
+
     const data: any = {};
     if (updateData.reference !== undefined) data.reference = updateData.reference;
     if (updateData.nom !== undefined) {
@@ -1279,6 +1343,30 @@ router.put('/produits/:id', async (req, res) => {
       }
     }
     const mappedProduit = { ...produit, nom: (produit as any).designation || (produit as any).nom };
+
+    // Record stock change in history
+    if (oldStock !== undefined && produit) {
+      const newStock = Number(produit.stock_actuel) || 0;
+      const delta = newStock - oldStock;
+      if (delta !== 0) {
+        try {
+          await supabaseAdmin.from('stock_history').insert([{
+            produit_id: produit.id,
+            quantite: delta,
+            type: 'ajustement',
+            source_document_type: 'ajustement',
+            source_document_ref: 'Ajustement manuel',
+            ancien_stock: oldStock,
+            nouveau_stock: newStock,
+            notes: `Ajustement manuel de ${oldStock} Ã  ${newStock}`,
+            user_id: req.user?.id || null,
+          }]);
+        } catch (histErr) {
+          console.warn(`Stock history not recorded:`, histErr);
+        }
+      }
+    }
+
     res.json(toCamel(mappedProduit));
   } catch (error: any) {
     console.error('Error updating produit:', formatError(error));
@@ -2034,6 +2122,7 @@ router.post('/bons-commande', async (req, res) => {
 
     await logActivity('crÃ©ation bon de commande', `Bon de Commande ${numero} crÃ©Ã©`);
 
+    let stockWarnings: string[] | undefined;
     if (lignes && lignes.length > 0) {
       const lignesData = lignes.map((l: any, index: number) => {
         const qte = Number(l.quantite || 0);
@@ -2074,7 +2163,7 @@ router.post('/bons-commande', async (req, res) => {
       if (islivré) {
         const stockResult = await processPurchaseOrderStock(bon.id, bon.statut, null);
         if (!stockResult.success) {
-          console.warn('Stock update warnings for BC:', stockResult.errors);
+          stockWarnings = stockResult.errors;
         }
 
         // Create a linked Bon de Livraison
@@ -2119,11 +2208,12 @@ router.post('/bons-commande', async (req, res) => {
       .eq('id', bon.id)
       .single();
 
-    if (fetchError) {
-      return res.status(201).json(toCamel(bon));
+    const postPayload: any = fetchError ? toCamel(bon) : toCamel(completeBon);
+    if (stockWarnings) {
+      postPayload.stock_warnings = stockWarnings;
     }
 
-    res.status(201).json(toCamel(completeBon));
+    res.status(201).json(postPayload);
   } catch (error) {
     console.error('Unexpected error in POST /bons-commande:', error);
     res.status(500).json({ error: 'Internal server error', details: formatError(error) });
@@ -2215,9 +2305,6 @@ router.put('/bons-commande/:id', async (req, res) => {
     }
 
     const stockResult = await processPurchaseOrderStock(Number(id), newStatut, oldStatut);
-    if (!stockResult.success) {
-      console.warn('Stock update warnings for BC:', stockResult.errors);
-    }
 
     // Only update lines if provided
     if (lignes !== undefined) {
@@ -2260,11 +2347,12 @@ router.put('/bons-commande/:id', async (req, res) => {
       .eq('id', id)
       .single();
 
-    if (fetchError) {
-      return res.status(200).json({ id });
+    const responsePayload: any = fetchError ? { id } : toCamel(updatedBon);
+    if (!stockResult.success) {
+      responsePayload.stock_warnings = stockResult.errors;
     }
 
-    res.json(toCamel(updatedBon));
+    res.json(responsePayload);
   } catch (error) {
     console.error('Unexpected error in PUT /bons-commande:', error);
     res.status(500).json({ error: 'Internal server error', details: formatError(error) });
@@ -2418,11 +2506,13 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
 
     // --- Stock movement sync via centralized service --------------------------
     const stockResult = await processPurchaseOrderStock(id, statut, oldBon.statut);
+
+    const payload: any = toCamel(bon);
     if (!stockResult.success) {
-      console.warn('[PUT /bons-commande/:id/statut] Stock update warnings:', stockResult.errors);
+      payload.stock_warnings = stockResult.errors;
     }
 
-    return res.json(toCamel(bon));
+    return res.json(payload);
   } catch (error: any) {
     // Top-level safety net — always return JSON, never let the serverless
     // function crash with an unhandled exception.
@@ -2432,6 +2522,63 @@ router.put(['/bons-commande/:id/statut', '/bons-commande/:id/status'], async (re
       details: error?.message || String(error),
       code: error?.code,
     });
+  }
+});
+
+// Auto-restock endpoint: checks for negative stock after a facture and generates BCs
+router.post('/factures/:id/auto-restock', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10)
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid facture ID' })
+
+    const { data: facture } = await supabaseAdmin
+      .from('factures')
+      .select('id, numero, client_id')
+      .eq('id', id)
+      .single()
+
+    if (!facture) return res.status(404).json({ error: 'Facture not found' })
+
+    const { data: lignes } = await supabaseAdmin
+      .from('facture_lignes')
+      .select('produit_id, quantite, prix_unitaire_ht, reference, designation')
+      .eq('facture_id', id)
+
+    if (!lignes || lignes.length === 0) return res.json({ bc_id: null })
+
+    const autoBCProducts: { produit_id: number; quantite_manquante: number; prix_unitaire: number; reference?: string; designation?: string }[] = []
+
+    for (const l of lignes) {
+      if (!l.produit_id) continue
+      const { data: prod } = await supabaseAdmin
+        .from('produits')
+        .select('stock_actuel')
+        .eq('id', l.produit_id)
+        .single()
+
+      const stock = Number(prod?.stock_actuel) || 0
+      const qte = Number(l.quantite || 0)
+
+      // Check if this deduction made stock negative
+      // stock_actuel already reflects the deduction (done client-side)
+      if (stock < 0) {
+        autoBCProducts.push({
+          produit_id: l.produit_id,
+          quantite_manquante: Math.abs(stock),
+          prix_unitaire: Number(l.prix_unitaire_ht || 0),
+          reference: l.reference,
+          designation: l.designation,
+        })
+      }
+    }
+
+    if (autoBCProducts.length === 0) return res.json({ bc_id: null })
+
+    const bcId = await generateAutoPurchaseOrder(`Facture ${facture.numero}`, facture.client_id, autoBCProducts)
+    res.json({ bc_id: bcId })
+  } catch (error: any) {
+    console.error('[POST /factures/:id/auto-restock] Error:', error)
+    res.status(500).json({ error: error.message })
   }
 });
 
@@ -3341,6 +3488,65 @@ router.get('/stock-history', async (req, res) => {
   } catch (error) {
     console.error('Failed to fetch stock history:', error);
     res.status(500).json({ error: 'Failed to fetch stock history' });
+  }
+});
+
+// Client-side stock adjustment (called from notifications.ts instead of direct supabase)
+router.post('/stock-adjust', async (req, res) => {
+  try {
+    const { produitId, delta, userId, sourceDocumentType, sourceDocumentRef, clampToZero } = req.body;
+    if (!produitId || delta === undefined) {
+      return res.status(400).json({ error: 'produitId and delta are required' });
+    }
+    const pid = Number(produitId);
+    const d = Number(delta);
+    if (isNaN(pid) || isNaN(d)) {
+      return res.status(400).json({ error: 'Invalid produitId or delta' });
+    }
+
+    const { data: produit, error: fetchError } = await supabaseAdmin
+      .from('produits')
+      .select('stock_actuel, designation, nom, user_id')
+      .eq('id', pid)
+      .single();
+
+    if (fetchError || !produit) {
+      return res.status(404).json({ error: 'Produit not found' });
+    }
+
+    const ancienStock = Number(produit.stock_actuel) || 0;
+    let nouveauStock = ancienStock + d;
+
+    if (clampToZero && nouveauStock < 0) {
+      nouveauStock = 0;
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from('produits')
+      .update({ stock_actuel: nouveauStock })
+      .eq('id', pid);
+
+    if (updateError) {
+      console.error('[POST /stock-adjust] Update error:', updateError);
+      return res.status(500).json({ error: `Erreur mise à jour stock: ${updateError.message}` });
+    }
+
+    await supabaseAdmin.from('stock_history').insert([{
+      produit_id: pid,
+      quantite: d,
+      type: d > 0 ? 'achat' : 'vente',
+      source_document_type: sourceDocumentType || 'ajustement',
+      source_document_ref: sourceDocumentRef || null,
+      ancien_stock: ancienStock,
+      nouveau_stock: nouveauStock,
+      notes: nouveauStock !== ancienStock + d ? '(Stock clôturé à 0)' : '',
+      user_id: userId || produit.user_id || null,
+    }]);
+
+    res.json({ success: true, ancien_stock: ancienStock, nouveau_stock: nouveauStock });
+  } catch (error: any) {
+    console.error('[POST /stock-adjust] Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

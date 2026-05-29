@@ -1215,6 +1215,7 @@
       "col_ancien":       "Old stock",
       "col_nouveau":      "New stock",
       "col_notes":        "Notes",
+      "col_status":       "Status",
       "empty":            "No movements found",
       "type_achat":       "Purchase",
       "type_vente":       "Sale",

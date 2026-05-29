@@ -1349,6 +1349,7 @@
       "col_ancien":       "المخزون القديم",
       "col_nouveau":      "المخزون الجديد",
       "col_notes":        "ملاحظات",
+      "col_status":       "الحالة",
       "empty":            "لا توجد حركات",
       "type_achat":       "شراء",
       "type_vente":       "بيع",

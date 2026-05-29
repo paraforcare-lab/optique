@@ -205,7 +205,10 @@ export default function VentesPassagers() {
       }
 
       for (const item of panier) {
-        await updateStockAndNotify(user?.id, item.produitId, -item.quantite);
+        await updateStockAndNotify(user?.id, item.produitId, -item.quantite, {
+          sourceDocumentType: 'vente_passager',
+          sourceDocumentRef: `${numero} (#${venteData.id})`,
+        });
       }
       await ensureLowStockNotifications(user?.id);
 

@@ -627,6 +627,7 @@ export function ImportExport() {
                           <TableHead className="dark:text-slate-300">{ie('histourique.col_date')}</TableHead>
                           <TableHead className="dark:text-slate-300">{ie('histourique.col_type')}</TableHead>
                           <TableHead className="dark:text-slate-300">{ie('histourique.col_document')}</TableHead>
+                          <TableHead className="dark:text-slate-300">{ie('histourique.col_status')}</TableHead>
                           <TableHead className="text-right dark:text-slate-300">{ie('histourique.col_quantite')}</TableHead>
                           <TableHead className="text-right dark:text-slate-300">{ie('histourique.col_ancien')}</TableHead>
                           <TableHead className="text-right dark:text-slate-300">{ie('histourique.col_nouveau')}</TableHead>
@@ -636,13 +637,13 @@ export function ImportExport() {
                       <TableBody>
                         {isLoadingHistory ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                               <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                             </TableCell>
                           </TableRow>
                         ) : stockHistory.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                               {ie('histourique.empty')}
                             </TableCell>
                           </TableRow>
@@ -661,6 +662,9 @@ export function ImportExport() {
                                 {h.sourceDocumentRef || h.source_document_ref || '-'}
                                 {h.sourceDocumentId || h.source_document_id ? ` (#${h.sourceDocumentId || h.source_document_id})` : ''}
                               </TableCell>
+                              <TableCell className="text-xs dark:text-slate-300">
+                                {h.document_status || '-'}
+                              </TableCell>
                               <TableCell className={`text-right text-xs font-mono font-medium ${
                                 Number(h.quantite) > 0
                                   ? 'text-green-600 dark:text-green-400'
@@ -671,10 +675,10 @@ export function ImportExport() {
                                 {Number(h.quantite) > 0 ? '+' : ''}{Number(h.quantite)}
                               </TableCell>
                               <TableCell className="text-right text-xs font-mono dark:text-slate-300">
-                                {Number(h.ancienStock || h.ancien_stock)}
+                                {Number(h.ancienStock ?? h.ancien_stock) || 0}
                               </TableCell>
                               <TableCell className="text-right text-xs font-mono dark:text-slate-300">
-                                {Number(h.nouveauStock || h.nouveau_stock)}
+                                {Number(h.nouveauStock ?? h.nouveau_stock) || 0}
                               </TableCell>
                               <TableCell className="text-xs max-w-[200px] truncate dark:text-slate-400">
                                 {h.notes || '-'}
