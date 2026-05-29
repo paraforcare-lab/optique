@@ -8,7 +8,7 @@ import {
 } from 'recharts'
 import {
   DollarSign, CreditCard, Activity, FileText, Users, Package,
-  ShieldCheck, ChevronRight, ChevronLeft, Receipt, Building2,
+  ShieldCheck, ChevronRight, Receipt, Building2,
   HeartPulse, ClipboardList, Plus, ShoppingCart, AlertTriangle,
   PieChart, CalendarDays,
 } from 'lucide-react'
@@ -74,8 +74,7 @@ export function Dashboard() {
 
   const [stats, setStats]     = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
-  // Pagination for the upcoming-appointments list (UI only).
-  const [rdvPage, setRdvPage] = useState(0)
+  // Maximum number of upcoming appointments to display (UI only).
   const RDV_PER_PAGE = 4
 
   // Locale-aware currency formatter (memoised to the current language)
@@ -329,11 +328,9 @@ export function Dashboard() {
   const healthData = stats?.stockByHealth ?? []
   const healthTotal = healthData.reduce((s, h) => s + h.value, 0)
 
-  // ─── Upcoming appointments pagination (UI only) ──────────────────────────
+  // ─── Upcoming appointments — show a maximum of 4 (UI only) ────────────────
   const allRdvs = stats?.upcomingRdvs ?? []
-  const rdvPageCount = Math.max(1, Math.ceil(allRdvs.length / RDV_PER_PAGE))
-  const safeRdvPage = Math.min(rdvPage, rdvPageCount - 1)
-  const pagedRdvs = allRdvs.slice(safeRdvPage * RDV_PER_PAGE, safeRdvPage * RDV_PER_PAGE + RDV_PER_PAGE)
+  const pagedRdvs = allRdvs.slice(0, RDV_PER_PAGE)
 
   // ─── Donut tooltip (category — currency + share) ──────────────────────────
   const CustomTooltip = ({ active, payload }: any) => {
@@ -751,27 +748,27 @@ export function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-7">
         {/* Calendar */}
         <Card className="lg:col-span-3 card-elevated border-transparent dark:border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2.5">
-              <span className="h-9 w-9 rounded-2xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
-                <CalendarDays className="h-[18px] w-[18px] text-[#6D5BF6] dark:text-[#A78BFA]" />
+          <CardHeader className="pb-1">
+            <CardTitle className="text-base font-bold flex items-center gap-2.5">
+              <span className="h-8 w-8 rounded-xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
+                <CalendarDays className="h-4 w-4 text-[#6D5BF6] dark:text-[#A78BFA]" />
               </span>
               {td('coming_up.title')}
             </CardTitle>
-            <CardDescription>{td('coming_up.subtitle')}</CardDescription>
+            <CardDescription className="text-xs">{td('coming_up.subtitle')}</CardDescription>
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className="pt-3">
             <ComingUpCalendar rdvs={stats?.upcomingRdvs ?? []} />
           </CardContent>
         </Card>
 
         {/* Upcoming appointments list */}
         <Card className="lg:col-span-4 card-elevated border-transparent dark:border-border">
-          <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-1">
             <div className="space-y-1 min-w-0">
-              <CardTitle className="text-lg font-bold flex items-center gap-2.5">
-                <span className="h-9 w-9 rounded-2xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
-                  <Receipt className="h-[18px] w-[18px] text-[#6D5BF6] dark:text-[#A78BFA]" />
+              <CardTitle className="text-base font-bold flex items-center gap-2.5">
+                <span className="h-8 w-8 rounded-xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
+                  <Receipt className="h-4 w-4 text-[#6D5BF6] dark:text-[#A78BFA]" />
                 </span>
                 {td('coming_up.subtitle')}
               </CardTitle>
@@ -779,7 +776,7 @@ export function Dashboard() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-[#6D5BF6] dark:text-[#A78BFA] font-semibold hover:bg-[#EEEDFB] dark:hover:bg-[#6D5BF6]/10 rounded-lg ms-auto shrink-0"
+              className="text-[#6D5BF6] dark:text-[#A78BFA] font-semibold hover:bg-[#EEEDFB] dark:hover:bg-[#6D5BF6]/10 rounded-lg ms-auto shrink-0 h-8"
             >
               <Link to="/rendez-vous" className="flex items-center gap-1">
                 {td('recent_invoices.view_all')}
@@ -787,20 +784,20 @@ export function Dashboard() {
               </Link>
             </Button>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
+          <CardContent className="pt-2">
+            <div className="space-y-1">
               {allRdvs.length ? (
                 pagedRdvs.map((rdv) => (
                   <div
                     key={rdv.id}
-                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-[#F8F8FD] dark:hover:bg-white/5 transition-colors duration-200"
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#F8F8FD] dark:hover:bg-white/5 transition-colors duration-200"
                   >
                     {/* Date chip */}
-                    <div className="h-11 w-11 rounded-2xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex flex-col items-center justify-center shrink-0 leading-none" dir="ltr">
-                      <span className="text-[15px] font-black text-[#4A3FCF] dark:text-[#A78BFA]">
+                    <div className="h-10 w-10 rounded-xl bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex flex-col items-center justify-center shrink-0 leading-none" dir="ltr">
+                      <span className="text-sm font-black text-[#4A3FCF] dark:text-[#A78BFA]">
                         {new Date(rdv.date_rdv).getDate()}
                       </span>
-                      <span className="text-[9px] font-bold text-[#6D5BF6]/70 dark:text-[#A78BFA]/70 uppercase">
+                      <span className="text-[8px] font-bold text-[#6D5BF6]/70 dark:text-[#A78BFA]/70 uppercase">
                         {new Date(rdv.date_rdv).toLocaleDateString(dateFmt, { month: 'short' })}
                       </span>
                     </div>
@@ -824,39 +821,14 @@ export function Dashboard() {
                   </div>
                 ))
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 rounded-2xl p-4 mb-3">
-                    <CalendarDays className="h-8 w-8 text-[#6D5BF6]/60 dark:text-[#A78BFA]/60" />
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 rounded-2xl p-3 mb-3">
+                    <CalendarDays className="h-7 w-7 text-[#6D5BF6]/60 dark:text-[#A78BFA]/60" />
                   </div>
                   <p className="text-sm text-muted-foreground">{td('coming_up.none')}</p>
                 </div>
               )}
             </div>
-
-            {/* Pagination (rows) */}
-            {allRdvs.length > RDV_PER_PAGE && (
-              <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-[#EAEAF4] dark:border-white/10">
-                <button
-                  onClick={() => setRdvPage((p) => Math.max(0, p - 1))}
-                  disabled={safeRdvPage === 0}
-                  aria-label="Previous"
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-[#F2F2FA] dark:hover:bg-white/5 hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
-                </button>
-                <span className="text-xs font-medium text-muted-foreground" dir="ltr">
-                  {safeRdvPage + 1} / {rdvPageCount}
-                </span>
-                <button
-                  onClick={() => setRdvPage((p) => Math.min(rdvPageCount - 1, p + 1))}
-                  disabled={safeRdvPage >= rdvPageCount - 1}
-                  aria-label="Next"
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-[#F2F2FA] dark:hover:bg-white/5 hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  <ChevronRight className="h-4 w-4 rtl:rotate-180" />
-                </button>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

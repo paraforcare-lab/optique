@@ -89,7 +89,7 @@ export function ComingUpCalendar({ rdvs }: ComingUpCalendarProps) {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <button
           onClick={goPrev}
           aria-label="Previous month"
@@ -108,7 +108,7 @@ export function ComingUpCalendar({ rdvs }: ComingUpCalendarProps) {
       </div>
 
       {/* Weekday row */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-0.5 mb-1.5">
         {weekdayLabels.map((w, i) => (
           <div key={i} className="text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
             {w}
@@ -117,15 +117,15 @@ export function ComingUpCalendar({ rdvs }: ComingUpCalendarProps) {
       </div>
 
       {/* Day grid */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5">
         {cells.map((cell, i) => {
-          if (!cell) return <div key={i} />
+          if (!cell) return <div key={i} className="h-8" />
           const hasRdv = cell.count > 0
           return (
-            <div key={i} className="aspect-square flex items-center justify-center">
+            <div key={i} className="h-8 flex items-center justify-center">
               <div
                 className={cn(
-                  'relative h-9 w-9 rounded-lg flex items-center justify-center text-sm transition-colors',
+                  'relative h-7 w-7 rounded-md flex items-center justify-center text-[13px] transition-colors',
                   cell.isToday && !hasRdv && 'ring-1 ring-[#6D5BF6]/40 text-[#4A3FCF] dark:text-[#A78BFA] font-bold',
                   hasRdv && 'bg-[#6D5BF6] text-white font-bold shadow-[0_4px_12px_-6px_rgba(109,91,246,0.6)]',
                   !hasRdv && !cell.isToday && 'text-foreground/80',
@@ -135,7 +135,7 @@ export function ComingUpCalendar({ rdvs }: ComingUpCalendarProps) {
                 <span dir="ltr">{cell.day}</span>
                 {hasRdv && cell.count > 1 && (
                   <span
-                    className="absolute -top-1 -end-1 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center"
+                    className="absolute -top-1 -end-1 h-3.5 min-w-3.5 px-1 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center"
                     dir="ltr"
                   >
                     {cell.count}
@@ -148,7 +148,7 @@ export function ComingUpCalendar({ rdvs }: ComingUpCalendarProps) {
       </div>
 
       {/* Footer summary */}
-      <div className="mt-4 pt-4 border-t border-[#EAEAF4] dark:border-white/10">
+      <div className="mt-3 pt-3 border-t border-[#EAEAF4] dark:border-white/10">
         {totalUpcoming > 0 ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="h-7 w-7 rounded-lg bg-[#EEEDFB] dark:bg-[#6D5BF6]/10 flex items-center justify-center shrink-0">
