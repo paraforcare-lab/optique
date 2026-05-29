@@ -222,8 +222,8 @@ export default function VentesPassagers() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('ventes_passagers').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch(`/api/ventes-passagers/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
       toast.success(t('ventes.toast_deleted'));
       fetchVentes();
     } catch (error) {
