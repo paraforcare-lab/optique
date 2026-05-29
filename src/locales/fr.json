@@ -1043,6 +1043,7 @@
       "type_lentille":       "Lentille",
       "type_solution":       "Solution",
       "type_accessoire":     "Accessoire",
+      "type_autre":          "Autre",
       "section_monture":       "CARACTÉRISTIQUES MONTURE",
       "monture_taille":        "Taille (œil/ponte/branche)",
       "monture_couleur":       "Couleur",

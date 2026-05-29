@@ -592,6 +592,17 @@ function generateHTML(data: DocumentData): string {
     font-size: 6pt;
     color: #94a3b8;
   }
+  .brand-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .company-info {
+    font-size: 8pt;
+    color: #374151;
+    line-height: 1.6;
+    margin-top: 6px;
+  }
 </style>
 </head>
 <body>
@@ -602,12 +613,15 @@ function generateHTML(data: DocumentData): string {
   <div class="header-section">
     <div class="brand-left">
       ${data.company.logo
-        ? `<img src="${data.company.logo}" alt="Logo" style="width:120px;height:60px;object-fit:contain;display:block;margin-bottom:4px;" />`
-        : `<div style="font-size:18pt;font-weight:700;color:#000;letter-spacing:1px;margin-bottom:4px;">${(data.company.nom || 'OPTIGESTION').substring(0, 4).toUpperCase()}</div>`
+        ? `<img src="${data.company.logo}" alt="Logo" style="width:120px;height:60px;object-fit:contain;display:block;margin-bottom:8px;" />`
+        : `<div style="font-size:18pt;font-weight:700;color:#000;letter-spacing:1px;margin-bottom:8px;">${(data.company.nom || 'OPTIGESTION').substring(0, 4).toUpperCase()}</div>`
       }
-      <div>
-        <div class="brand-name">${data.company.nom || 'OptiGestion'}</div>
-        <div class="brand-sub">${data.language?.startsWith('ar') ? 'إدارة البصريات' : data.language?.startsWith('en') ? 'Optical Management' : 'Gestion Optique'}</div>
+      <div class="brand-name">${data.company.nom || 'OptiGestion'}</div>
+      <div class="company-info">
+        ${data.company.email ? `<div>Email: ${data.company.email}</div>` : ''}
+        ${data.company.telephone ? `<div>${data.language?.startsWith('ar') ? 'هاتف: ' : data.language?.startsWith('en') ? 'Tel: ' : 'Tél: '}${data.company.telephone}</div>` : ''}
+        ${data.company.adresse ? `<div>${data.company.adresse}</div>` : ''}
+        ${data.company.ville || data.company.codePostal ? `<div>${[data.company.ville, data.company.codePostal].filter(Boolean).join(' ')}</div>` : ''}
       </div>
     </div>
     <div class="title-right">

@@ -108,12 +108,15 @@ export function Dashboard() {
         const bonsCommande     = bcRes.data    ?? []
 
         const allFactures   = [...factures, ...ventesPassagers]
-        const validFact     = allFactures.filter((f: any) => f.statut !== 'annulée')
+        const validFact     = [
+          ...factures.filter((f: any) => f.statut === 'payée' || f.statut === 'reste_a_payer'),
+          ...ventesPassagers,
+        ]
         const payeesFact    = allFactures.filter((f: any) => f.statut === 'payée')
         const resteAPayerFact = allFactures.filter((f: any) => f.statut === 'reste_a_payer')
         const brouillonFact = allFactures.filter((f: any) => f.statut === 'brouillon')
         const bonsCommandeValides = bonsCommande.filter((b: any) =>
-          ['confirmé', 'livré', 'livrée'].includes(b.statut),
+          ['livré', 'livrée'].includes(b.statut),
         )
 
         const totalRevenue   = validFact.reduce((s, f: any) => s + Number(f.montant_ttc || 0), 0)
@@ -187,7 +190,7 @@ export function Dashboard() {
           stockValueHT,
           monthlyData,
           bonsCommandeCount: bonsCommande.filter((b: any) =>
-            ['confirmé', 'livré'].includes(b.statut),
+            ['livré', 'livrée'].includes(b.statut),
           ).length,
           lowStockProduits: produits
             .filter((p: any) => Number(p.stock_actuel) <= Number(p.stock_min))

@@ -1043,6 +1043,7 @@
       "type_lentille":       "عدسة لاصقة",
       "type_solution":       "محلول",
       "type_accessoire":     "ملحق",
+      "type_autre":          "آخر",
       "section_monture":       "خصائص الإطار",
       "monture_taille":        "المقاس (عين/جسر/ذراع)",
       "monture_couleur":       "اللون",
